@@ -14,7 +14,7 @@ export function DepositForm() {
       <h3 className="font-semibold mb-4">Deposit USDC</h3>
       <div className="flex gap-2">
         <Input type="number" placeholder="Amount" value={amount} onChange={e => setAmount(e.target.value)} className="flex-1" />
-        <Button onClick={() => { deposit(amount); setAmount(""); }} disabled={loading || !amount}>
+        <Button onClick={() => { deposit(parseFloat(amount)); setAmount(""); }} disabled={loading || !amount}>
           {loading ? "..." : "Deposit"}
         </Button>
       </div>

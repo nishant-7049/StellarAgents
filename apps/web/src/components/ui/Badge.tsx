@@ -3,12 +3,13 @@ import clsx from "clsx";
 interface BadgeProps {
   children: React.ReactNode;
   variant?: "default" | "success" | "warning" | "error" | "info";
+  className?: string;
 }
 
-export function Badge({ children, variant = "default" }: BadgeProps) {
+export function Badge({ children, variant = "default", className = "" }: BadgeProps) {
   return (
     <span className={clsx(
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", className,
       {
         "bg-indigo-500/20 text-indigo-300": variant === "default",
         "bg-green-500/20 text-green-300": variant === "success",

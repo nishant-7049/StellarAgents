@@ -1,39 +1,229 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { nativeToScVal } from "@stellar/stellar-sdk";
 import { useWallet } from "./useWallet";
+import { buildContractTx, signAndSubmit, readContract, toStroops, type TxState } from "@/lib/stellar";
+import { VAULT_FACTORY_ADDRESS, USDC_SAC_ADDRESS } from "@/lib/contracts";
+
+interface AgentInfo {
+  address: string;
+  dailyLimit: string;
+  spent: string;
+  isActive: boolean;
+}
 
 export function useVault() {
   const { address } = useWallet();
   const [vaultAddress, setVaultAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState("0");
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [txState, setTxState] = useState<TxState>("idle");
+  const [lastTxHash, setLastTxHash] = useState<string | undefined>();
 
-  async function createVault() {
+  // Load vault on mount / address change
+  useEffect(() => {
+    if (!address) {
+      setVaultAddress(null);
+      setBalance("0");
+      setAgents([]);
+      return;
+    }
+    loadVault(address);
+  }, [address]);
+
+  async function loadVault(owner: string) {
+    try {
+      setLoading(true);
+      const vault = await readContract<string | null>(
+        VAULT_FACTORY_ADDRESS,
+        "get_vault",
+        [nativeToScVal(owner, { type: "address" })],
+      );
+      if (!vault) {
+        setVaultAddress(null);
+        return;
+      }
+      setVaultAddress(vault);
+      await loadVaultData(vault);
+    } catch {
+      setVaultAddress(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadVaultData(vault: string) {
+    try {
+      const [bal, agentAddrs] = await Promise.all([
+        readContract<bigint>(vault, "balance", []),
+        readContract<string[]>(vault, "list_agents", []).catch(() => [] as string[]),
+      ]);
+      setBalance(bal.toString());
+
+      // Load policies for each agent
+      const agentInfos: AgentInfo[] = [];
+      for (const addr of agentAddrs) {
+        try {
+          const policy = await readContract<any>(vault, "get_agent_policy", [
+            nativeToScVal(addr, { type: "address" }),
+          ]);
+          agentInfos.push({
+            address: addr,
+            dailyLimit: (policy.daily_limit ?? policy.dailyLimit ?? 0).toString(),
+            spent: (policy.spent_today ?? policy.spentToday ?? 0).toString(),
+            isActive: policy.is_active ?? policy.isActive ?? true,
+          });
+        } catch {
+          agentInfos.push({ address: addr, dailyLimit: "0", spent: "0", isActive: true });
+        }
+      }
+      setAgents(agentInfos);
+    } catch {
+      // Vault exists but can't read data
+    }
+  }
+
+  const createVault = useCallback(async () => {
     if (!address) return;
-    setLoading(true);
+    setTxState("building");
+    setLastTxHash(undefined);
     try {
-      // Would use Freighter to sign VaultFactory.create_vault() transaction
-      setVaultAddress("DEMO_VAULT_" + address.slice(0, 8));
-    } finally { setLoading(false); }
-  }
+      const xdr = await buildContractTx({
+        contractId: VAULT_FACTORY_ADDRESS,
+        method: "create_vault",
+        args: [nativeToScVal(address, { type: "address" })],
+        publicKey: address,
+      });
 
-  async function deposit(amount: string) {
-    setLoading(true);
+      setTxState("signing");
+      const txHash = await signAndSubmit(xdr);
+      setTxState("confirming");
+
+      // Wait a moment for state to settle, then reload
+      await new Promise(r => setTimeout(r, 2000));
+      await loadVault(address);
+
+      setLastTxHash(txHash);
+      setTxState("success");
+    } catch (e) {
+      console.error("Create vault failed:", e);
+      setTxState("error");
+    }
+  }, [address]);
+
+  const deposit = useCallback(async (usdc: number) => {
+    if (!address || !vaultAddress) return;
+    setTxState("building");
+    setLastTxHash(undefined);
     try {
-      // Would use Freighter to sign vault.deposit() transaction
-      const current = parseFloat(balance);
-      setBalance((current + parseFloat(amount)).toString());
-    } finally { setLoading(false); }
-  }
+      const stroops = toStroops(usdc);
+      const xdr = await buildContractTx({
+        contractId: vaultAddress,
+        method: "deposit",
+        args: [
+          nativeToScVal(address, { type: "address" }),
+          nativeToScVal(stroops, { type: "i128" }),
+        ],
+        publicKey: address,
+      });
 
-  async function withdraw(amount: string) {
-    setLoading(true);
+      setTxState("signing");
+      const txHash = await signAndSubmit(xdr);
+      setTxState("confirming");
+
+      await new Promise(r => setTimeout(r, 2000));
+      await loadVaultData(vaultAddress);
+
+      setLastTxHash(txHash);
+      setTxState("success");
+    } catch (e) {
+      console.error("Deposit failed:", e);
+      setTxState("error");
+    }
+  }, [address, vaultAddress]);
+
+  const withdraw = useCallback(async (usdc: number) => {
+    if (!address || !vaultAddress) return;
+    setTxState("building");
+    setLastTxHash(undefined);
     try {
-      // Would use Freighter to sign vault.withdraw() transaction
-      const current = parseFloat(balance);
-      setBalance(Math.max(0, current - parseFloat(amount)).toString());
-    } finally { setLoading(false); }
-  }
+      const stroops = toStroops(usdc);
+      const xdr = await buildContractTx({
+        contractId: vaultAddress,
+        method: "withdraw",
+        args: [
+          nativeToScVal(address, { type: "address" }),
+          nativeToScVal(stroops, { type: "i128" }),
+        ],
+        publicKey: address,
+      });
 
-  return { vaultAddress, balance, loading, createVault, deposit, withdraw };
+      setTxState("signing");
+      const txHash = await signAndSubmit(xdr);
+      setTxState("confirming");
+
+      await new Promise(r => setTimeout(r, 2000));
+      await loadVaultData(vaultAddress);
+
+      setLastTxHash(txHash);
+      setTxState("success");
+    } catch (e) {
+      console.error("Withdraw failed:", e);
+      setTxState("error");
+    }
+  }, [address, vaultAddress]);
+
+  const addAgent = useCallback(async (agentAddress: string, dailyLimitUsdc: number) => {
+    if (!address || !vaultAddress) return;
+    setTxState("building");
+    setLastTxHash(undefined);
+    try {
+      const limitStroops = toStroops(dailyLimitUsdc);
+      const xdr = await buildContractTx({
+        contractId: vaultAddress,
+        method: "add_agent",
+        args: [
+          nativeToScVal(address, { type: "address" }),
+          nativeToScVal(agentAddress, { type: "address" }),
+          nativeToScVal(limitStroops, { type: "i128" }),
+          nativeToScVal([], { type: "vec" }),
+        ],
+        publicKey: address,
+      });
+
+      setTxState("signing");
+      const txHash = await signAndSubmit(xdr);
+      setTxState("confirming");
+
+      await new Promise(r => setTimeout(r, 2000));
+      await loadVaultData(vaultAddress);
+
+      setLastTxHash(txHash);
+      setTxState("success");
+    } catch (e) {
+      console.error("Add agent failed:", e);
+      setTxState("error");
+    }
+  }, [address, vaultAddress]);
+
+  const resetTxState = useCallback(() => {
+    setTxState("idle");
+    setLastTxHash(undefined);
+  }, []);
+
+  return {
+    vaultAddress,
+    balance,
+    agents,
+    loading,
+    txState,
+    lastTxHash,
+    createVault,
+    deposit,
+    withdraw,
+    addAgent,
+    resetTxState,
+    refresh: vaultAddress ? () => loadVaultData(vaultAddress) : undefined,
+  };
 }

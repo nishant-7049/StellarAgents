@@ -1,34 +1,49 @@
 "use client";
 import { useState } from "react";
+import { buildX402Header } from "@/lib/api";
+
+export type X402Phase = "idle" | "building" | "settling" | "confirmed" | "error";
 
 export function useX402() {
-  const [paying, setPaying] = useState(false);
+  const [phase, setPhase] = useState<X402Phase>("idle");
   const [lastPayment, setLastPayment] = useState<{ txHash: string; amount: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  async function buildPaymentHeader(requirements: any): Promise<string> {
-    // In production, this would:
-    // 1. Build vault.agent_pay() invocation
-    // 2. Simulate to get auth entries
-    // 3. Sign auth entry with agent keypair via Freighter
-    // 4. Base64 encode the payload
-    const mockPayload = {
-      x402Version: 1,
-      scheme: "stellar-vault",
-      network: "stellar:testnet",
-      payload: {
-        vaultContract: "DEMO_VAULT",
-        agentId: 1,
-        agentSigner: "DEMO_AGENT",
-        payTo: requirements.accepts?.[0]?.payTo || "",
-        amount: requirements.accepts?.[0]?.amount || "100000",
-        asset: "USDC",
-        memo: "yield_query",
-        signedAuthEntry: "",
-        expirationLedger: 0,
-      },
-    };
-    return Buffer.from(JSON.stringify(mockPayload)).toString("base64");
+  async function buildPaymentHeader(params: {
+    vaultContract: string;
+    payTo: string;
+    amount: string;
+    memo?: string;
+  }): Promise<string | null> {
+    setPhase("building");
+    setError(null);
+    try {
+      const header = await buildX402Header(params);
+      return header;
+    } catch (e: any) {
+      setError(e.message);
+      setPhase("error");
+      return null;
+    }
   }
 
-  return { paying, setPaying, lastPayment, setLastPayment, buildPaymentHeader };
+  function setSettling() { setPhase("settling"); }
+
+  function setConfirmed(txHash: string, amount: string) {
+    setLastPayment({ txHash, amount });
+    setPhase("confirmed");
+  }
+
+  function setFailed(msg: string) {
+    setError(msg);
+    setPhase("error");
+  }
+
+  function reset() {
+    setPhase("idle");
+    setLastPayment(null);
+    setError(null);
+  }
+
+  return { phase, lastPayment, error, buildPaymentHeader, setSettling, setConfirmed, setFailed, reset };
 }
