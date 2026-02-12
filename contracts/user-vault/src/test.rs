@@ -23,9 +23,11 @@ fn setup() -> (Env, Address, Address, Address, Address, Address) {
     let usdc_addr = usdc_sac.address();
     StellarAssetClient::new(&env, &usdc_addr).mint(&owner, &1000_0000000i128);
 
-    // Deploy vault
-    let vault_id = env.register(UserVault, ());
-    UserVaultClient::new(&env, &vault_id).initialize(&owner, &usdc_addr, &factory);
+    // Deploy vault with constructor args
+    let vault_id = env.register(
+        UserVault,
+        (owner.clone(), usdc_addr.clone(), factory.clone()),
+    );
 
     (env, vault_id, owner, agent, service, usdc_addr)
 }

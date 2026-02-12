@@ -1,7 +1,25 @@
-import { Keypair, Networks, TransactionBuilder, Contract, nativeToScVal } from "@stellar/stellar-sdk";
-import { Server } from "@stellar/stellar-sdk/rpc";
+import { Keypair, Networks, TransactionBuilder, Contract, nativeToScVal, authorizeEntry } from "@stellar/stellar-sdk";
+import { Server, assembleTransaction } from "@stellar/stellar-sdk/rpc";
 import { config } from "../config.js";
 
+/**
+ * Build an X-PAYMENT header for x402 protocol.
+ *
+ * This is the agent-side function. It:
+ * 1. Simulates vault.agent_pay() to get the required SorobanAuthorizationEntry
+ * 2. Signs the auth entry with the agent's private key (authorizeEntry)
+ * 3. Assembles the full transaction (to capture the correct footprint + resources)
+ * 4. Packages the signed auth entry AND assembled transaction XDR
+ *
+ * CRITICAL: The assembled transaction XDR is included because it contains the
+ * footprint with the correct auth nonce. If the facilitator re-simulates, it
+ * gets a DIFFERENT nonce, causing an INVOKE_HOST_FUNCTION_TRAPPED error.
+ *
+ * The facilitator will:
+ * - Receive the pre-assembled transaction
+ * - Sign it as source account (pays XLM fees)
+ * - Submit to the network
+ */
 export async function buildX402Header(params: {
   vaultContract: string;
   agentSigner: string;
@@ -15,7 +33,12 @@ export async function buildX402Header(params: {
   const agentKp = Keypair.fromSecret(params.agentSecret);
   const vault = new Contract(params.vaultContract);
 
-  const account = await rpc.getAccount(agentKp.publicKey());
+  // Use facilitator as source account since they'll submit the final tx.
+  const facilitatorPub = config.FACILITATOR_SECRET_KEY
+    ? Keypair.fromSecret(config.FACILITATOR_SECRET_KEY).publicKey()
+    : agentKp.publicKey();
+
+  const account = await rpc.getAccount(facilitatorPub);
   const tx = new TransactionBuilder(account, {
     fee: "1000000",
     networkPassphrase: Networks.TESTNET,
@@ -36,7 +59,23 @@ export async function buildX402Header(params: {
   if (!("result" in sim)) throw new Error("Simulation failed for x402 header");
 
   const authEntries = sim.result?.auth || [];
-  const signedAuthEntry = authEntries.length > 0 ? authEntries[0].toXDR("base64") : "";
+  if (authEntries.length === 0) throw new Error("No auth entries from simulation");
+
+  // Sign the auth entry with the agent's keypair.
+  const latestLedger = sim.latestLedger;
+  const validUntilLedger = latestLedger + 1000;
+
+  const signedAuth = await authorizeEntry(
+    authEntries[0],
+    agentKp,
+    validUntilLedger,
+    Networks.TESTNET,
+  );
+
+  // Replace the unsigned auth with the signed one in the simulation result,
+  // then assemble. This ensures the footprint matches the signed auth's nonce.
+  sim.result!.auth = [signedAuth];
+  const assembled = assembleTransaction(tx, sim).build();
 
   const payload = {
     x402Version: 1,
@@ -50,8 +89,11 @@ export async function buildX402Header(params: {
       amount: params.amount,
       asset: config.USDC_SAC_ADDRESS,
       memo: params.memo,
-      signedAuthEntry,
-      expirationLedger: 0,
+      signedAuthEntry: signedAuth.toXDR("base64"),
+      // Include the fully assembled transaction XDR.
+      // The facilitator signs this directly instead of re-simulating.
+      assembledTxXdr: assembled.toXDR("base64"),
+      expirationLedger: validUntilLedger,
     },
   };
 

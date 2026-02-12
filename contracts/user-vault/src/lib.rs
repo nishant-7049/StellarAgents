@@ -11,7 +11,24 @@ pub struct UserVault;
 
 #[contractimpl]
 impl UserVault {
-    // ── INITIALIZATION ──
+    // ── CONSTRUCTOR (called by deploy_v2 from VaultFactory) ──
+
+    pub fn __constructor(env: Env, owner: Address, usdc_token: Address, factory: Address) {
+        env.storage().instance().set(&DataKey::Owner, &owner);
+        env.storage()
+            .instance()
+            .set(&DataKey::UsdcToken, &usdc_token);
+        env.storage().instance().set(&DataKey::Factory, &factory);
+        env.storage().instance().set(&DataKey::AgentCount, &0u32);
+        env.storage()
+            .instance()
+            .set(&DataKey::AgentList, &Vec::<Address>::new(&env));
+        env.storage().instance().set(&DataKey::Initialized, &true);
+        env.storage().instance().set(&DataKey::TotalSpent, &0i128);
+        env.storage().instance().set(&DataKey::TxNonce, &0u64);
+    }
+
+    // ── INITIALIZATION (kept for standalone deploys / tests) ──
 
     pub fn initialize(
         env: Env,

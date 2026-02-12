@@ -1,7 +1,30 @@
 import { z } from "zod";
 import dotenv from "dotenv";
-dotenv.config();
-dotenv.config({ path: "../../.env.contracts" });
+import path from "path";
+
+import { existsSync } from "fs";
+
+// Resolve monorepo root — handle both direct execution and turborepo
+function findRoot(): string {
+  // If CWD is apps/backend, root is ../..
+  const fromCwd = path.resolve(process.cwd(), "../..");
+  if (existsSync(path.join(fromCwd, ".env.contracts"))) return fromCwd;
+  // If CWD is the monorepo root
+  if (existsSync(path.join(process.cwd(), ".env.contracts"))) return process.cwd();
+  // Fallback: walk up from CWD
+  let dir = process.cwd();
+  while (dir !== path.dirname(dir)) {
+    if (existsSync(path.join(dir, ".env.contracts"))) return dir;
+    dir = path.dirname(dir);
+  }
+  return path.resolve(process.cwd(), "../..");
+}
+
+const rootDir = findRoot();
+
+// Load root .env first, then .env.contracts (override=true to merge)
+dotenv.config({ path: path.join(rootDir, ".env") });
+dotenv.config({ path: path.join(rootDir, ".env.contracts"), override: true });
 
 const envSchema = z.object({
   PORT: z.string().default("3001"),

@@ -1,7 +1,6 @@
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, contracttype, contracterror, Address, Bytes, BytesN, Env, FromVal,
-    IntoVal, Symbol, Val, Vec,
+    contract, contractimpl, contracttype, contracterror, Address, BytesN, Env, Symbol,
 };
 
 #[contracterror]
@@ -69,34 +68,29 @@ impl VaultFactory {
             .get(&DataKey::UsdcToken)
             .ok_or(FactoryError::NotInitialized)?;
 
-        // Create deterministic salt from owner address
-        let owner_val: Val = owner.clone().into_val(&env);
-        let owner_bytes: Bytes = Bytes::from_val(&env, &owner_val);
-        let salt = env.crypto().sha256(&owner_bytes);
-
-        let vault_addr: Address = env
-            .deployer()
-            .with_current_contract(salt)
-            .deploy_v2(wasm_hash, ());
-
-        let init_args: Vec<Val> = Vec::from_array(
-            &env,
-            [
-                owner.clone().into_val(&env),
-                usdc_token.into_val(&env),
-                env.current_contract_address().into_val(&env),
-            ],
-        );
-        env.invoke_contract::<()>(&vault_addr, &Symbol::new(&env, "initialize"), init_args);
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::UserVault(owner.clone()), &vault_addr);
+        // Deterministic salt from vault count — each owner gets exactly one vault
         let count: u32 = env
             .storage()
             .instance()
             .get(&DataKey::VaultCount)
             .unwrap_or(0);
+        let mut salt_arr = [0u8; 32];
+        salt_arr[28..32].copy_from_slice(&count.to_be_bytes());
+        let salt = BytesN::<32>::from_array(&env, &salt_arr);
+
+        // Deploy UserVault with constructor args (owner, usdc_token, factory)
+        let vault_addr: Address = env.deployer().with_current_contract(salt).deploy_v2(
+            wasm_hash,
+            (
+                owner.clone(),
+                usdc_token,
+                env.current_contract_address(),
+            ),
+        );
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::UserVault(owner.clone()), &vault_addr);
         env.storage()
             .instance()
             .set(&DataKey::VaultCount, &(count + 1));
