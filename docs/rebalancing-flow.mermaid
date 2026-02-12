@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant Cron as Rebalancer (every 5 min)
+    participant AI as Claude API
+    participant Blend as Blend SDK
+    participant Swap as Soroswap SDK
+    participant Vault as UserVault
+    participant RPC as Soroban RPC
+
+    Cron->>Blend: Pool.load(network, poolId)
+    Blend-->>Cron: reserves, rates, positions
+    Cron->>Swap: soroswapClient.quote({USDC->XLM})
+    Swap-->>Cron: currentPrice, route
+
+    Note over Cron: Calculate current allocation vs target<br/>Drift > threshold (5%)?
+
+    Cron->>AI: "Given current rates and positions,<br/>generate rebalance actions"
+    AI-->>Cron: [{action: "withdraw_blend", amount},<br/>{action: "supply_blend", amount}]
+
+    Cron->>Blend: PoolContract.submit({SupplyCollateral})
+    Cron->>RPC: sendTransaction(supplyTx)
+    RPC-->>Cron: txHash
+
+    Cron->>Vault: Log rebalance event

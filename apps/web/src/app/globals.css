@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #0a0a1a;
+  --bg-secondary: #111127;
+  --bg-card: #1a1a3e;
+  --border: #2a2a5e;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --accent: #6366f1;
+  --accent-light: #818cf8;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.card-glow {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.1);
+}
+
+.card-glow:hover {
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.2);
+}

@@ -1,0 +1,60 @@
+graph TB
+    subgraph "Frontend (NextJS 15 — App Router)"
+        LP["Landing Page<br/>/"]
+        DASH["Dashboard<br/>/app"]
+        VAULT["Vault Manager<br/>/app/vault"]
+        AGENTS["Agent Marketplace<br/>/app/agents"]
+        CHAT["Agent Chat<br/>/app/chat"]
+        REG["Register Agent<br/>/app/register"]
+    end
+
+    subgraph "Backend (Express + TypeScript — Merged AI/x402)"
+        API["REST API<br/>port 3001"]
+        X402M["x402 Middleware"]
+        FACIL["Facilitator<br/>/x402/settle"]
+        AI["AI Engine<br/>Claude API"]
+        REB["Rebalancer<br/>cron job"]
+        BLEND_C["Blend Client<br/>@blend-capital/blend-sdk"]
+        SORO_C["Soroswap Client<br/>@soroswap/sdk"]
+        STELLAR["Stellar Client<br/>@stellar/stellar-sdk"]
+    end
+
+    subgraph "Soroban Smart Contracts (Rust)"
+        VF["VaultFactory<br/>deploys vaults"]
+        UV["UserVault<br/>C-account, agent_pay()"]
+        AR["AgentRegistry<br/>ERC-8004 NFT"]
+    end
+
+    subgraph "Stellar Testnet"
+        USDC["USDC SAC"]
+        BPOOL["Blend Pools"]
+        SPOOL["Soroswap AMM"]
+        HORIZON["Horizon API"]
+        RPC["Soroban RPC"]
+    end
+
+    LP --> DASH
+    DASH --> API
+    VAULT -->|Freighter Sign| VF
+    VAULT -->|Deposit USDC| UV
+    AGENTS --> AR
+    CHAT -->|x402 header| X402M
+    REG -->|Freighter Sign| AR
+
+    X402M -->|verify| FACIL
+    FACIL -->|submit tx| RPC
+    FACIL -->|agent_pay()| UV
+
+    API --> AI
+    AI -->|strategy| BLEND_C
+    AI -->|strategy| SORO_C
+    REB -->|supply/withdraw| BLEND_C
+    REB -->|swap| SORO_C
+    BLEND_C --> BPOOL
+    SORO_C --> SPOOL
+    STELLAR --> RPC
+    STELLAR --> HORIZON
+
+    VF -->|deploy instance| UV
+    UV -->|transfer USDC| USDC
+    UV -.->|check agent policy| AR

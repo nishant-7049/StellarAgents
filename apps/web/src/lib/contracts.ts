@@ -1,0 +1,3 @@
+export const VAULT_FACTORY_ADDRESS = process.env.NEXT_PUBLIC_VAULT_FACTORY_ADDRESS || "";
+export const AGENT_REGISTRY_ADDRESS = process.env.NEXT_PUBLIC_AGENT_REGISTRY_ADDRESS || "";
+export const USDC_SAC_ADDRESS = process.env.NEXT_PUBLIC_USDC_SAC_ADDRESS || "";

@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant Agent as AI Agent (Browser/Backend)
+    participant Service as Backend API (x402 gated)
+    participant Facilitator as x402 Facilitator
+    participant Vault as UserVault Contract
+    participant RPC as Soroban RPC
+
+    Agent->>Service: GET /api/agent/query?q="best yield"
+    Service-->>Agent: 402 Payment Required<br/>{scheme:"stellar-vault", amount:"100000"}
+
+    Note over Agent: Build vault.agent_pay() invocation<br/>Sign SorobanAuthorizationEntry
+
+    Agent->>Service: GET /api/agent/query?q="best yield"<br/>X-PAYMENT: <base64 payload>
+    Service->>Facilitator: POST /x402/settle<br/>{authEntry, vaultContract, amount}
+
+    Facilitator->>RPC: simulateTransaction(vault.agent_pay)
+    RPC-->>Facilitator: simulation result + footprint
+
+    Note over Facilitator: Inject agent's signed authEntry<br/>Assemble + sign as source<br/>Fee-bump (facilitator pays XLM)
+
+    Facilitator->>RPC: sendTransaction(feeBumpTx)
+    RPC-->>Facilitator: txHash
+
+    Note over Vault: __check_auth -> agent signed?<br/>policy.can_spend(amount)?<br/>policy.can_pay_to(service)?<br/>USDC.transfer(vault -> service)
+
+    Facilitator-->>Service: {success: true, txHash}
+    Service-->>Agent: 200 OK + yield strategy<br/>X-PAYMENT-RESPONSE: {txHash}
