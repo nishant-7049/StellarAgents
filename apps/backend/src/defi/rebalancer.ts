@@ -1,42 +1,21 @@
 import cron from "node-cron";
+import { Rebalancer } from "@stellaragent402/agent-ai";
+import type { AllocationTarget } from "@stellaragent402/agent-ai";
 import { blendClient } from "./blend-client.js";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 
-interface AllocationTarget {
-  protocol: string;
-  asset: string;
-  targetPct: number;
-  currentPct: number;
-}
-
-let lastStrategy: AllocationTarget[] = [];
-let rebalanceCount = 0;
+const rebalancer = new Rebalancer(
+  blendClient,
+  {
+    driftThresholdPct: parseFloat(config.REBALANCE_DRIFT_THRESHOLD_PCT),
+    adminSecret: config.ADMIN_SECRET_KEY || undefined,
+  },
+  logger,
+);
 
 export function setTargetAllocation(targets: AllocationTarget[]) {
-  lastStrategy = targets;
-  logger.info("Target allocation updated", { targets });
-}
-
-async function checkAndRebalance() {
-  if (lastStrategy.length === 0) {
-    logger.debug("No target strategy set, skipping rebalance check");
-    return;
-  }
-  try {
-    const blendData = await blendClient.loadPool();
-    const driftThreshold = parseFloat(config.REBALANCE_DRIFT_THRESHOLD_PCT);
-    for (const target of lastStrategy) {
-      const drift = Math.abs(target.currentPct - target.targetPct);
-      if (drift > driftThreshold) {
-        logger.info(`Drift detected: ${drift.toFixed(1)}% > ${driftThreshold}%`, { target });
-      }
-    }
-    rebalanceCount++;
-    logger.debug("Rebalance check complete", { count: rebalanceCount });
-  } catch (err) {
-    logger.error("Rebalance check failed", { error: err });
-  }
+  rebalancer.setTargetAllocation(targets);
 }
 
 export function startRebalancer() {
@@ -44,7 +23,7 @@ export function startRebalancer() {
   logger.info(`Starting rebalancer (every ${interval} min)`);
   cron.schedule(`*/${interval} * * * *`, async () => {
     logger.debug("Rebalancer tick");
-    await checkAndRebalance();
+    await rebalancer.checkAndRebalance();
   });
 }
 
@@ -52,8 +31,8 @@ export function getRebalancerStatus() {
   return {
     running: true,
     intervalMinutes: parseInt(config.REBALANCE_INTERVAL_MINUTES),
-    rebalanceCount,
-    lastStrategy,
+    rebalanceCount: rebalancer.getRebalanceCount(),
+    lastStrategy: rebalancer.getTargetAllocation(),
     driftThreshold: parseFloat(config.REBALANCE_DRIFT_THRESHOLD_PCT),
   };
 }

@@ -12,6 +12,9 @@
     "seed": "tsx src/scripts/seed-agents.ts"
   },
   "dependencies": {
+    "@stellaragent402/x402-stellar": "workspace:*",
+    "@stellaragent402/vault": "workspace:*",
+    "@stellaragent402/agent-ai": "workspace:*",
     "@stellar/stellar-sdk": "^13.1.0",
     "@blend-capital/blend-sdk": "^2.2.0",
     "@anthropic-ai/sdk": "^0.40.0",

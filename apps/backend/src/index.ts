@@ -6,6 +6,7 @@ import { routes } from "./routes/index.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { loggerMiddleware } from "./middleware/logger.middleware.js";
 import { startRebalancer } from "./defi/rebalancer.js";
+import { startEventIndexer } from "./stellar/event-indexer.js";
 import { logger } from "./logger.js";
 
 const app = express();
@@ -22,6 +23,8 @@ app.get("/health", (_, res) => res.json({
   contracts: {
     factory: config.VAULT_FACTORY_ADDRESS,
     registry: config.AGENT_REGISTRY_ADDRESS,
+    reputation: config.REPUTATION_REGISTRY_ADDRESS,
+    validation: config.VALIDATION_REGISTRY_ADDRESS,
   },
 }));
 
@@ -29,6 +32,7 @@ app.use("/api", routes);
 app.use(errorMiddleware);
 
 startRebalancer();
+startEventIndexer();
 
 app.listen(parseInt(config.PORT), () => {
   logger.info(`AgentNet backend on port ${config.PORT}`);

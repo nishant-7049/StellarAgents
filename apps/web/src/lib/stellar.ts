@@ -1,12 +1,21 @@
 import { Networks, Contract, nativeToScVal, TransactionBuilder, xdr, scValToNative } from "@stellar/stellar-sdk";
 import { Server, assembleTransaction } from "@stellar/stellar-sdk/rpc";
 import { signTransaction } from "./freighter";
+import {
+  formatUsdc as sdkFormatUsdc,
+  toStroops as sdkToStroops,
+  USDC_DECIMALS,
+  STROOPS_PER_USDC,
+} from "@stellaragent402/x402-stellar";
 
 export const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK || "testnet";
 export const NETWORK_PASSPHRASE = Networks.TESTNET;
 export const RPC_URL = "https://soroban-testnet.stellar.org";
 export const HORIZON_URL = "https://horizon-testnet.stellar.org";
 export const EXPLORER_URL = "https://stellar.expert/explorer/testnet";
+
+// Re-export from SDK for backward compatibility
+export { USDC_DECIMALS, STROOPS_PER_USDC };
 
 // Facilitator public key — funded account used as source for read-only simulations
 const READ_SOURCE = "GB4WBZZRI3RWJI7IUBOMO4R7SILFN2IWNXRWTLIGM7E7ZF3YV6N5HNME";
@@ -22,16 +31,11 @@ export function getAccountUrl(address: string): string {
 }
 
 export function formatUsdc(stroops: string | number | bigint): string {
-  const amount = typeof stroops === "bigint"
-    ? Number(stroops)
-    : typeof stroops === "string"
-      ? parseInt(stroops)
-      : stroops;
-  return (amount / 10_000_000).toFixed(2);
+  return sdkFormatUsdc(stroops);
 }
 
 export function toStroops(usdc: number): bigint {
-  return BigInt(Math.round(usdc * 10_000_000));
+  return sdkToStroops(usdc);
 }
 
 export type TxState = "idle" | "building" | "signing" | "submitting" | "confirming" | "success" | "error";

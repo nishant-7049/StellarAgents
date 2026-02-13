@@ -1,0 +1,39 @@
+{
+  "name": "@stellaragent402/agent-ai",
+  "version": "0.1.0",
+  "description": "AI-powered DeFi agent toolkit for Stellar — yield optimization, Blend, Soroswap",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^13.1.0",
+    "@anthropic-ai/sdk": "^0.40.0"
+  },
+  "peerDependencies": {
+    "@blend-capital/blend-sdk": ">=2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@blend-capital/blend-sdk": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@blend-capital/blend-sdk": "^2.2.0",
+    "typescript": "^5.7.0"
+  },
+  "license": "MIT"
+}

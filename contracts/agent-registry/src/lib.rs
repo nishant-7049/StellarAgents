@@ -158,6 +158,34 @@ impl AgentRegistry {
             .unwrap_or(1)
     }
 
+    pub fn transfer_agent(
+        env: Env,
+        current_owner: Address,
+        agent_id: u32,
+        new_owner: Address,
+    ) -> Result<(), RegistryError> {
+        current_owner.require_auth();
+        let mut agent: AgentInfo = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Agent(agent_id))
+            .ok_or(RegistryError::AgentNotFound)?;
+        if agent.owner != current_owner {
+            return Err(RegistryError::NotAgentOwner);
+        }
+        env.storage()
+            .persistent()
+            .remove(&DataKey::OwnerAgent(current_owner));
+        env.storage()
+            .persistent()
+            .set(&DataKey::OwnerAgent(new_owner.clone()), &agent_id);
+        agent.owner = new_owner;
+        env.storage()
+            .persistent()
+            .set(&DataKey::Agent(agent_id), &agent);
+        Ok(())
+    }
+
     pub fn list_agents(env: Env, start_id: u32, limit: u32) -> Vec<AgentInfo> {
         let next: u32 = env
             .storage()

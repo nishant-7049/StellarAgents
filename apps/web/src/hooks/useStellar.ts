@@ -1,15 +1,21 @@
 "use client";
 import { useState } from "react";
-import { formatUsdc, toStroops, rpc } from "@/lib/stellar";
+import { nativeToScVal } from "@stellar/stellar-sdk";
+import { formatUsdc, toStroops, rpc, readContract } from "@/lib/stellar";
+import { USDC_SAC_ADDRESS } from "@/lib/contracts";
 
 export function useStellar() {
   const [loading, setLoading] = useState(false);
 
   async function getBalance(address: string): Promise<string> {
+    if (!USDC_SAC_ADDRESS || !address) return "0";
     try {
-      // For Soroban RPC, getAccount returns an Account without balances
-      // Token balances are read from the token contract directly
-      return "0";
+      const balance = await readContract<bigint>(
+        USDC_SAC_ADDRESS,
+        "balance",
+        [nativeToScVal(address, { type: "address" })],
+      );
+      return balance?.toString() || "0";
     } catch {
       return "0";
     }

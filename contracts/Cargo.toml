@@ -4,6 +4,8 @@ members = [
     "vault-factory",
     "user-vault",
     "agent-registry",
+    "reputation-registry",
+    "validation-registry",
 ]
 
 [workspace.dependencies]

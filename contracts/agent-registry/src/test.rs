@@ -86,3 +86,31 @@ fn test_metadata() {
         Some(String::from_str(&env, "claude-sonnet-4-5-20250929"))
     );
 }
+
+#[test]
+fn test_transfer_agent() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let admin = Address::generate(&env);
+    let owner = Address::generate(&env);
+    let new_owner = Address::generate(&env);
+    let reg_id = env.register(AgentRegistry, ());
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    reg.initialize(&admin);
+
+    let id = reg.register(
+        &owner,
+        &String::from_str(&env, "Agent"),
+        &String::from_str(&env, "{}"),
+        &Address::generate(&env),
+        &Address::generate(&env),
+    );
+
+    reg.transfer_agent(&owner, &id, &new_owner);
+    let agent = reg.get_agent(&id);
+    assert_eq!(agent.owner, new_owner);
+
+    // Old owner can no longer look up by owner
+    assert_eq!(reg.get_agent_by_owner(&owner), None);
+    assert_eq!(reg.get_agent_by_owner(&new_owner), Some(id));
+}

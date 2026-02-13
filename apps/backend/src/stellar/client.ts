@@ -1,26 +1,27 @@
-import { Keypair } from "@stellar/stellar-sdk";
-import { Server } from "@stellar/stellar-sdk/rpc";
+import {
+  createRpcClient,
+  getAccount as sdkGetAccount,
+  getLatestLedger as sdkGetLatestLedger,
+  generateKeypair as sdkGenerateKeypair,
+  fundAccount,
+} from "@stellaragent402/x402-stellar";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 
-const rpc = new Server(config.STELLAR_RPC_URL);
+export const rpc = createRpcClient(config.STELLAR_RPC_URL);
 
 export async function getAccount(publicKey: string) {
-  return rpc.getAccount(publicKey);
+  return sdkGetAccount(rpc, publicKey);
 }
 
 export async function getLatestLedger() {
-  return rpc.getLatestLedger();
+  return sdkGetLatestLedger(rpc);
 }
 
 export async function fundWithFriendbot(publicKey: string) {
-  const resp = await fetch(`https://friendbot.stellar.org/?addr=${publicKey}`);
-  if (!resp.ok) throw new Error("Friendbot failed");
-  logger.info("Funded account", { publicKey });
+  return fundAccount(publicKey, logger);
 }
 
 export function generateKeypair() {
-  return Keypair.random();
+  return sdkGenerateKeypair();
 }
-
-export { rpc };

@@ -9,6 +9,9 @@
     "build": "tsc",
     "lint": "tsc --noEmit"
   },
+  "dependencies": {
+    "@stellaragent402/x402-stellar": "workspace:*"
+  },
   "devDependencies": {
     "typescript": "^5.7.0"
   }

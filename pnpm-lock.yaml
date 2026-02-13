@@ -29,6 +29,15 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^13.1.0
         version: 13.3.0
+      '@stellaragent402/agent-ai':
+        specifier: workspace:*
+        version: link:../../packages/agent-ai
+      '@stellaragent402/vault':
+        specifier: workspace:*
+        version: link:../../packages/vault
+      '@stellaragent402/x402-stellar':
+        specifier: workspace:*
+        version: link:../../packages/x402-stellar
       cors:
         specifier: ^2.8.5
         version: 2.8.6
@@ -81,6 +90,9 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^13.1.0
         version: 13.3.0
+      '@stellaragent402/x402-stellar':
+        specifier: workspace:*
+        version: link:../../packages/x402-stellar
       clsx:
         specifier: ^2.1.0
         version: 2.1.1
@@ -119,8 +131,54 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  packages/shared:
+  packages/agent-ai:
+    dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.40.0
+        version: 0.40.1
+      '@stellar/stellar-sdk':
+        specifier: ^13.1.0
+        version: 13.3.0
     devDependencies:
+      '@blend-capital/blend-sdk':
+        specifier: ^2.2.0
+        version: 2.2.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  packages/shared:
+    dependencies:
+      '@stellaragent402/x402-stellar':
+        specifier: workspace:*
+        version: link:../x402-stellar
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  packages/vault:
+    dependencies:
+      '@stellar/stellar-sdk':
+        specifier: ^13.1.0
+        version: 13.3.0
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  packages/x402-stellar:
+    dependencies:
+      '@stellar/stellar-sdk':
+        specifier: ^13.1.0
+        version: 13.3.0
+      express:
+        specifier: '>=4.0.0'
+        version: 5.2.1
+    devDependencies:
+      '@types/express':
+        specifier: ^5.0.0
+        version: 5.0.6
       typescript:
         specifier: ^5.7.0
         version: 5.9.3

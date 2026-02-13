@@ -51,8 +51,8 @@ async function main() {
     console.log("  WASM binaries already exist, skipping build.");
   }
 
-  // Verify all 3 WASM files exist
-  for (const name of ["user_vault", "vault_factory", "agent_registry"]) {
+  // Verify all 5 WASM files exist
+  for (const name of ["user_vault", "vault_factory", "agent_registry", "reputation_registry", "validation_registry"]) {
     const wasmPath = path.join(WASM_DIR, `${name}.wasm`);
     if (!existsSync(wasmPath)) {
       console.error(`  Missing: ${wasmPath}`);
@@ -169,6 +169,32 @@ async function main() {
     process.exit(1);
   }
 
+  // ── Step 6B: Deploy ReputationRegistry ──
+  console.log("\n[6B] Deploying ReputationRegistry...");
+  let reputationAddress: string;
+  try {
+    reputationAddress = run(
+      `stellar contract deploy --wasm ${WASM_DIR}/reputation_registry.wasm --source-account agentnet-admin --network ${NETWORK}`
+    );
+    console.log(`  REPUTATION_REGISTRY: ${reputationAddress}`);
+  } catch (err: any) {
+    console.error(`  Deploy error: ${err.stderr?.toString() || err.message}`);
+    process.exit(1);
+  }
+
+  // ── Step 6C: Deploy ValidationRegistry ──
+  console.log("\n[6C] Deploying ValidationRegistry...");
+  let validationAddress: string;
+  try {
+    validationAddress = run(
+      `stellar contract deploy --wasm ${WASM_DIR}/validation_registry.wasm --source-account agentnet-admin --network ${NETWORK}`
+    );
+    console.log(`  VALIDATION_REGISTRY: ${validationAddress}`);
+  } catch (err: any) {
+    console.error(`  Deploy error: ${err.stderr?.toString() || err.message}`);
+    process.exit(1);
+  }
+
   // ── Step 7: Initialize VaultFactory ──
   console.log("\n[7] Initializing VaultFactory...");
   try {
@@ -203,6 +229,40 @@ async function main() {
     }
   }
 
+  // ── Step 8B: Initialize ReputationRegistry ──
+  console.log("\n[8B] Initializing ReputationRegistry...");
+  try {
+    run(
+      `stellar contract invoke --id ${reputationAddress} --source-account agentnet-admin --network ${NETWORK} -- initialize --admin ${admin.public}`
+    );
+    console.log("  ReputationRegistry initialized.");
+  } catch (err: any) {
+    const stderr = err.stderr?.toString() || err.message;
+    if (stderr.includes("AlreadyInitialized") || stderr.includes("Error(Contract, #1)")) {
+      console.log("  ReputationRegistry already initialized, skipping.");
+    } else {
+      console.error(`  Init error: ${stderr}`);
+      process.exit(1);
+    }
+  }
+
+  // ── Step 8C: Initialize ValidationRegistry ──
+  console.log("\n[8C] Initializing ValidationRegistry...");
+  try {
+    run(
+      `stellar contract invoke --id ${validationAddress} --source-account agentnet-admin --network ${NETWORK} -- initialize --admin ${admin.public}`
+    );
+    console.log("  ValidationRegistry initialized.");
+  } catch (err: any) {
+    const stderr = err.stderr?.toString() || err.message;
+    if (stderr.includes("AlreadyInitialized") || stderr.includes("Error(Contract, #1)")) {
+      console.log("  ValidationRegistry already initialized, skipping.");
+    } else {
+      console.error(`  Init error: ${stderr}`);
+      process.exit(1);
+    }
+  }
+
   // ── Step 9: Verify deployments ──
   console.log("\n[9] Verifying deployments...");
   try {
@@ -231,6 +291,8 @@ async function main() {
 # ── Contract Addresses ──
 VAULT_FACTORY_ADDRESS=${factoryAddress}
 AGENT_REGISTRY_ADDRESS=${registryAddress}
+REPUTATION_REGISTRY_ADDRESS=${reputationAddress}
+VALIDATION_REGISTRY_ADDRESS=${validationAddress}
 USDC_SAC_ADDRESS=${usdcSacAddress}
 VAULT_WASM_HASH=${vaultWasmHash}
 
@@ -256,6 +318,8 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 NEXT_PUBLIC_STELLAR_NETWORK=testnet
 NEXT_PUBLIC_VAULT_FACTORY_ADDRESS=${factoryAddress}
 NEXT_PUBLIC_AGENT_REGISTRY_ADDRESS=${registryAddress}
+NEXT_PUBLIC_REPUTATION_REGISTRY_ADDRESS=${reputationAddress}
+NEXT_PUBLIC_VALIDATION_REGISTRY_ADDRESS=${validationAddress}
 NEXT_PUBLIC_USDC_SAC_ADDRESS=${usdcSacAddress}
 `;
   writeFileSync(frontendEnvPath, frontendEnv);
@@ -263,9 +327,11 @@ NEXT_PUBLIC_USDC_SAC_ADDRESS=${usdcSacAddress}
 
   console.log("\n=== Deployment Complete ===");
   console.log(`\nView contracts on Stellar Expert:`);
-  console.log(`  Factory:  https://stellar.expert/explorer/testnet/contract/${factoryAddress}`);
-  console.log(`  Registry: https://stellar.expert/explorer/testnet/contract/${registryAddress}`);
-  console.log(`  USDC SAC: https://stellar.expert/explorer/testnet/contract/${usdcSacAddress}`);
+  console.log(`  Factory:    https://stellar.expert/explorer/testnet/contract/${factoryAddress}`);
+  console.log(`  Registry:   https://stellar.expert/explorer/testnet/contract/${registryAddress}`);
+  console.log(`  Reputation: https://stellar.expert/explorer/testnet/contract/${reputationAddress}`);
+  console.log(`  Validation: https://stellar.expert/explorer/testnet/contract/${validationAddress}`);
+  console.log(`  USDC SAC:   https://stellar.expert/explorer/testnet/contract/${usdcSacAddress}`);
 }
 
 main().catch((err) => {

@@ -5,6 +5,9 @@ import { statsRoutes } from "./stats.routes.js";
 import { yieldRoutes } from "./yield.routes.js";
 import { rebalanceRoutes } from "./rebalance.routes.js";
 import { x402Routes } from "./x402.routes.js";
+import { reputationRoutes } from "./reputation.routes.js";
+import { validationRoutes } from "./validation.routes.js";
+import { eventsRoutes } from "./events.routes.js";
 
 export const routes = Router();
 routes.use("/vaults", vaultRoutes);
@@ -13,3 +16,6 @@ routes.use("/stats", statsRoutes);
 routes.use("/yield", yieldRoutes);
 routes.use("/rebalance", rebalanceRoutes);
 routes.use("/x402", x402Routes);
+routes.use("/reputation", reputationRoutes);
+routes.use("/validation", validationRoutes);
+routes.use("/events", eventsRoutes);

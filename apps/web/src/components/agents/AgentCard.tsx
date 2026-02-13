@@ -1,12 +1,21 @@
 "use client";
+import { useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { ReputationBadge } from "./ReputationBadge";
+import { useReputation } from "@/hooks/useReputation";
 
 interface AgentCardProps {
   agent: { id: number; name: string; capabilities?: string[]; pricing?: { amount: string }; status?: string };
 }
 
 export function AgentCard({ agent }: AgentCardProps) {
+  const { summary, loadSummary } = useReputation(agent.id);
+
+  useEffect(() => {
+    loadSummary();
+  }, [loadSummary]);
+
   return (
     <Card glow className="hover:border-indigo-500/50 transition-colors cursor-pointer">
       <div className="flex items-start justify-between mb-3">
@@ -16,11 +25,14 @@ export function AgentCard({ agent }: AgentCardProps) {
       <div className="flex flex-wrap gap-1 mb-3">
         {agent.capabilities?.map(c => <Badge key={c} variant="info">{c}</Badge>)}
       </div>
-      {agent.pricing && (
-        <div className="text-sm text-[var(--text-secondary)]">
-          {(parseInt(agent.pricing.amount) / 10_000_000).toFixed(2)} USDC per query
-        </div>
-      )}
+      <div className="flex items-center justify-between">
+        {agent.pricing && (
+          <div className="text-sm text-[var(--text-secondary)]">
+            {(parseInt(agent.pricing.amount) / 10_000_000).toFixed(2)} USDC per query
+          </div>
+        )}
+        <ReputationBadge summary={summary} />
+      </div>
     </Card>
   );
 }

@@ -34,6 +34,8 @@ const envSchema = z.object({
   STELLAR_NETWORK_PASSPHRASE: z.string().default("Test SDF Network ; September 2015"),
   VAULT_FACTORY_ADDRESS: z.string().default(""),
   AGENT_REGISTRY_ADDRESS: z.string().default(""),
+  REPUTATION_REGISTRY_ADDRESS: z.string().default(""),
+  VALIDATION_REGISTRY_ADDRESS: z.string().default(""),
   USDC_SAC_ADDRESS: z.string().default(""),
   ADMIN_SECRET_KEY: z.string().default(""),
   FACILITATOR_SECRET_KEY: z.string().default(""),

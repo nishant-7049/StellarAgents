@@ -21,17 +21,34 @@ export async function fetchYieldQuery(query: string, risk: string, paymentHeader
 }
 
 export async function fetchAgents() {
-  return fetchAPI<{ agents: any[] }>("/api/agents");
+  return fetchAPI<{ agents: any[]; totalActive: number }>("/api/agents");
 }
 
 export async function fetchStats() {
   return fetchAPI<any>("/api/stats");
 }
 
-/**
- * Build a real x402 payment header via the backend.
- * The backend signs the auth entry with the agent signer key.
- */
+export async function fetchReputationSummary(agentId: number) {
+  return fetchAPI<any>(`/api/reputation/${agentId}/summary`);
+}
+
+export async function fetchFeedback(agentId: number, offset = 0, limit = 10) {
+  return fetchAPI<{ agentId: number; feedback: any[]; offset: number; limit: number }>(
+    `/api/reputation/${agentId}/feedback?offset=${offset}&limit=${limit}`
+  );
+}
+
+export async function fetchValidations(agentId: number) {
+  return fetchAPI<{ agentId: number; validations: any[] }>(`/api/validation/${agentId}`);
+}
+
+export async function fetchEvents(contractId?: string, limit = 50) {
+  const params = new URLSearchParams();
+  if (contractId) params.set("contractId", contractId);
+  params.set("limit", limit.toString());
+  return fetchAPI<{ events: any[]; count: number }>(`/api/events?${params.toString()}`);
+}
+
 export async function buildX402Header(params: {
   vaultContract: string;
   payTo: string;
@@ -51,9 +68,6 @@ export async function buildX402Header(params: {
   return data.header;
 }
 
-/**
- * Fetch transaction history from Horizon API.
- */
 export async function fetchTransactionHistory(accountId: string, limit = 20) {
   const res = await fetch(
     `https://horizon-testnet.stellar.org/accounts/${accountId}/operations?limit=${limit}&order=desc`,
