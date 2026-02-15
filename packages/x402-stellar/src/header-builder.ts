@@ -53,7 +53,11 @@ export async function buildX402Header(params: {
     .build();
 
   const sim = await rpc.simulateTransaction(tx);
-  if (!("result" in sim)) throw new Error("Simulation failed for x402 header");
+  if (!("result" in sim)) {
+    const errorMsg = "error" in sim ? `${sim.error}` : "Unknown simulation error";
+    console.error("x402 simulation failed:", JSON.stringify(sim, null, 2));
+    throw new Error(`Simulation failed: ${errorMsg}`);
+  }
 
   const authEntries = sim.result?.auth || [];
   if (authEntries.length === 0) throw new Error("No auth entries from simulation");

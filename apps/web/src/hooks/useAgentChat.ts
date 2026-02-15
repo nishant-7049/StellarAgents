@@ -2,20 +2,22 @@
 import { useState } from "react";
 import { fetchYieldQuery } from "@/lib/api";
 import { useX402, type X402Phase } from "./useX402";
-import { DEMO_VAULT_ADDRESS, FACILITATOR_PUBLIC_KEY } from "@/lib/contracts";
+import { useWallet } from "./useWallet";
+import { FACILITATOR_PUBLIC_KEY } from "@/lib/contracts";
 
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   strategies?: any[];
+  amount_usdc?: number;
   x402?: { txHash: string; amount: string };
   timestamp: number;
 }
 
 export type ChatPhase = "idle" | "querying" | "payment_required" | "building_payment" | "settling" | "confirmed" | "error";
 
-export function useAgentChat() {
+export function useAgentChat(vaultAddress?: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [chatPhase, setChatPhase] = useState<ChatPhase>("idle");
@@ -51,9 +53,21 @@ export function useAgentChat() {
         }]);
 
         // 2. Build real x402 payment header
+        if (!vaultAddress) {
+          setChatPhase("error");
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 2).toString(),
+            role: "system",
+            content: "You need to create a vault first. Go to /app/vault to create one.",
+            timestamp: Date.now(),
+          }]);
+          setLoading(false);
+          return;
+        }
+
         setChatPhase("building_payment");
         const header = await x402.buildPaymentHeader({
-          vaultContract: DEMO_VAULT_ADDRESS,
+          vaultContract: vaultAddress,
           payTo,
           amount,
           memo: "yield_q",
@@ -86,6 +100,7 @@ export function useAgentChat() {
             role: "assistant",
             content: retryResult.data.summary || "Strategy generated",
             strategies: retryResult.data.strategies,
+            amount_usdc: retryResult.data.amount_usdc,
             x402: { txHash, amount },
             timestamp: Date.now(),
           }]);
@@ -107,6 +122,7 @@ export function useAgentChat() {
           role: "assistant",
           content: data.summary || "Strategy generated",
           strategies: data.strategies,
+          amount_usdc: data.amount_usdc,
           x402: data.x402,
           timestamp: Date.now(),
         }]);
