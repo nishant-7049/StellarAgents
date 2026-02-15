@@ -1,4 +1,4 @@
-import { Networks, Contract, nativeToScVal, TransactionBuilder, xdr, scValToNative } from "@stellar/stellar-sdk";
+import { Networks, Contract, nativeToScVal, TransactionBuilder, xdr, scValToNative, BASE_FEE } from "@stellar/stellar-sdk";
 import { Server, assembleTransaction } from "@stellar/stellar-sdk/rpc";
 import { signTransaction } from "./freighter";
 import {
@@ -49,27 +49,27 @@ export async function buildContractTx(params: {
   args: xdr.ScVal[];
   publicKey: string;
 }): Promise<string> {
-  const contract = new Contract(params.contractId);
-  const account = await rpc.getAccount(params.publicKey);
+  // Use backend as proxy to build transaction (avoids browser bundling issues)
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
-  const tx = new TransactionBuilder(account, {
-    fee: "1000000",
-    networkPassphrase: NETWORK_PASSPHRASE,
-  })
-    .addOperation(contract.call(params.method, ...params.args))
-    .setTimeout(60)
-    .build();
+  const response = await fetch(`${BACKEND_URL}/api/tx/build`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contractId: params.contractId,
+      method: params.method,
+      args: params.args.map(arg => arg.toXDR("base64")),
+      publicKey: params.publicKey,
+    }),
+  });
 
-  const sim = await rpc.simulateTransaction(tx);
-  if (!("result" in sim)) {
-    const errMsg = "transactionData" in sim
-      ? JSON.stringify((sim as any).error)
-      : "Simulation failed";
-    throw new Error(errMsg);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Transaction build failed");
   }
 
-  const assembled = assembleTransaction(tx, sim).build();
-  return assembled.toXDR();
+  const { xdr: assembledXdr } = await response.json();
+  return assembledXdr;
 }
 
 /**

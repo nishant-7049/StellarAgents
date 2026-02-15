@@ -6,11 +6,11 @@ import { LayoutDashboard, Shield, Bot, MessageSquare, UserPlus, History } from "
 
 const navItems = [
   { href: "/app", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/app/vault", label: "Vault", icon: Shield },
-  { href: "/app/agents", label: "Agents", icon: Bot },
-  { href: "/app/chat", label: "Chat", icon: MessageSquare },
-  { href: "/app/register", label: "Register", icon: UserPlus },
-  { href: "/app/history", label: "History", icon: History },
+  { href: "/vault", label: "Vault", icon: Shield },
+  { href: "/agents", label: "Agents", icon: Bot },
+  { href: "/chat", label: "Chat", icon: MessageSquare },
+  { href: "/register", label: "Register", icon: UserPlus },
+  { href: "/history", label: "History", icon: History },
 ];
 
 export function Sidebar() {

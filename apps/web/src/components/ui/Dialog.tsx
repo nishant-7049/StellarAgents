@@ -7,9 +7,16 @@ interface DialogProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  size?: "small" | "medium" | "large";
 }
 
-export function Dialog({ open, onClose, title, children }: DialogProps) {
+export function Dialog({ open, onClose, title, children, size = "medium" }: DialogProps) {
+  const sizeClasses = {
+    small: "max-w-sm",
+    medium: "max-w-md",
+    large: "max-w-2xl",
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -27,10 +34,12 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="relative bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-6 max-w-md w-full mx-4"
+            className={`relative bg-[var(--bg-card)] border border-[var(--border)] rounded-xl ${sizeClasses[size]} w-full mx-4 max-h-[90vh] flex flex-col`}
           >
-            <h3 className="text-lg font-semibold mb-4">{title}</h3>
-            {children}
+            <h3 className="text-lg font-semibold p-6 pb-4 border-b border-[var(--border)]">{title}</h3>
+            <div className="overflow-y-auto p-6 pt-4">
+              {children}
+            </div>
           </motion.div>
         </div>
       )}

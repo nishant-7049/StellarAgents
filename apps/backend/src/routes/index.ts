@@ -8,6 +8,8 @@ import { x402Routes } from "./x402.routes.js";
 import { reputationRoutes } from "./reputation.routes.js";
 import { validationRoutes } from "./validation.routes.js";
 import { eventsRoutes } from "./events.routes.js";
+import { txRoutes } from "./tx.routes.js";
+import { executeRoutes } from "./execute.routes.js";
 
 export const routes = Router();
 routes.use("/vaults", vaultRoutes);
@@ -19,3 +21,5 @@ routes.use("/x402", x402Routes);
 routes.use("/reputation", reputationRoutes);
 routes.use("/validation", validationRoutes);
 routes.use("/events", eventsRoutes);
+routes.use("/tx", txRoutes);
+routes.use("/execute", executeRoutes);

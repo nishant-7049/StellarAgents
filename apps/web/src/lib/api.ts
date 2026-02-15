@@ -69,6 +69,23 @@ export async function buildX402Header(params: {
 }
 
 export async function fetchTransactionHistory(accountId: string, limit = 20) {
+  // For Soroban contracts (start with 'C'), use backend events endpoint
+  if (accountId.startsWith('C')) {
+    try {
+      const events = await fetchEvents(accountId, limit);
+      return events.events.map((evt: any, i: number) => ({
+        id: `${evt.ledger}-${i}`,
+        type: "invoke_host_function",
+        created_at: new Date(evt.timestamp || Date.now()).toISOString(),
+        transaction_hash: evt.txHash || `ledger-${evt.ledger}`,
+        topic: evt.topic,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  // For regular accounts, use Horizon
   const res = await fetch(
     `https://horizon-testnet.stellar.org/accounts/${accountId}/operations?limit=${limit}&order=desc`,
   );
