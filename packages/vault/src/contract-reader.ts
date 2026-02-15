@@ -37,12 +37,30 @@ export class ContractReader {
 
       const result = await this.rpc.simulateTransaction(tx);
       if ("result" in result && result.result?.retval) {
-        return scValToNative(result.result.retval);
+        const native = scValToNative(result.result.retval);
+        return this.convertBigInts(native);
       }
       return null;
     } catch (err) {
       this.log.error("Contract read failed", { contractId, method, error: err });
       return null;
     }
+  }
+
+  /**
+   * Recursively convert BigInt values to numbers for JSON serialization.
+   */
+  private convertBigInts(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj === "bigint") return Number(obj);
+    if (Array.isArray(obj)) return obj.map((item) => this.convertBigInts(item));
+    if (typeof obj === "object") {
+      const converted: any = {};
+      for (const key in obj) {
+        converted[key] = this.convertBigInts(obj[key]);
+      }
+      return converted;
+    }
+    return obj;
   }
 }
