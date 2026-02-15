@@ -235,14 +235,6 @@
                   },
                   {
                     "key": {
-                      "symbol": "category_counts"
-                    },
-                    "val": {
-                      "u32": 1
-                    }
-                  },
-                  {
-                    "key": {
                       "symbol": "total_reviews"
                     },
                     "val": {

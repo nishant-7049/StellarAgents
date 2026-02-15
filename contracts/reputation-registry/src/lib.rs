@@ -63,15 +63,13 @@ impl ReputationRegistry {
             .get(&DataKey::Summary(agent_id))
             .unwrap_or(FeedbackSummary {
                 total_reviews: 0,
-                avg_score_x100: 0,
-                category_counts: 0,
                 total_score: 0,
+                avg_score_x100: 0,
             });
 
         summary.total_score += score;
         summary.total_reviews += 1;
         summary.avg_score_x100 = (summary.total_score * 100) / summary.total_reviews;
-        summary.category_counts += 1;
 
         env.storage()
             .persistent()
@@ -114,9 +112,8 @@ impl ReputationRegistry {
             .get(&DataKey::Summary(agent_id))
             .unwrap_or(FeedbackSummary {
                 total_reviews: 0,
-                avg_score_x100: 0,
-                category_counts: 0,
                 total_score: 0,
+                avg_score_x100: 0,
             })
     }
 }

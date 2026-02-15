@@ -33,7 +33,6 @@ pub struct Feedback {
 #[derive(Clone, Debug)]
 pub struct FeedbackSummary {
     pub total_reviews: u32,
-    pub avg_score_x100: u32,
-    pub category_counts: u32,
     pub total_score: u32,
+    pub avg_score_x100: u32,  // score * 100 for 2 decimal precision (e.g., 4.35 = 435)
 }

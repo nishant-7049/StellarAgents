@@ -35,9 +35,8 @@ export interface AgentInfo {
 
 export interface FeedbackSummary {
   total_reviews: number;
-  avg_score_x100: number;
-  category_counts: number;
   total_score: number;
+  avg_score_x100: number;  // score * 100 for 2 decimal precision (e.g., 4.35 = 435)
 }
 
 export interface Feedback {
