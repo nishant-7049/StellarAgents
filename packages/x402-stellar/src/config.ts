@@ -16,6 +16,13 @@ export const TESTNET: StellarNetworkConfig = {
   explorerUrl: "https://stellar.expert/explorer/testnet",
 };
 
+export const MAINNET: StellarNetworkConfig = {
+  rpcUrl: "https://soroban.stellar.org",
+  horizonUrl: "https://horizon.stellar.org",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
+  explorerUrl: "https://stellar.expert/explorer/public",
+};
+
 export const STELLAR_CONFIG = {
   testnet: {
     rpcUrl: TESTNET.rpcUrl,
@@ -23,6 +30,13 @@ export const STELLAR_CONFIG = {
     networkPassphrase: TESTNET.networkPassphrase,
     friendbotUrl: TESTNET.friendbotUrl!,
     explorerUrl: TESTNET.explorerUrl!,
+  },
+  mainnet: {
+    rpcUrl: MAINNET.rpcUrl,
+    horizonUrl: MAINNET.horizonUrl,
+    networkPassphrase: MAINNET.networkPassphrase,
+    friendbotUrl: "",
+    explorerUrl: MAINNET.explorerUrl!,
   },
 } as const;
 

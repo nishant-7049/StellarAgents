@@ -20,6 +20,8 @@ interface TxRecord {
   from?: string;
   to?: string;
   source_account?: string;
+  description?: string; // decoded human-readable description
+  amountFormatted?: string;
 }
 
 export default function HistoryPage() {
@@ -50,8 +52,18 @@ export default function HistoryPage() {
     return <ArrowDownToLine className="w-4 h-4 text-green-400" />;
   }
 
-  function getOpLabel(type: string) {
-    if (type === "invoke_host_function") return "Contract Call";
+  function getOpLabel(op: TxRecord) {
+    // Use decoded description if available
+    if (op.description) return op.description;
+    if (op.type === "invoke_host_function") return "Smart Contract Interaction";
+    if (op.type === "payment") return "Payment";
+    if (op.type === "create_account") return "Create Account";
+    return op.type.replace(/_/g, " ");
+  }
+
+  // Keep backward compat
+  function getOpLabelFromType(type: string) {
+    if (type === "invoke_host_function") return "Smart Contract Interaction";
     if (type === "payment") return "Payment";
     if (type === "create_account") return "Create Account";
     return type.replace(/_/g, " ");
@@ -88,7 +100,7 @@ export default function HistoryPage() {
                   {getOpIcon(op.type)}
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{getOpLabel(op.type)}</span>
+                      <span className="text-sm font-medium">{getOpLabel(op)}</span>
                       <Badge variant="default">{op.type === "invoke_host_function" ? "Soroban" : "Stellar"}</Badge>
                     </div>
                     <div className="text-xs text-[var(--text-secondary)]">

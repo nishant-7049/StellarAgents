@@ -11,6 +11,17 @@ import { signAndSubmit } from "@/lib/stellar";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
+function resolveProtocolKey(protocol: string): string {
+  const p = protocol.toLowerCase();
+  if (p.includes("blend")) return "blend";
+  if (p.includes("soroswap")) return "soroswap";
+  if (p.includes("ondo") || p.includes("usdy")) return "ondo";
+  if (p.includes("defindex") || p.includes("vault")) return "defindex";
+  if (p.includes("aquarius")) return "aquarius";
+  if (p.includes("centrifuge")) return "centrifuge";
+  return "other";
+}
+
 interface Strategy {
   protocol: string;
   action: string;
@@ -43,6 +54,7 @@ export function ExecuteStrategy({ strategies, totalAmount, userAddress }: Execut
   const [transactions, setTransactions] = useState<TransactionStep[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [simulation, setSimulation] = useState<any>(null);
+  const [feeInfo, setFeeInfo] = useState<{ amount: string; percentage: string } | null>(null);
 
   async function loadPreview() {
     setLoading(true);
@@ -71,6 +83,9 @@ export function ExecuteStrategy({ strategies, totalAmount, userAddress }: Execut
       }
 
       setTransactions(data.transactions.map((tx: any) => ({ ...tx, status: "pending" })));
+      if (data.fee) {
+        setFeeInfo({ amount: data.fee.amount, percentage: data.fee.percentage });
+      }
 
       // Also load simulation data
       const simResponse = await fetch(`${BACKEND_URL}/api/execute/simulate`, {
@@ -130,6 +145,30 @@ export function ExecuteStrategy({ strategies, totalAmount, userAddress }: Execut
     }
 
     setLoading(false);
+
+    // Record positions in portfolio tracker after all txs succeed
+    const allDone = transactions.every(t => t.status === "success" || t.status === "error");
+    const anySuccess = transactions.some(t => t.status === "success");
+    if (allDone && anySuccess) {
+      const successHashes = transactions.filter(t => t.txHash).map(t => t.txHash!);
+      const positions = strategies
+        .filter(s => !s.protocol.includes("StellarAgent402")) // skip fee tx
+        .map(s => ({
+          protocol: s.protocol,
+          protocolKey: resolveProtocolKey(s.protocol),
+          amountUsdc: (s.allocation_pct / 100) * totalAmount,
+          allocationPct: s.allocation_pct,
+          entryApy: s.estimated_apy,
+          deployedAt: new Date().toISOString(),
+        }));
+      try {
+        await fetch(`${BACKEND_URL}/api/portfolio/record`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet: userAddress, positions, totalAmount, txHashes: successHashes }),
+        });
+      } catch {}
+    }
   }
 
   const allSuccess = transactions.every(tx => tx.status === "success");
@@ -170,6 +209,19 @@ export function ExecuteStrategy({ strategies, totalAmount, userAddress }: Execut
           size="large"
         >
           <div className="space-y-4">
+            {/* Platform Fee Notice */}
+            {feeInfo && (
+              <Card className="p-3 bg-amber-500/10 border-amber-500/30">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-amber-300">Platform fee ({feeInfo.percentage})</span>
+                  <span className="font-mono font-medium text-amber-400">{feeInfo.amount} USDC</span>
+                </div>
+                <p className="text-xs text-[var(--text-secondary)] mt-1">
+                  Included as the first transaction. Supports ongoing platform development.
+                </p>
+              </Card>
+            )}
+
             {/* Simulation Summary */}
             {simulation && (
               <Card className="p-4 bg-gradient-to-br from-purple-500/10 to-indigo-500/10">
@@ -217,7 +269,7 @@ export function ExecuteStrategy({ strategies, totalAmount, userAddress }: Execut
                         <Badge
                           variant={
                             tx.status === "success" ? "success" :
-                            tx.status === "error" ? "danger" :
+                            tx.status === "error" ? "error" :
                             "default"
                           }
                           className="text-xs"

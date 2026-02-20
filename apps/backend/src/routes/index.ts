@@ -10,6 +10,10 @@ import { validationRoutes } from "./validation.routes.js";
 import { eventsRoutes } from "./events.routes.js";
 import { txRoutes } from "./tx.routes.js";
 import { executeRoutes } from "./execute.routes.js";
+import { creditsRoutes } from "./credits.routes.js";
+import { dashboardRoutes } from "./dashboard.routes.js";
+import { explorerRoutes } from "./explorer.routes.js";
+import { portfolioRoutes } from "./portfolio.routes.js";
 
 export const routes = Router();
 routes.use("/vaults", vaultRoutes);
@@ -23,3 +27,7 @@ routes.use("/validation", validationRoutes);
 routes.use("/events", eventsRoutes);
 routes.use("/tx", txRoutes);
 routes.use("/execute", executeRoutes);
+routes.use("/credits", creditsRoutes);
+routes.use("/dashboard", dashboardRoutes);
+routes.use("/explorer", explorerRoutes);
+routes.use("/portfolio", portfolioRoutes);

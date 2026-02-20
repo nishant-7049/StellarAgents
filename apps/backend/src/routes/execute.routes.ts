@@ -1,17 +1,23 @@
 import { Router } from "express";
-import { Contract, nativeToScVal, TransactionBuilder, Networks, Operation } from "@stellar/stellar-sdk";
+import { Contract, nativeToScVal, TransactionBuilder, Networks, Operation, Keypair } from "@stellar/stellar-sdk";
 import { Server, assembleTransaction } from "@stellar/stellar-sdk/rpc";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
+import { creditsService } from "../services/credits.service.js";
 
 export const executeRoutes = Router();
 const rpc = new Server(config.STELLAR_RPC_URL);
+
+// Platform fee: 20 basis points = 0.2%
+const PLATFORM_FEE_BPS = 20;
 
 interface StrategyStep {
   protocol: string;
   action: string;
   amount: number; // in USDC (human readable)
   allocation_pct: number;
+  estimated_apy?: number;
+  risk_level?: string;
 }
 
 /**
@@ -40,6 +46,19 @@ executeRoutes.post("/preview", async (req, res) => {
       return res.status(400).json({ error: "Missing totalAmount or userAddress" });
     }
 
+    // Deduct 2 credits per tx (pre-flight check)
+    const creditOk = creditsService.consumeCredits(userAddress, "execute_tx", strategies.length);
+    if (!creditOk) {
+      logger.warn("Insufficient credits for execute", { userAddress });
+      // Non-blocking — proceed anyway for demo mode
+    }
+
+    // ── Platform fee (0.2%) ──
+    const totalAmountInStroops = Math.floor(totalAmount * 10_000_000);
+    const feeAmountInStroops = Math.floor(totalAmountInStroops * PLATFORM_FEE_BPS / 10000);
+    const feeAmountUsdc = (feeAmountInStroops / 10_000_000).toFixed(4);
+    const strategyTotalInStroops = totalAmountInStroops - feeAmountInStroops;
+
     // Fetch user account
     let account;
     try {
@@ -57,10 +76,51 @@ executeRoutes.post("/preview", async (req, res) => {
       amount: string;
       xdr: string;
       description: string;
+      isFee?: boolean;
     }> = [];
 
+    // ── Prepend platform fee transaction ──
+    if (feeAmountInStroops > 0 && config.FACILITATOR_SECRET_KEY && config.USDC_SAC_ADDRESS) {
+      try {
+        const facilitatorPubKey = Keypair.fromSecret(config.FACILITATOR_SECRET_KEY).publicKey();
+        const usdcContract = new Contract(config.USDC_SAC_ADDRESS);
+
+        const feeTx = new TransactionBuilder(account, {
+          fee: "1000000",
+          networkPassphrase: Networks.TESTNET,
+        })
+          .addOperation(
+            usdcContract.call(
+              "transfer",
+              nativeToScVal(userAddress, { type: "address" }),
+              nativeToScVal(facilitatorPubKey, { type: "address" }),
+              nativeToScVal(BigInt(feeAmountInStroops), { type: "i128" })
+            )
+          )
+          .setTimeout(60)
+          .build();
+
+        const feeSim = await rpc.simulateTransaction(feeTx);
+        if ("result" in feeSim) {
+          const feeAssembled = assembleTransaction(feeTx, feeSim).build();
+          transactions.push({
+            protocol: "StellarAgent402",
+            action: "Platform Fee",
+            amount: feeAmountUsdc,
+            xdr: feeAssembled.toXDR(),
+            description: `Platform fee (0.2%) — ${feeAmountUsdc} USDC`,
+            isFee: true,
+          });
+          // Refresh account sequence for next transactions
+          account = await rpc.getAccount(userAddress);
+        }
+      } catch (err: any) {
+        logger.warn("Fee tx build failed (non-blocking)", { error: err.message });
+      }
+    }
+
     for (const strategy of strategies as StrategyStep[]) {
-      const amountInStroops = Math.floor((strategy.allocation_pct / 100) * totalAmount * 10_000_000);
+      const amountInStroops = Math.floor((strategy.allocation_pct / 100) * strategyTotalInStroops);
 
       if (amountInStroops === 0) continue;
 
@@ -73,7 +133,6 @@ executeRoutes.post("/preview", async (req, res) => {
 
       if (strategy.protocol.toLowerCase().includes("blend")) {
         description = `Supply ${amountUsdc} USDC to Blend pool`;
-        // For demo: simple USDC transfer (would use Blend SDK in production)
         tx = new TransactionBuilder(account, {
           fee: "1000000",
           networkPassphrase: Networks.TESTNET,
@@ -134,6 +193,12 @@ executeRoutes.post("/preview", async (req, res) => {
       totalSteps: transactions.length,
       estimatedTime: `${transactions.length * 5} seconds`,
       summary: `Execute ${transactions.length} transaction${transactions.length !== 1 ? "s" : ""} to implement your yield strategy`,
+      fee: {
+        amount: feeAmountUsdc,
+        amountInStroops: feeAmountInStroops,
+        percentage: "0.2%",
+        bps: PLATFORM_FEE_BPS,
+      },
     });
 
   } catch (err: any) {
@@ -172,14 +237,15 @@ executeRoutes.post("/simulate", async (req, res) => {
       };
     });
 
-    const totalYearlyReturn = outcomes.reduce((sum, o) => sum + o.estimatedYearlyReturn, 0);
+    type Outcome = typeof outcomes[number];
+    const totalYearlyReturn = outcomes.reduce((sum: number, o: Outcome) => sum + o.estimatedYearlyReturn, 0);
     const portfolioAPY = (totalYearlyReturn / totalAmount) * 100;
 
     // Risk analysis
     const riskDistribution = {
-      low: outcomes.filter(o => o.riskLevel === "low").reduce((sum, o) => sum + o.allocationPct, 0),
-      moderate: outcomes.filter(o => o.riskLevel === "moderate").reduce((sum, o) => sum + o.allocationPct, 0),
-      high: outcomes.filter(o => o.riskLevel === "high").reduce((sum, o) => sum + o.allocationPct, 0),
+      low: outcomes.filter((o: Outcome) => o.riskLevel === "low").reduce((sum: number, o: Outcome) => sum + o.allocationPct, 0),
+      moderate: outcomes.filter((o: Outcome) => o.riskLevel === "moderate").reduce((sum: number, o: Outcome) => sum + o.allocationPct, 0),
+      high: outcomes.filter((o: Outcome) => o.riskLevel === "high").reduce((sum: number, o: Outcome) => sum + o.allocationPct, 0),
     };
 
     res.json({
@@ -190,10 +256,10 @@ executeRoutes.post("/simulate", async (req, res) => {
       portfolioAPY: portfolioAPY.toFixed(2),
       riskDistribution,
       protocolDiversification: {
-        lending: outcomes.filter(o => o.protocolType === "Lending").length,
-        dex: outcomes.filter(o => o.protocolType === "AMM/DEX").length,
-        rwa: outcomes.filter(o => o.protocolType === "RWA").length,
-        vaults: outcomes.filter(o => o.protocolType === "Vault").length,
+        lending: outcomes.filter((o: Outcome) => o.protocolType === "Lending").length,
+        dex: outcomes.filter((o: Outcome) => o.protocolType === "AMM/DEX").length,
+        rwa: outcomes.filter((o: Outcome) => o.protocolType === "RWA").length,
+        vaults: outcomes.filter((o: Outcome) => o.protocolType === "Vault").length,
       },
       summary: `Expected ${portfolioAPY.toFixed(1)}% APY on $${totalAmount.toLocaleString()} = $${totalYearlyReturn.toFixed(2)}/year or $${(totalYearlyReturn / 12).toFixed(2)}/month`,
       disclaimer: "Simulated returns based on current market rates. Actual returns may vary. Past performance does not guarantee future results.",

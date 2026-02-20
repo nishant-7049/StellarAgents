@@ -2,25 +2,32 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { LayoutDashboard, Shield, Bot, MessageSquare, UserPlus, History } from "lucide-react";
+import { LayoutDashboard, Shield, Bot, MessageSquare, UserPlus, History, Zap, Search, PieChart } from "lucide-react";
+import { CreditMeter } from "./CreditMeter";
+import { useWallet } from "@/hooks/useWallet";
 
 const navItems = [
   { href: "/app", label: "Dashboard", icon: LayoutDashboard },
   { href: "/vault", label: "Vault", icon: Shield },
+  { href: "/portfolio", label: "Portfolio", icon: PieChart },
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/register", label: "Register", icon: UserPlus },
   { href: "/history", label: "History", icon: History },
+  { href: "/explorer", label: "Explorer", icon: Search },
+  { href: "/credits", label: "Credits", icon: Zap },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { address: publicKey } = useWallet();
+
   return (
     <aside className="fixed left-0 top-0 h-full w-56 border-r border-[var(--border)] bg-[var(--bg-secondary)] p-4 flex flex-col">
       <Link href="/" className="text-lg font-bold gradient-text mb-8 px-3">AgentNet</Link>
       <nav className="flex flex-col gap-1">
         {navItems.map(item => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link key={item.href} href={item.href}
               className={clsx(
@@ -35,10 +42,13 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="mt-auto px-3 py-2">
-        <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          Stellar Testnet
+      <div className="mt-auto space-y-2">
+        <CreditMeter wallet={publicKey} compact />
+        <div className="px-3 py-2">
+          <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            Stellar Testnet
+          </div>
         </div>
       </div>
     </aside>

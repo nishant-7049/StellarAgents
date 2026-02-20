@@ -14,6 +14,7 @@ export { ErrorCode, AgentNetError } from "./types.js";
 export {
   STELLAR_CONFIG,
   TESTNET,
+  MAINNET,
   USDC_DECIMALS,
   STROOPS_PER_USDC,
   formatUsdc,

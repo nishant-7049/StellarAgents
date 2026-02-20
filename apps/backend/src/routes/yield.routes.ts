@@ -8,13 +8,15 @@ import {
   generateMarketData,
   generateComparison,
   generateEducation,
+  generatePortfolioStatus,
 } from "../ai/response-generator.js";
+import { creditsService } from "../services/credits.service.js";
 
 export const yieldRoutes = Router();
 const optimizer = new YieldOptimizer();
 
 // Free query intents (no payment required)
-const FREE_INTENTS = ["greeting", "protocol_info", "market_data", "comparison", "defi_education", "general_question"];
+const FREE_INTENTS = ["greeting", "portfolio_status", "protocol_info", "market_data", "comparison", "defi_education", "general_question"];
 
 // Conditional x402 middleware - only charge for strategy requests
 const conditionalX402 = (req: Request, res: Response, next: NextFunction) => {
@@ -39,25 +41,44 @@ yieldRoutes.get("/query", conditionalX402, async (req, res) => {
   const q = req.query.q as string;
   const risk = (req.query.risk as string) || "moderate";
   const amount = req.query.amount ? parseFloat(req.query.amount as string) : undefined;
+  const wallet = req.query.wallet as string | undefined;
   if (!q) return res.status(400).json({ error: "query parameter 'q' required" });
 
-  const result = await handleQuery(q, risk, amount);
+  // Deduct 5 credits for strategy queries (non-blocking)
+  if (wallet) {
+    creditsService.consumeCredits(wallet, "yield_query");
+  }
+
+  const result = await handleQuery(q, risk, amount, wallet);
   res.json({ ...result, x402: (req as any).x402 });
 });
 
 yieldRoutes.post("/query", conditionalX402, async (req, res) => {
-  const { query, risk_tolerance, amount } = req.body;
+  const { query, risk_tolerance, amount, wallet } = req.body;
   if (!query) return res.status(400).json({ error: "'query' field required" });
 
-  const result = await handleQuery(query, risk_tolerance || "moderate", amount);
+  // Deduct 5 credits for strategy queries (non-blocking)
+  if (wallet) {
+    creditsService.consumeCredits(wallet, "yield_query");
+  }
+
+  const result = await handleQuery(query, risk_tolerance || "moderate", amount, wallet);
   res.json({ ...result, x402: (req as any).x402 });
 });
 
-async function handleQuery(query: string, riskTolerance: string, amount?: number) {
+async function handleQuery(query: string, riskTolerance: string, amount?: number, wallet?: string) {
   const classified = classifyQuery(query);
   const risk = extractRiskLevel(query) || riskTolerance;
 
   switch (classified.intent) {
+    case "portfolio_status": {
+      if (!wallet) {
+        return { type: "text", summary: "To show your portfolio status, I need your wallet address. Make sure your Freighter wallet is connected.", query, risk_tolerance: risk };
+      }
+      const portfolioResp = await generatePortfolioStatus(wallet);
+      return { type: "text", summary: portfolioResp.content, query, risk_tolerance: risk, portfolioData: portfolioResp.portfolioData };
+    }
+
     case "greeting":
       const greeting = await generateGreeting();
       return {

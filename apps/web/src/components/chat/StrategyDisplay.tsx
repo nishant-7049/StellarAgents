@@ -109,7 +109,7 @@ export function StrategyDisplay({ strategies, totalApy, summary }: StrategyDispl
                       {strategy.estimated_apy.toFixed(1)}%
                     </div>
                     <Badge
-                      variant="secondary"
+                      variant="default"
                       className={`text-xs ${riskColors[strategy.risk_level]} border`}
                     >
                       <RiskIcon className="w-3 h-3 mr-1" />

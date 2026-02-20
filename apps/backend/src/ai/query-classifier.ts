@@ -4,6 +4,7 @@
 
 export type QueryIntent =
   | "greeting"
+  | "portfolio_status"
   | "protocol_info"
   | "market_data"
   | "defi_education"
@@ -26,6 +27,12 @@ const STRATEGY_KEYWORDS = ["strategy", "allocate", "portfolio", "invest", "yield
 const COMPARISON_KEYWORDS = ["compare", "versus", "vs", "difference", "better", "which"];
 const EDUCATION_KEYWORDS = ["what is", "explain", "how does", "define", "meaning", "learn"];
 const ACCOUNT_STATUS_KEYWORDS = ["status", "balance", "deposit", "vault", "account", "show", "see", "check", "view", "my"];
+const PORTFOLIO_KEYWORDS = [
+  "my portfolio", "my funds", "my positions", "my balance", "my apy", "my yield",
+  "how much am i earning", "how much have i earned", "my pnl", "my gains", "my losses",
+  "what am i earning", "current apy", "deployed", "track my", "show my funds",
+  "rebalance my", "withdraw and redeposit", "how are my funds", "my investments",
+];
 
 export function classifyQuery(query: string): ClassifiedQuery {
   const lowerQuery = query.toLowerCase();
@@ -34,6 +41,11 @@ export function classifyQuery(query: string): ClassifiedQuery {
   // Greeting
   if (words.some(word => GREETINGS.includes(word)) && words.length <= 3) {
     return { intent: "greeting", entities: {} };
+  }
+
+  // Portfolio status — user asking about their own deployed funds/APY/PnL
+  if (PORTFOLIO_KEYWORDS.some(k => lowerQuery.includes(k))) {
+    return { intent: "portfolio_status", entities: {} };
   }
 
   // Account/vault status queries (should be free)

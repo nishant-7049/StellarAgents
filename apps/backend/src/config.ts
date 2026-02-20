@@ -45,7 +45,7 @@ const envSchema = z.object({
   BLEND_POOL_USDC: z.string().optional(),
   BLEND_BACKSTOP: z.string().optional(),
   REBALANCE_INTERVAL_MINUTES: z.string().default("5"),
-  REBALANCE_DRIFT_THRESHOLD_PCT: z.string().default("5"),
+  REBALANCE_DRIFT_THRESHOLD_PCT: z.string().default("0.5"),
 });
 
 export const config = envSchema.parse(process.env);

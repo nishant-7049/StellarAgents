@@ -123,7 +123,7 @@ export function ReviewsList({ agentId }: ReviewsListProps) {
                         />
                       ))}
                     </div>
-                    <Badge variant="secondary">{review.category}</Badge>
+                    <Badge variant="default">{review.category}</Badge>
                   </div>
                   <div className="text-xs text-[var(--text-secondary)]">
                     {new Date(review.timestamp * 1000).toLocaleDateString()}

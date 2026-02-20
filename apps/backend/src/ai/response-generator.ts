@@ -5,6 +5,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { ClassifiedQuery } from "./query-classifier.js";
 import { blendClient } from "../defi/blend-client.js";
 import { soroswapClient } from "../defi/soroswap-client.js";
+import { portfolioService } from "../services/portfolio.service.js";
+import { vaultService } from "../services/vault.service.js";
 import { config } from "../config.js";
 
 const anthropic = config.ANTHROPIC_API_KEY
@@ -224,6 +226,70 @@ Soroswap LP pairs yield around ${soroswapData[0]?.apy.toFixed(1)}% APY from fees
       ? "I can compare any Stellar protocols! Try: 'Blend vs Soroswap' or 'Compare Ondo and Blend'"
       : `Want to compare ${protocols.join(" and ")}? I can break down APY, risks, and which is best for different goals. What specifically interests you?`,
   };
+}
+
+export async function generatePortfolioStatus(wallet: string): Promise<{ type: "text"; content: string; portfolioData?: any }> {
+  // Fetch vault balance
+  let vaultBalanceUsdc = 0;
+  let vaultAddress: string | null = null;
+  try {
+    vaultAddress = await vaultService.getVaultForOwner(wallet);
+    if (vaultAddress) {
+      const raw = await vaultService.getBalance(vaultAddress);
+      vaultBalanceUsdc = parseInt(raw || "0") / 10_000_000;
+    }
+  } catch {}
+
+  // Live Blend APY
+  let blendApy = 7.2;
+  try {
+    const blend = await blendClient.loadPool();
+    blendApy = blend.reserves[0]?.supplyApy || 7.2;
+  } catch {}
+
+  const portfolio = portfolioService.getPortfolio(wallet);
+
+  if (!portfolio || portfolio.positions.length === 0) {
+    const content = vaultAddress
+      ? `Your vault has **$${vaultBalanceUsdc.toFixed(2)} USDC** but no active strategy is deployed yet.\n\nAll your funds are sitting idle. Ask me for a yield strategy to start earning — current Blend USDC rate is **${blendApy.toFixed(1)}% APY**.`
+      : "You don't have a vault set up yet. Head to the **Vault** page to create one and deposit USDC, then come back to set up a yield strategy.";
+    return { type: "text", content };
+  }
+
+  const pnl = portfolioService.calculatePnl(portfolio);
+  const weightedApy = portfolio.positions.reduce((s, p) => {
+    const apy = p.protocolKey === "blend" ? blendApy : p.entryApy;
+    return s + (apy * p.allocationPct / 100);
+  }, 0);
+  const projYearly = portfolio.totalInvested * weightedApy / 100;
+  const lastRebalance = portfolio.rebalanceHistory.slice(-1)[0];
+
+  const positionLines = portfolio.positions
+    .map(p => {
+      const apy = p.protocolKey === "blend" ? blendApy : p.entryApy;
+      return `• **${p.protocol}**: $${p.amountUsdc.toFixed(2)} (${p.allocationPct}%) @ ${apy.toFixed(1)}% APY`;
+    })
+    .join("\n");
+
+  const content = `**Your Portfolio Status**
+
+**Vault Balance:** $${vaultBalanceUsdc.toFixed(2)} USDC
+**Total Deployed:** $${portfolio.totalInvested.toFixed(2)} USDC
+**Weighted APY:** ${weightedApy.toFixed(2)}%
+
+**Active Positions:**
+${positionLines}
+
+**Earnings:**
+• Earned so far: **$${pnl.earnedUsdc.toFixed(4)} USDC** (+${pnl.earnedPct.toFixed(4)}%) over ${Math.floor(pnl.daysDeployed)} days
+• Projected yearly: **$${projYearly.toFixed(2)} USDC**
+• Projected monthly: **$${(projYearly / 12).toFixed(2)} USDC**
+
+${lastRebalance ? `**Last rebalance:** ${new Date(lastRebalance.timestamp).toLocaleDateString()} — APY changed by ${lastRebalance.netApyChange > 0 ? "+" : ""}${lastRebalance.netApyChange.toFixed(2)}%` : ""}
+
+Want me to suggest a better allocation? Just ask!`;
+
+  return { type: "text", content, portfolioData: { vaultBalanceUsdc, weightedApy, pnl, positions: portfolio.positions } };
 }
 
 export async function generateEducation(query: string): Promise<{ type: "text"; content: string }> {
