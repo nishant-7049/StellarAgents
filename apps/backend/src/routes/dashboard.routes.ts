@@ -89,7 +89,7 @@ dashboardRoutes.get("/:walletAddress", async (req, res) => {
     }
 
     // Fetch credits
-    const credits = creditsService.getCredits(walletAddress);
+    const credits = await creditsService.getCredits(walletAddress);
 
     // Fetch recent events (last 10 x402 payments)
     let recentPayments: any[] = [];

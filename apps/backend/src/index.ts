@@ -1,19 +1,25 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import cron from "node-cron";
 import { config } from "./config.js";
 import { routes } from "./routes/index.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { loggerMiddleware } from "./middleware/logger.middleware.js";
 import { startRebalancer } from "./defi/rebalancer.js";
 import { startEventIndexer } from "./stellar/event-indexer.js";
+import { creditsService } from "./services/credits.service.js";
+import { connectDB } from "./db/mongoose.js";
 import { logger } from "./logger.js";
 
 const app = express();
 
 app.use(helmet());
 app.use(cors({ origin: ["http://localhost:3000", "https://agentnet.vercel.app"] }));
-app.use(express.json());
+// Capture raw body for Stripe webhook signature verification
+app.use(express.json({
+  verify: (req: any, _res, buf) => { req.rawBody = buf; },
+}));
 app.use(loggerMiddleware);
 
 app.get("/health", (_, res) => res.json({
@@ -31,9 +37,18 @@ app.get("/health", (_, res) => res.json({
 app.use("/api", routes);
 app.use(errorMiddleware);
 
-startRebalancer();
-startEventIndexer();
+// Connect to MongoDB, then start server
+connectDB().then(() => {
+  startRebalancer();
+  startEventIndexer();
 
-app.listen(parseInt(config.PORT), () => {
-  logger.info(`AgentNet backend on port ${config.PORT}`);
+  // Nightly cron: downgrade expired paid plans to free (runs at midnight UTC)
+  cron.schedule("0 0 * * *", () => {
+    logger.info("Running nightly plan expiry check");
+    creditsService.downgradeExpiredPlans();
+  });
+
+  app.listen(parseInt(config.PORT), () => {
+    logger.info(`AgentNet backend on port ${config.PORT}`);
+  });
 });

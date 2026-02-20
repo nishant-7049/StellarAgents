@@ -1,20 +1,46 @@
 import { Router } from "express";
+import { Keypair } from "@stellar/stellar-sdk";
 import { creditsService, CreditPlan } from "../services/credits.service.js";
 import { logger } from "../logger.js";
 import { config } from "../config.js";
 
+// Testnet USDC classic asset issuer (Circle testnet USDC)
+const USDC_ISSUER =
+  process.env.USDC_ISSUER || "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+
 export const creditsRoutes = Router();
+
+/**
+ * GET /api/credits/payment-params
+ * Returns facilitator address and USDC issuer for frontend payment building.
+ * Must be defined before /:wallet to avoid being matched as a wallet param.
+ */
+creditsRoutes.get("/payment-params", (req, res) => {
+  try {
+    const facilitatorAddress = config.FACILITATOR_SECRET_KEY
+      ? Keypair.fromSecret(config.FACILITATOR_SECRET_KEY).publicKey()
+      : "";
+
+    res.json({
+      facilitatorAddress,
+      usdcIssuer: USDC_ISSUER,
+      network: "testnet",
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /**
  * GET /api/credits/:wallet
  * Returns credit balance, plan, reset date, and recent history.
  */
-creditsRoutes.get("/:wallet", (req, res) => {
+creditsRoutes.get("/:wallet", async (req, res) => {
   const { wallet } = req.params;
   if (!wallet) return res.status(400).json({ error: "wallet required" });
 
   try {
-    const credits = creditsService.getCredits(wallet);
+    const credits = await creditsService.getCredits(wallet);
     res.json({
       wallet: credits.wallet,
       balance: credits.balance,
@@ -22,6 +48,7 @@ creditsRoutes.get("/:wallet", (req, res) => {
       monthlyQuota: credits.monthlyQuota,
       usedThisMonth: credits.usedThisMonth,
       resetDate: credits.resetDate,
+      expiresAt: credits.expiresAt,
       history: credits.history.slice(-20), // last 20 entries
     });
   } catch (err: any) {
@@ -34,7 +61,7 @@ creditsRoutes.get("/:wallet", (req, res) => {
  * Deduct credits for an action.
  * Body: { wallet, action, count? }
  */
-creditsRoutes.post("/consume", (req, res) => {
+creditsRoutes.post("/consume", async (req, res) => {
   const { wallet, action, count = 1 } = req.body;
   if (!wallet || !action) {
     return res.status(400).json({ error: "wallet and action required" });
@@ -46,11 +73,11 @@ creditsRoutes.post("/consume", (req, res) => {
   }
 
   try {
-    const ok = creditsService.consumeCredits(wallet, action, count);
+    const ok = await creditsService.consumeCredits(wallet, action, count);
     if (!ok) {
       return res.status(402).json({ error: "Insufficient credits. Please upgrade your plan." });
     }
-    const credits = creditsService.getCredits(wallet);
+    const credits = await creditsService.getCredits(wallet);
     res.json({ success: true, balance: credits.balance, consumed: count });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -142,7 +169,7 @@ creditsRoutes.post("/purchase", async (req, res) => {
     }
 
     // Award credits
-    const credits = creditsService.setPlan(wallet, plan as CreditPlan);
+    const credits = await creditsService.setPlan(wallet, plan as CreditPlan);
     logger.info("Plan purchased", { wallet, plan, txHash });
 
     res.json({

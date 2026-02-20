@@ -46,6 +46,10 @@ const envSchema = z.object({
   BLEND_BACKSTOP: z.string().optional(),
   REBALANCE_INTERVAL_MINUTES: z.string().default("5"),
   REBALANCE_DRIFT_THRESHOLD_PCT: z.string().default("0.5"),
+  MONGODB_URI: z.string().default("mongodb://localhost:27017/agentnet"),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  FRONTEND_URL: z.string().default("http://localhost:3000"),
 });
 
 export const config = envSchema.parse(process.env);

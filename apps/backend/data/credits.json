@@ -1,0 +1,139 @@
+{
+  "GABC123TEST456WALLET789XYZ": {
+    "wallet": "GABC123TEST456WALLET789XYZ",
+    "balance": 59,
+    "plan": "free",
+    "monthlyQuota": 100,
+    "usedThisMonth": 41,
+    "resetDate": "2026-02-28T18:30:00.000Z",
+    "history": [
+      {
+        "action": "signup",
+        "amount": 100,
+        "timestamp": "2026-02-20T07:34:30.556Z",
+        "note": "Welcome bonus"
+      },
+      {
+        "action": "yield_query",
+        "amount": -5,
+        "timestamp": "2026-02-20T07:34:30.606Z"
+      },
+      {
+        "action": "create_vault",
+        "amount": -10,
+        "timestamp": "2026-02-20T07:34:30.621Z"
+      },
+      {
+        "action": "register_agent",
+        "amount": -20,
+        "timestamp": "2026-02-20T07:34:30.635Z"
+      },
+      {
+        "action": "execute_tx",
+        "amount": -6,
+        "timestamp": "2026-02-20T07:34:30.651Z"
+      }
+    ],
+    "createdAt": "2026-02-20T07:34:30.556Z"
+  },
+  "GABC123TEST456WALLET999NEW": {
+    "wallet": "GABC123TEST456WALLET999NEW",
+    "balance": 1959,
+    "plan": "pro",
+    "monthlyQuota": 2000,
+    "usedThisMonth": 41,
+    "resetDate": "2026-02-28T18:30:00.000Z",
+    "history": [
+      {
+        "action": "signup",
+        "amount": 100,
+        "timestamp": "2026-02-20T07:35:47.870Z",
+        "note": "Welcome bonus"
+      },
+      {
+        "action": "yield_query",
+        "amount": -5,
+        "timestamp": "2026-02-20T07:35:47.915Z"
+      },
+      {
+        "action": "create_vault",
+        "amount": -10,
+        "timestamp": "2026-02-20T07:35:47.937Z"
+      },
+      {
+        "action": "register_agent",
+        "amount": -20,
+        "timestamp": "2026-02-20T07:35:47.958Z"
+      },
+      {
+        "action": "execute_tx",
+        "amount": -6,
+        "timestamp": "2026-02-20T07:35:47.979Z"
+      },
+      {
+        "action": "signup",
+        "amount": 400,
+        "timestamp": "2026-02-20T07:35:48.031Z",
+        "note": "Upgraded to basic plan"
+      },
+      {
+        "action": "signup",
+        "amount": 1500,
+        "timestamp": "2026-02-20T07:35:48.055Z",
+        "note": "Upgraded to pro plan"
+      }
+    ],
+    "createdAt": "2026-02-20T07:35:47.870Z"
+  },
+  "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5": {
+    "wallet": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    "balance": 100,
+    "plan": "free",
+    "monthlyQuota": 100,
+    "usedThisMonth": 0,
+    "resetDate": "2026-02-28T18:30:00.000Z",
+    "history": [
+      {
+        "action": "signup",
+        "amount": 100,
+        "timestamp": "2026-02-20T14:20:40.820Z",
+        "note": "Welcome bonus"
+      }
+    ],
+    "createdAt": "2026-02-20T14:20:40.820Z"
+  },
+  "GDLCSUDUCBLY5Z727TAZ4ZLUTKYM2CC74FM77M3GJ7IA2BYEQRD6CRZ6": {
+    "wallet": "GDLCSUDUCBLY5Z727TAZ4ZLUTKYM2CC74FM77M3GJ7IA2BYEQRD6CRZ6",
+    "balance": 100,
+    "plan": "free",
+    "monthlyQuota": 100,
+    "usedThisMonth": 0,
+    "resetDate": "2026-02-28T18:30:00.000Z",
+    "history": [
+      {
+        "action": "signup",
+        "amount": 100,
+        "timestamp": "2026-02-20T14:22:56.288Z",
+        "note": "Welcome bonus"
+      }
+    ],
+    "createdAt": "2026-02-20T14:22:56.288Z"
+  },
+  "payment-params": {
+    "wallet": "payment-params",
+    "balance": 100,
+    "plan": "free",
+    "monthlyQuota": 100,
+    "usedThisMonth": 0,
+    "resetDate": "2026-02-28T18:30:00.000Z",
+    "history": [
+      {
+        "action": "signup",
+        "amount": 100,
+        "timestamp": "2026-02-20T14:23:37.239Z",
+        "note": "Welcome bonus"
+      }
+    ],
+    "createdAt": "2026-02-20T14:23:37.239Z"
+  }
+}

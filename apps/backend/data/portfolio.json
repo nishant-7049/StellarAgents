@@ -1,0 +1,193 @@
+{
+  "GTEST_WALLET_REBALANCER_001": {
+    "wallet": "GTEST_WALLET_REBALANCER_001",
+    "vaultAddress": "CVAULT_TEST_001",
+    "totalInvested": 1000,
+    "positions": [
+      {
+        "protocol": "Blend USDC",
+        "protocolKey": "blend",
+        "amountUsdc": 600,
+        "allocationPct": 60,
+        "entryApy": 5.5,
+        "deployedAt": "2026-02-01T00:00:00Z"
+      },
+      {
+        "protocol": "Ondo USDY",
+        "protocolKey": "ondo",
+        "amountUsdc": 400,
+        "allocationPct": 40,
+        "entryApy": 4.8,
+        "deployedAt": "2026-02-01T00:00:00Z"
+      }
+    ],
+    "rebalanceHistory": [
+      {
+        "timestamp": "2026-02-20T08:13:54.138Z",
+        "type": "user_strategy",
+        "fromPositions": [],
+        "toPositions": [
+          {
+            "protocol": "Blend USDC",
+            "protocolKey": "blend",
+            "amountUsdc": 600,
+            "allocationPct": 60,
+            "entryApy": 5.5,
+            "deployedAt": "2026-02-01T00:00:00Z"
+          },
+          {
+            "protocol": "Ondo USDY",
+            "protocolKey": "ondo",
+            "amountUsdc": 400,
+            "allocationPct": 40,
+            "entryApy": 4.8,
+            "deployedAt": "2026-02-01T00:00:00Z"
+          }
+        ],
+        "reason": "User executed strategy",
+        "txHashes": [
+          "demo_seed_tx_001"
+        ],
+        "netApyChange": 5.22
+      }
+    ],
+    "lastUpdated": "2026-02-20T08:13:54.138Z",
+    "createdAt": "2026-02-20T08:13:54.138Z"
+  },
+  "GTEST_REBALANCER_DEMO_001": {
+    "wallet": "GTEST_REBALANCER_DEMO_001",
+    "vaultAddress": "CVAULT_DEMO_REBALANCER_001",
+    "totalInvested": 1000,
+    "positions": [
+      {
+        "protocol": "Blend USDC",
+        "protocolKey": "blend",
+        "amountUsdc": 500,
+        "allocationPct": 50,
+        "entryApy": 7.2,
+        "deployedAt": "2026-02-20T08:17:17.010Z",
+        "liveApy": 7.2
+      },
+      {
+        "protocol": "Ondo USDY",
+        "protocolKey": "ondo",
+        "amountUsdc": 500,
+        "allocationPct": 50,
+        "entryApy": 4.8,
+        "deployedAt": "2026-02-20T08:17:17.010Z",
+        "liveApy": 4.8
+      },
+      {
+        "protocol": "Centrifuge",
+        "protocolKey": "centrifuge",
+        "amountUsdc": 0,
+        "allocationPct": 0,
+        "entryApy": 4.5,
+        "deployedAt": "2026-02-20T08:17:17.010Z",
+        "liveApy": 4.5
+      }
+    ],
+    "rebalanceHistory": [
+      {
+        "timestamp": "2026-02-20T08:17:17.009Z",
+        "type": "user_strategy",
+        "fromPositions": [],
+        "toPositions": [
+          {
+            "protocol": "Ondo USDY",
+            "protocolKey": "ondo",
+            "amountUsdc": 500,
+            "allocationPct": 50,
+            "entryApy": 4.8,
+            "deployedAt": "2026-02-01T00:00:00Z"
+          },
+          {
+            "protocol": "Blend USDC",
+            "protocolKey": "blend",
+            "amountUsdc": 300,
+            "allocationPct": 30,
+            "entryApy": 7.2,
+            "deployedAt": "2026-02-01T00:00:00Z"
+          },
+          {
+            "protocol": "Centrifuge",
+            "protocolKey": "centrifuge",
+            "amountUsdc": 200,
+            "allocationPct": 20,
+            "entryApy": 4.5,
+            "deployedAt": "2026-02-01T00:00:00Z"
+          }
+        ],
+        "reason": "User executed strategy",
+        "txHashes": [
+          "demo_initial_tx"
+        ],
+        "netApyChange": 5.46
+      },
+      {
+        "timestamp": "2026-02-20T08:17:17.010Z",
+        "type": "user_strategy",
+        "fromPositions": [
+          {
+            "protocol": "Ondo USDY",
+            "protocolKey": "ondo",
+            "amountUsdc": 500,
+            "allocationPct": 50,
+            "entryApy": 4.8,
+            "deployedAt": "2026-02-01T00:00:00Z"
+          },
+          {
+            "protocol": "Blend USDC",
+            "protocolKey": "blend",
+            "amountUsdc": 300,
+            "allocationPct": 30,
+            "entryApy": 7.2,
+            "deployedAt": "2026-02-01T00:00:00Z"
+          },
+          {
+            "protocol": "Centrifuge",
+            "protocolKey": "centrifuge",
+            "amountUsdc": 200,
+            "allocationPct": 20,
+            "entryApy": 4.5,
+            "deployedAt": "2026-02-01T00:00:00Z"
+          }
+        ],
+        "toPositions": [
+          {
+            "protocol": "Blend USDC",
+            "protocolKey": "blend",
+            "amountUsdc": 500,
+            "allocationPct": 50,
+            "entryApy": 7.2,
+            "deployedAt": "2026-02-20T08:17:17.010Z",
+            "liveApy": 7.2
+          },
+          {
+            "protocol": "Ondo USDY",
+            "protocolKey": "ondo",
+            "amountUsdc": 500,
+            "allocationPct": 50,
+            "entryApy": 4.8,
+            "deployedAt": "2026-02-20T08:17:17.010Z",
+            "liveApy": 4.8
+          },
+          {
+            "protocol": "Centrifuge",
+            "protocolKey": "centrifuge",
+            "amountUsdc": 0,
+            "allocationPct": 0,
+            "entryApy": 4.5,
+            "deployedAt": "2026-02-20T08:17:17.010Z",
+            "liveApy": 4.5
+          }
+        ],
+        "reason": "Algorithmic rebalance (+0.54% APY)",
+        "txHashes": [],
+        "netApyChange": 0.54
+      }
+    ],
+    "lastUpdated": "2026-02-20T08:17:17.010Z",
+    "createdAt": "2026-02-20T08:17:17.009Z"
+  }
+}

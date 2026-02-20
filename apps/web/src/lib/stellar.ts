@@ -1,4 +1,4 @@
-import { Networks, Contract, nativeToScVal, TransactionBuilder, xdr, scValToNative, BASE_FEE } from "@stellar/stellar-sdk";
+import { Networks, Contract, nativeToScVal, TransactionBuilder, xdr, scValToNative, BASE_FEE, Account, Asset, Operation, Memo } from "@stellar/stellar-sdk";
 import { Server, assembleTransaction } from "@stellar/stellar-sdk/rpc";
 import { signTransaction } from "./freighter";
 import {
@@ -152,4 +152,66 @@ export async function readContract<T = any>(
 export function shortenAddress(address: string, chars = 4): string {
   if (address.length <= chars * 2 + 3) return address;
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
+}
+
+/**
+ * Build a classic Stellar payment transaction (XLM or USDC).
+ * Returns the unsigned transaction XDR string ready for Freighter signing.
+ */
+export async function buildPaymentTx(params: {
+  from: string;
+  to: string;
+  asset: { code: string; issuer: string } | "native";
+  amount: string; // decimal string, e.g. "5.0000000"
+  memo?: string;
+}): Promise<string> {
+  const acctResp = await fetch(`${HORIZON_URL}/accounts/${params.from}`);
+  if (!acctResp.ok) {
+    throw new Error("Wallet account not found on Stellar — fund it with XLM first");
+  }
+  const acctData = await acctResp.json();
+  const account = new Account(params.from, acctData.sequence);
+
+  const stellarAsset =
+    params.asset === "native"
+      ? Asset.native()
+      : new Asset(params.asset.code, params.asset.issuer);
+
+  const builder = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  }).addOperation(
+    Operation.payment({
+      destination: params.to,
+      asset: stellarAsset,
+      amount: params.amount,
+    })
+  );
+
+  if (params.memo) {
+    builder.addMemo(Memo.text(params.memo.slice(0, 28)));
+  }
+
+  return builder.setTimeout(60).build().toXDR();
+}
+
+/**
+ * Submit a signed classic Stellar transaction XDR to Horizon.
+ * Returns the transaction hash on success.
+ */
+export async function submitPaymentTx(signedXdr: string): Promise<string> {
+  const resp = await fetch(`${HORIZON_URL}/transactions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `tx=${encodeURIComponent(signedXdr)}`,
+  });
+  const data = await resp.json();
+  if (!resp.ok) {
+    const code =
+      data.extras?.result_codes?.transaction ||
+      data.extras?.result_codes?.operations?.[0] ||
+      "tx_failed";
+    throw new Error(`Transaction failed: ${code}`);
+  }
+  return data.hash;
 }

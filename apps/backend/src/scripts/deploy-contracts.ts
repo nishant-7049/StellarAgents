@@ -6,7 +6,16 @@ const ROOT = path.resolve(process.cwd(), "../..");
 const CONTRACTS_DIR = path.join(ROOT, "contracts");
 const WASM_DIR = path.join(CONTRACTS_DIR, "target/wasm32-unknown-unknown/release");
 const ENV_CONTRACTS_PATH = path.join(ROOT, ".env.contracts");
-const NETWORK = "testnet";
+
+// Support --network mainnet flag for post-audit mainnet deployment
+const NETWORK_ARG = process.argv.find(a => a.startsWith("--network="))?.split("=")[1]
+  || process.argv[process.argv.indexOf("--network") + 1];
+const NETWORK = (NETWORK_ARG === "mainnet") ? "mainnet" : "testnet";
+
+if (NETWORK === "mainnet") {
+  console.warn("⚠️  MAINNET DEPLOYMENT — Ensure contracts have been audited before proceeding.");
+  console.warn("⚠️  Check AUDIT_CHECKLIST.md for required pre-deployment steps.\n");
+}
 
 // Ensure stellar CLI and cargo are in PATH
 const PATH_ENV = `${process.env.HOME}/.cargo/bin:${process.env.PATH}`;

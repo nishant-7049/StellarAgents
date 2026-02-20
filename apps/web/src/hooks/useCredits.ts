@@ -11,6 +11,7 @@ export interface CreditInfo {
   monthlyQuota: number;
   usedThisMonth: number;
   resetDate: string;
+  expiresAt?: string;
   history: Array<{
     action: string;
     amount: number;
