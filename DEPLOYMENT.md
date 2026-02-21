@@ -182,7 +182,7 @@
 - ✅ Event indexer (30s interval)
 - ✅ Rebalancer cron (5 min interval)
 - ✅ Express server on port 3001
-- ✅ All SDK packages (@stellaragent402/vault, x402-stellar, agent-ai)
+- ✅ All SDK packages (@agentsea/vault, x402-stellar, agent-ai)
 
 ### Critical Fix Applied:
 **Issue:** BigInt serialization error in contract reader

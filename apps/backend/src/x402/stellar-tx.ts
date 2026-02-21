@@ -1,7 +1,7 @@
 import {
   buildAndSubmitTx as sdkBuildAndSubmitTx,
   fundAccount as sdkFundAccount,
-} from "@stellaragent402/x402-stellar";
+} from "@agentsea/x402-stellar";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 

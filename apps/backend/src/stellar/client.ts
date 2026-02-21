@@ -4,7 +4,7 @@ import {
   getLatestLedger as sdkGetLatestLedger,
   generateKeypair as sdkGenerateKeypair,
   fundAccount,
-} from "@stellaragent402/x402-stellar";
+} from "@agentsea/x402-stellar";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 

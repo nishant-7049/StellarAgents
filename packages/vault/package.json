@@ -1,5 +1,5 @@
 {
-  "name": "@stellaragent402/vault",
+  "name": "@agentsea/vault",
   "version": "0.1.0",
   "description": "Smart vault and agent identity SDK for Stellar/Soroban",
   "type": "module",

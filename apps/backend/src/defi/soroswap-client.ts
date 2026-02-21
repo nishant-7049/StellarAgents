@@ -1,8 +1,8 @@
-import { SoroswapClient } from "@stellaragent402/agent-ai";
+import { SoroswapClient } from "@agentsea/agent-ai";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 
-export type { SwapQuote, PoolData } from "@stellaragent402/agent-ai";
+export type { SwapQuote, PoolData } from "@agentsea/agent-ai";
 
 export const soroswapClient = new SoroswapClient({
   stellarRpcUrl: config.STELLAR_RPC_URL,

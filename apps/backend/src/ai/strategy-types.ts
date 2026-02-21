@@ -1,1 +1,1 @@
-export type { YieldStrategy, StrategyResponse } from "@stellaragent402/agent-ai";
+export type { YieldStrategy, StrategyResponse } from "@agentsea/agent-ai";

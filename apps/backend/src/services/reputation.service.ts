@@ -1,4 +1,4 @@
-import { ReputationRegistry } from "@stellaragent402/vault";
+import { ReputationRegistry } from "@agentsea/vault";
 import { Keypair } from "@stellar/stellar-sdk";
 import { config } from "../config.js";
 import { logger } from "../logger.js";

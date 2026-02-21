@@ -1,5 +1,5 @@
-import { settlePayment as sdkSettlePayment } from "@stellaragent402/x402-stellar";
-import type { PaymentPayload, SettlementResult } from "@stellaragent402/x402-stellar";
+import { settlePayment as sdkSettlePayment } from "@agentsea/x402-stellar";
+import type { PaymentPayload, SettlementResult } from "@agentsea/x402-stellar";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 

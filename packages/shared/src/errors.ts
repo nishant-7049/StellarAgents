@@ -1,1 +1,1 @@
-export { ErrorCode, AgentNetError } from "@stellaragent402/x402-stellar";
+export { ErrorCode, AgentNetError } from "@agentsea/x402-stellar";

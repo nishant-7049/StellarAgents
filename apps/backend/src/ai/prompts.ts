@@ -1,1 +1,1 @@
-export { SYSTEM_PROMPT, buildUserPrompt } from "@stellaragent402/agent-ai";
+export { SYSTEM_PROMPT, buildUserPrompt } from "@agentsea/agent-ai";

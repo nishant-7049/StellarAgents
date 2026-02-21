@@ -1,4 +1,4 @@
-import { buildX402Header as sdkBuildX402Header } from "@stellaragent402/x402-stellar";
+import { buildX402Header as sdkBuildX402Header } from "@agentsea/x402-stellar";
 import { config } from "../config.js";
 import { Keypair } from "@stellar/stellar-sdk";
 

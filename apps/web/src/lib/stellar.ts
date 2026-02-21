@@ -6,7 +6,7 @@ import {
   toStroops as sdkToStroops,
   USDC_DECIMALS,
   STROOPS_PER_USDC,
-} from "@stellaragent402/x402-stellar";
+} from "@agentsea/x402-stellar";
 
 export const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK || "testnet";
 export const NETWORK_PASSPHRASE = Networks.TESTNET;

@@ -1,10 +1,10 @@
-import { YieldOptimizer as SdkYieldOptimizer, Rebalancer, BlendClient } from "@stellaragent402/agent-ai";
+import { YieldOptimizer as SdkYieldOptimizer, Rebalancer, BlendClient } from "@agentsea/agent-ai";
 import { blendClient } from "../defi/blend-client.js";
 import { setTargetAllocation } from "../defi/rebalancer.js";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 
-export type { StrategyResponse } from "@stellaragent402/agent-ai";
+export type { StrategyResponse } from "@agentsea/agent-ai";
 
 // Create a Rebalancer-compatible wrapper that delegates to the app-level setTargetAllocation
 const rebalancerProxy = {

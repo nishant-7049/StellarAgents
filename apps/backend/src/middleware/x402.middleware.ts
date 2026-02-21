@@ -1,4 +1,4 @@
-import { createX402Middleware } from "@stellaragent402/x402-stellar";
+import { createX402Middleware } from "@agentsea/x402-stellar";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 

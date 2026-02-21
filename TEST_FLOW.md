@@ -1034,7 +1034,7 @@ Track these metrics during testing:
 3. **Create presentation deck** — architecture diagrams, screenshots, metrics
 4. **Deploy to production** — Vercel (frontend) + Railway (backend)
 5. **Write documentation** — README, API docs, integration guide
-6. **Publish SDK packages** — npm publish for @stellaragent402/* packages
+6. **Publish SDK packages** — npm publish for @agentsea/* packages
 7. **Submit to hackathon** — GitHub repo + demo video + live URL
 
 ---
