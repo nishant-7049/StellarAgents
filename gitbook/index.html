@@ -12,6 +12,12 @@
       --sidebar-background: #0f0f1a;
       --content-background: #13131f;
     }
+    /* hide the loading progress bar in the sidebar */
+    .progress-bar,
+    .app-nav .progress-bar,
+    #nprogress,
+    #nprogress .bar,
+    .docsify-progress-bar { display: none !important; }
   </style>
 </head>
 <body>
@@ -19,7 +25,6 @@
   <script>
     window.$docsify = {
       name: '🌊 AgenticOcean',
-      repo: 'https://github.com/StellarAgent402/StellarRiseInHackathon',
       loadSidebar: '_sidebar.md',
       loadNavbar: false,
       homepage: 'README.md',
