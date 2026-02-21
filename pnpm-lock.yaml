@@ -20,7 +20,7 @@ importers:
 
   apps/backend:
     dependencies:
-      '@agentsea/agent-ai':
+      '@agentsea/defi-agent':
         specifier: workspace:*
         version: link:../../packages/agent-ai
       '@agentsea/vault':
@@ -148,13 +148,13 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^13.1.0
         version: 13.3.0
-      dotenv:
-        specifier: ^16.6.1
-        version: 16.6.1
     devDependencies:
       '@blend-capital/blend-sdk':
         specifier: ^3.2.2
         version: 3.2.2
+      dotenv:
+        specifier: ^16.6.1
+        version: 16.6.1
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
