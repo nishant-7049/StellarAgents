@@ -20,6 +20,15 @@ importers:
 
   apps/backend:
     dependencies:
+      '@agentsea/agent-ai':
+        specifier: workspace:*
+        version: link:../../packages/agent-ai
+      '@agentsea/vault':
+        specifier: workspace:*
+        version: link:../../packages/vault
+      '@agentsea/x402-stellar':
+        specifier: workspace:*
+        version: link:../../packages/x402-stellar
       '@anthropic-ai/sdk':
         specifier: ^0.40.0
         version: 0.40.1
@@ -29,15 +38,6 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^13.1.0
         version: 13.3.0
-      '@stellaragent402/agent-ai':
-        specifier: workspace:*
-        version: link:../../packages/agent-ai
-      '@stellaragent402/vault':
-        specifier: workspace:*
-        version: link:../../packages/vault
-      '@stellaragent402/x402-stellar':
-        specifier: workspace:*
-        version: link:../../packages/x402-stellar
       cors:
         specifier: ^2.8.5
         version: 2.8.6
@@ -93,15 +93,15 @@ importers:
 
   apps/web:
     dependencies:
+      '@agentsea/x402-stellar':
+        specifier: workspace:*
+        version: link:../../packages/x402-stellar
       '@stellar/freighter-api':
         specifier: ^2.0.0
         version: 2.0.0
       '@stellar/stellar-sdk':
         specifier: ^13.1.0
         version: 13.3.0
-      '@stellaragent402/x402-stellar':
-        specifier: workspace:*
-        version: link:../../packages/x402-stellar
       clsx:
         specifier: ^2.1.0
         version: 2.1.1
@@ -148,17 +148,20 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^13.1.0
         version: 13.3.0
+      dotenv:
+        specifier: ^16.6.1
+        version: 16.6.1
     devDependencies:
       '@blend-capital/blend-sdk':
-        specifier: ^2.2.0
-        version: 2.2.0
+        specifier: ^3.2.2
+        version: 3.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
 
   packages/shared:
     dependencies:
-      '@stellaragent402/x402-stellar':
+      '@agentsea/x402-stellar':
         specifier: workspace:*
         version: link:../x402-stellar
     devDependencies:
@@ -203,6 +206,9 @@ packages:
 
   '@blend-capital/blend-sdk@2.2.0':
     resolution: {integrity: sha512-S2P7D1Y45IKBk381gvPWt7rv587B2FUY9Vd8KyXpxkpcB8/IgFeCItoVBidqIW5vbsAG3T1fwHJbcI3bUfFlpw==}
+
+  '@blend-capital/blend-sdk@3.2.2':
+    resolution: {integrity: sha512-z37m86YaUvlogYNcTtwnxraRK3+w3bPPj3lxMe0Ei4LO5MaGN+maB6yTcea8rvizshnZ1bjD5wbvAEnQ8L7rhA==}
 
   '@colors/colors@1.6.0':
     resolution: {integrity: sha512-Ir+AOibqzrIsL6ajt3Rz3LskB7OiMVHqltZmspbW/TJuTVuyOMirVqAkjfY6JISiLHgyNqicAC8AyHHGzNd/dA==}
@@ -735,6 +741,14 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@noble/curves@1.9.7':
+    resolution: {integrity: sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw==}
+    engines: {node: ^14.21.3 || >=16}
+
+  '@noble/hashes@1.8.0':
+    resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
+    engines: {node: ^14.21.3 || >=16}
+
   '@rollup/rollup-android-arm-eabi@4.57.1':
     resolution: {integrity: sha512-A6ehUVSiSaaliTxai040ZpZ2zTevHYbvu/lDoeAteHI8QnaosIzm4qwtezfRg1jOYaUmnzLX1AOD6Z+UJjtifg==}
     cpu: [arm]
@@ -886,12 +900,20 @@ packages:
     resolution: {integrity: sha512-90EArG+eCCEzDGj3OJNoCtwpWDwxjv+rs/RNPhvg4bulpjN/CSRj+Ys/SalRcfM4/WRC5/qAfjzmJBAuquWhkA==}
     engines: {node: '>=18.0.0'}
 
+  '@stellar/stellar-base@14.0.4':
+    resolution: {integrity: sha512-UbNW6zbdOBXJwLAV2mMak0bIC9nw3IZVlQXkv2w2dk1jgCbJjy3oRVC943zeGE5JAm0Z9PHxrIjmkpGhayY7kw==}
+    engines: {node: '>=20.0.0'}
+
   '@stellar/stellar-sdk@13.0.0':
     resolution: {integrity: sha512-+wvmKi+XWwu27nLYTM17EgBdpbKohEkOfCIK4XKfsI4WpMXAqvnqSm98i9h5dAblNB+w8BJqzGs1JY0PtTGm4A==}
 
   '@stellar/stellar-sdk@13.3.0':
     resolution: {integrity: sha512-8+GHcZLp+mdin8gSjcgfb/Lb6sSMYRX6Nf/0LcSJxvjLQR0XHpjGzOiRbYb2jSXo51EnA6kAV5j+4Pzh5OUKUg==}
     engines: {node: '>=18.0.0'}
+
+  '@stellar/stellar-sdk@14.4.3':
+    resolution: {integrity: sha512-QfaScSNd4Ku0GGfaZjR8679+M5gLHG+09OLLqV3Bv1VaDKXjHmhf8ikalz2jlx3oFnmlEpEgnqXIdf4kdD2x/w==}
+    engines: {node: '>=20.0.0'}
 
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
@@ -2291,6 +2313,14 @@ snapshots:
       - bare-url
       - debug
 
+  '@blend-capital/blend-sdk@3.2.2':
+    dependencies:
+      '@stellar/stellar-sdk': 14.4.3
+      buffer: 6.0.3
+      follow-redirects: 1.15.11
+    transitivePeerDependencies:
+      - debug
+
   '@colors/colors@1.6.0': {}
 
   '@dabh/diagnostics@2.0.8':
@@ -2597,6 +2627,12 @@ snapshots:
   '@next/swc-win32-x64-msvc@15.5.12':
     optional: true
 
+  '@noble/curves@1.9.7':
+    dependencies:
+      '@noble/hashes': 1.8.0
+
+  '@noble/hashes@1.8.0': {}
+
   '@rollup/rollup-android-arm-eabi@4.57.1':
     optional: true
 
@@ -2694,6 +2730,15 @@ snapshots:
     transitivePeerDependencies:
       - bare-url
 
+  '@stellar/stellar-base@14.0.4':
+    dependencies:
+      '@noble/curves': 1.9.7
+      '@stellar/js-xdr': 3.1.2
+      base32.js: 0.1.0
+      bignumber.js: 9.3.1
+      buffer: 6.0.3
+      sha.js: 2.4.12
+
   '@stellar/stellar-sdk@13.0.0':
     dependencies:
       '@stellar/stellar-base': 13.1.0
@@ -2720,6 +2765,19 @@ snapshots:
       urijs: 1.19.11
     transitivePeerDependencies:
       - bare-url
+      - debug
+
+  '@stellar/stellar-sdk@14.4.3':
+    dependencies:
+      '@stellar/stellar-base': 14.0.4
+      axios: 1.13.5
+      bignumber.js: 9.3.1
+      eventsource: 2.0.2
+      feaxios: 0.0.23
+      randombytes: 2.1.0
+      toml: 3.0.0
+      urijs: 1.19.11
+    transitivePeerDependencies:
       - debug
 
   '@swc/helpers@0.5.15':

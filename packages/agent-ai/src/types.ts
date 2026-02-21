@@ -81,6 +81,16 @@ export interface AllocationTarget {
   currentPct: number;
 }
 
+export interface PortfolioSnapshot {
+  totalUSDC: number;
+  positions: Array<{
+    protocol: string;   // "blend" | "soroswap" | "cash"
+    poolId: string;     // contract address or "wallet"
+    usdcValue: number;  // USDC equivalent value
+    pct: number;        // 0-100
+  }>;
+}
+
 // ── Config ──
 
 export interface AgentAIConfig {
@@ -91,6 +101,22 @@ export interface AgentAIConfig {
   usdcAddress?: string;
   blendPoolId?: string;
   logger?: LoggerLike;
+  /**
+   * The agent's Stellar secret key (authorized on the user's vault).
+   * Used to sign SorobanAuthorizationEntry for vault.agent_pay() calls.
+   * Never needs admin/owner key — vault policy enforces limits on-chain.
+   */
+  agentSignerSecret?: string;
+  /**
+   * The user's UserVault contract address.
+   * All rebalancing payments flow through this vault via agent_pay().
+   */
+  vaultContract?: string;
+  /**
+   * URL of the x402 facilitator endpoint.
+   * Defaults to local backend.
+   */
+  facilitatorUrl?: string;
 }
 
 // ── Logger ──

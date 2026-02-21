@@ -1,6 +1,6 @@
-import { Keypair, TransactionBuilder } from "@stellar/stellar-sdk";
-import { Server, assembleTransaction } from "@stellar/stellar-sdk/rpc";
-import type { AgentAIConfig, BlendPoolData, LoggerLike } from "./types.js";
+import { Keypair, Contract, TransactionBuilder, nativeToScVal, authorizeEntry } from "@stellar/stellar-sdk";
+import { Server } from "@stellar/stellar-sdk/rpc";
+import type { AgentAIConfig, BlendPoolData, UserBlendPosition, LoggerLike } from "./types.js";
 
 /**
  * Blend Protocol client.
@@ -19,16 +19,16 @@ export class BlendClient {
     this.rpcUrl = config.stellarRpcUrl;
     this.passphrase = config.networkPassphrase;
     this.usdcAddress = config.usdcAddress || "CUSDC";
-    this.defaultPoolId = config.blendPoolId || "CBP7NO6F7FRDHSOFQBT2L2UWYIZ2PU76JKVRYAQTG3KZSQLYAOKIF2WB";
+    this.defaultPoolId = config.blendPoolId || "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF";
     this.log = config.logger ?? console;
   }
 
   async loadPool(poolId?: string): Promise<BlendPoolData> {
     const id = poolId || this.defaultPoolId;
     try {
-      const { Pool, PoolEstimate } = await import("@blend-capital/blend-sdk");
+      const { PoolV2, PoolEstimate } = await import("@blend-capital/blend-sdk");
       const network = { rpc: this.rpcUrl, passphrase: this.passphrase, opts: undefined };
-      const pool: any = await Pool.load(network, id);
+      const pool: any = await PoolV2.load(network, id);
       const oracle = await pool.loadOracle();
       const estimate: any = PoolEstimate.build(pool.reserves, oracle);
       const reserves = [];
@@ -91,64 +91,133 @@ export class BlendClient {
     }
   }
 
-  async executeSupply(params: { poolId: string; signerSecret: string; asset: string; amount: bigint }): Promise<{ txHash: string }> {
-    const opXdr = this.buildSupplyOp({
-      poolId: params.poolId,
-      from: Keypair.fromSecret(params.signerSecret).publicKey(),
-      asset: params.asset,
-      amount: params.amount,
-    });
-
-    if (opXdr.startsWith("mock_")) {
-      this.log.info("Blend supply (mock)", { poolId: params.poolId, amount: params.amount.toString() });
-      return { txHash: "mock_blend_tx_" + Date.now() };
-    }
+  /**
+   * Execute a rebalancing supply via the UserVault.
+   *
+   * Flow:
+   *   1. Build a SorobanAuthorizationEntry for vault.agent_pay(agent → blendPool, amount)
+   *   2. Sign it with the agent signer key (NOT admin/owner)
+   *   3. POST to the x402 facilitator — it wraps + submits on-chain
+   *   4. Vault's smart contract enforces daily limit + destination policy
+   *
+   * No admin key is ever touched.
+   */
+  async executeViaVault(params: {
+    poolId: string;
+    agentSignerSecret: string;
+    vaultContract: string;
+    asset: string;
+    amount: bigint;
+    facilitatorUrl: string;
+    memo: string;
+  }): Promise<{ txHash: string }> {
+    const agentKeypair = Keypair.fromSecret(params.agentSignerSecret);
+    const agentAddress = agentKeypair.publicKey();
 
     try {
       const rpc = new Server(this.rpcUrl);
-      const keypair = Keypair.fromSecret(params.signerSecret);
-      const account = await rpc.getAccount(keypair.publicKey());
-      const { xdr } = await import("@stellar/stellar-sdk");
-      const op = xdr.Operation.fromXDR(opXdr, "base64");
-      const tx = new TransactionBuilder(account, {
+
+      // 1. Build a simulated vault.agent_pay() call to get the auth entry
+      const vault = new Contract(params.vaultContract);
+      const facilitatorAccount = await rpc.getAccount(agentAddress);
+
+      const tx = new TransactionBuilder(facilitatorAccount, {
         fee: "1000000",
         networkPassphrase: this.passphrase,
       })
-        .addOperation(op)
+        .addOperation(
+          vault.call(
+            "agent_pay",
+            nativeToScVal(agentAddress, { type: "address" }),
+            nativeToScVal(params.poolId, { type: "address" }),   // Blend pool = pay_to
+            nativeToScVal(params.amount, { type: "i128" }),
+            nativeToScVal(params.memo, { type: "symbol" }),
+          )
+        )
         .setTimeout(60)
         .build();
 
-      const simResult = await rpc.simulateTransaction(tx);
-      if (!("result" in simResult)) {
-        throw new Error("Blend supply simulation failed");
+      // 2. Simulate to get the auth entry that needs to be signed
+      const sim = await rpc.simulateTransaction(tx);
+      if (!("result" in sim) || !sim.result?.auth?.length) {
+        this.log.warn("Vault agent_pay simulation returned no auth entries — using mock", { params });
+        return { txHash: "mock_vault_tx_" + Date.now() };
       }
 
-      const assembled = assembleTransaction(tx, simResult).build();
-      assembled.sign(keypair);
+      // 3. Sign the agent's SorobanAuthorizationEntry using the SDK helper
+      const latestLedger = await rpc.getLatestLedger();
+      const expirationLedger = latestLedger.sequence + 100;
+      const signedEntry = await authorizeEntry(
+        sim.result.auth[0],
+        agentKeypair,
+        expirationLedger,
+        this.passphrase,
+      );
+      const signedAuthEntry = signedEntry.toXDR("base64");
 
-      const result = await rpc.sendTransaction(assembled);
-      if (result.status !== "PENDING") {
-        throw new Error(`Send failed: ${result.status}`);
-      }
+      // 4. POST to x402 facilitator — it submits vault.agent_pay() on-chain
+      const response = await fetch(`${params.facilitatorUrl}/api/x402/settle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          x402Version: 1,
+          scheme: "stellar-vault",
+          network: "stellar:testnet",
+          payload: {
+            vaultContract: params.vaultContract,
+            agentSigner: agentAddress,
+            payTo: params.poolId,
+            amount: params.amount.toString(),
+            asset: params.asset,
+            memo: params.memo,
+            signedAuthEntry,
+            expirationLedger,
+          },
+        }),
+      });
 
-      let getResult = await rpc.getTransaction(result.hash);
-      let waited = 0;
-      while (getResult.status === "NOT_FOUND" && waited < 30) {
-        await new Promise(r => setTimeout(r, 1000));
-        getResult = await rpc.getTransaction(result.hash);
-        waited++;
-      }
+      const result = await response.json() as any;
+      if (!result.success) throw new Error(result.error || "Facilitator rejected payment");
 
-      if (getResult.status !== "SUCCESS") {
-        throw new Error(`Tx failed: ${getResult.status}`);
-      }
+      this.log.info("Vault agent_pay executed via facilitator", {
+        txHash: result.txHash,
+        amount: params.amount.toString(),
+        vault: params.vaultContract,
+      });
+      return { txHash: result.txHash };
 
-      this.log.info("Blend supply executed", { txHash: result.hash, amount: params.amount.toString() });
-      return { txHash: result.hash };
     } catch (err) {
-      this.log.error("Blend supply failed, returning mock", { error: String(err) });
-      return { txHash: "mock_blend_tx_" + Date.now() };
+      this.log.error("executeViaVault failed", { error: String(err) });
+      throw err;
     }
+  }
+
+  async loadUserPosition(vaultAddress: string, poolId?: string): Promise<UserBlendPosition> {
+    const id = poolId || this.defaultPoolId;
+    try {
+      const { PoolV2, PositionsEstimate } = await import("@blend-capital/blend-sdk");
+      const network = { rpc: this.rpcUrl, passphrase: this.passphrase, opts: undefined };
+      const pool: any = await PoolV2.load(network, id);
+      const oracle = await pool.loadOracle();
+      const user: any = await pool.loadUser(vaultAddress);
+      if (!user?.positions) {
+        return { poolId: id, estimatedSupplyValue: 0, estimatedBorrowValue: 0, netApr: 0 };
+      }
+      const posEst = PositionsEstimate.build(pool, oracle, user.positions);
+      return {
+        poolId: id,
+        estimatedSupplyValue: posEst.totalSupplied || 0,
+        estimatedBorrowValue: posEst.totalBorrowed || 0,
+        netApr: posEst.netApy || 0,
+      };
+    } catch (err) {
+      this.log.warn("loadUserPosition failed, returning 0", { vaultAddress, error: String(err) });
+      return { poolId: id, estimatedSupplyValue: 0, estimatedBorrowValue: 0, netApr: 0 };
+    }
+  }
+
+  getDefaultPoolId(): string {
+    return this.defaultPoolId;
   }
 
   private getMockPoolData(poolId: string): BlendPoolData {

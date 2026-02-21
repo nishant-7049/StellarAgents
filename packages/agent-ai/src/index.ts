@@ -7,6 +7,7 @@ export type {
   SwapQuote,
   PoolData,
   AllocationTarget,
+  PortfolioSnapshot,
   AgentAIConfig,
   LoggerLike,
 } from "./types.js";

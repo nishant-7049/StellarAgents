@@ -8,10 +8,14 @@ import type { AgentAIConfig, SwapQuote, PoolData, LoggerLike } from "./types.js"
 export class SoroswapClient {
   private sdk: any = null;
   private usdcAddress: string;
+  private rpcUrl: string;
+  private passphrase: string;
   private log: LoggerLike;
 
   constructor(config: AgentAIConfig) {
     this.usdcAddress = config.usdcAddress || "CUSDC";
+    this.rpcUrl = config.stellarRpcUrl;
+    this.passphrase = config.networkPassphrase;
     this.log = config.logger ?? console;
     if (config.soroswapApiKey) {
       this.initSdk(config.soroswapApiKey);
@@ -76,6 +80,48 @@ export class SoroswapClient {
     } catch (err) {
       this.log.error("Soroswap build failed", { error: String(err) });
       return null;
+    }
+  }
+
+  async loadLPPosition(vaultAddress: string, pairAddress?: string): Promise<{ pairAddress: string; valueUSDC: number }> {
+    const pair = pairAddress || "SOROSWAP_USDC_XLM_PAIR";
+    try {
+      const { Contract, TransactionBuilder, nativeToScVal, scValToNative } = await import("@stellar/stellar-sdk");
+      const { Server: RpcServer } = await import("@stellar/stellar-sdk/rpc");
+      const rpc = new RpcServer(this.rpcUrl);
+
+      const pairContract = new Contract(pair);
+      const sourceAccount = await rpc.getAccount(vaultAddress).catch(() => null);
+      if (!sourceAccount) return { pairAddress: pair, valueUSDC: 0 };
+
+      const balanceTx = new TransactionBuilder(sourceAccount, { fee: "100", networkPassphrase: this.passphrase })
+        .addOperation(pairContract.call("balance", nativeToScVal(vaultAddress, { type: "address" })))
+        .setTimeout(10).build();
+      const balanceSim = await rpc.simulateTransaction(balanceTx);
+      if (!("result" in balanceSim) || !balanceSim.result?.retval) return { pairAddress: pair, valueUSDC: 0 };
+      const lpBalance = scValToNative(balanceSim.result.retval) as bigint;
+
+      const supplyTx = new TransactionBuilder(sourceAccount, { fee: "100", networkPassphrase: this.passphrase })
+        .addOperation(pairContract.call("total_supply"))
+        .setTimeout(10).build();
+      const supplySim = await rpc.simulateTransaction(supplyTx);
+      if (!("result" in supplySim) || !supplySim.result?.retval) return { pairAddress: pair, valueUSDC: 0 };
+      const totalSupply = scValToNative(supplySim.result.retval) as bigint;
+      if (totalSupply === 0n) return { pairAddress: pair, valueUSDC: 0 };
+
+      const reservesTx = new TransactionBuilder(sourceAccount, { fee: "100", networkPassphrase: this.passphrase })
+        .addOperation(pairContract.call("get_reserves"))
+        .setTimeout(10).build();
+      const reservesSim = await rpc.simulateTransaction(reservesTx);
+      if (!("result" in reservesSim) || !reservesSim.result?.retval) return { pairAddress: pair, valueUSDC: 0 };
+      const [reserve0] = scValToNative(reservesSim.result.retval) as [bigint, bigint];
+
+      // vault's USDC share = (lpBalance / totalSupply) * reserve0 (if token0 = USDC)
+      const usdcValue = Number((lpBalance * reserve0) / totalSupply) / 1e7;
+      return { pairAddress: pair, valueUSDC: usdcValue };
+    } catch (err) {
+      this.log.warn("loadLPPosition failed, returning 0", { pair, error: String(err) });
+      return { pairAddress: pair, valueUSDC: 0 };
     }
   }
 

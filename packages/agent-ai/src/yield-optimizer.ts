@@ -9,6 +9,7 @@ import type {
   StrategyResponse,
   BlendPoolData,
   PoolData,
+  PortfolioSnapshot,
   LoggerLike,
 } from "./types.js";
 
@@ -29,8 +30,10 @@ export class YieldOptimizer {
   private rebalancer: Rebalancer | null;
   private usdcAddress: string;
   private log: LoggerLike;
+  private config: AgentAIConfig;
 
   constructor(config: AgentAIConfig, rebalancer?: Rebalancer) {
+    this.config = config;
     this.anthropic = config.anthropicApiKey
       ? new Anthropic({ apiKey: config.anthropicApiKey })
       : null;
@@ -61,18 +64,39 @@ export class YieldOptimizer {
       this.soroswapClient.getPools(),
     ]);
     const poolContext = this.formatPoolContext(blendData, soroswapPools);
-    const strategy = this.anthropic
-      ? await this.generateWithClaude(query, poolContext, riskTolerance, amount)
-      : this.fallbackStrategy(riskTolerance, amount);
+    let strategy;
+    if (this.anthropic) {
+      try {
+        strategy = await this.generateWithClaude(query, poolContext, riskTolerance, amount);
+      } catch (err) {
+        this.log.warn("Claude unavailable, using fallback strategy", { error: err });
+        strategy = this.fallbackStrategy(riskTolerance, amount);
+      }
+    } else {
+      strategy = this.fallbackStrategy(riskTolerance, amount);
+    }
 
     if (this.rebalancer && strategy.strategies.length > 0) {
+      let snapshot: PortfolioSnapshot | null = null;
+      if (this.config.vaultContract) {
+        try {
+          snapshot = await this.rebalancer.readCurrentPortfolio(this.config.vaultContract);
+        } catch (err) {
+          this.log.warn("Could not read current portfolio, using currentPct: 0", { error: err });
+        }
+      }
+
       this.rebalancer.setTargetAllocation(
-        strategy.strategies.map(s => ({
-          protocol: s.protocol.toLowerCase().includes("blend") ? "blend" : "soroswap",
-          asset: this.usdcAddress,
-          targetPct: s.allocation_pct,
-          currentPct: 0,
-        }))
+        strategy.strategies.map(s => {
+          const protocol = s.protocol.toLowerCase().includes("blend") ? "blend" : "soroswap";
+          const pos = snapshot?.positions.find(p => p.protocol === protocol);
+          return {
+            protocol,
+            asset: this.usdcAddress,
+            targetPct: s.allocation_pct,
+            currentPct: pos?.pct ?? 0,
+          };
+        })
       );
     }
 
