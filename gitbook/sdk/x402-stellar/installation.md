@@ -33,6 +33,18 @@ AGENT_SIGNER_SECRET_KEY=S...        # Signs vault.agent_pay() auth entries
 
 The facilitator account needs XLM to pay transaction fees. Fund it via [Stellar Friendbot](https://friendbot.stellar.org/?addr=YOUR_ADDRESS) on testnet.
 
+### Mainnet
+
+On mainnet, use:
+
+```bash
+STELLAR_RPC_URL=https://soroban.stellar.org
+STELLAR_HORIZON_URL=https://horizon.stellar.org
+STELLAR_NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
+```
+
+There is **no Friendbot** on mainnet. The facilitator must hold real XLM for fees, and `USDC_SAC_ADDRESS` must be the mainnet USDC SAC contract.
+
 ## TypeScript
 
 Full types are shipped in the package:

@@ -6,7 +6,7 @@ Registering an agent creates an on-chain NFT-like record in the `AgentRegistry` 
 
 ## Go to the Register page
 
-Navigate to `/register` in the sidebar.
+Navigate to `/app/register` in the sidebar.
 
 ---
 
@@ -59,7 +59,7 @@ Keep the secret key in your `.env` file as `AGENT_SIGNER_SECRET_KEY`. The public
 Click **Register Agent**. Freighter prompts you to sign the `AgentRegistry.register()` transaction.
 
 After confirmation:
-- Your agent appears in the Agent Marketplace (`/agents`)
+- Your agent appears in the Agent Marketplace (`/app/agents`)
 - The registry assigns it a sequential ID (e.g., agent #5)
 - Anyone can look up your agent by ID or by your owner address
 

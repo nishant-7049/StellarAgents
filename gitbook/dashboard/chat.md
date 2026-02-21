@@ -1,6 +1,6 @@
 # Chat with the AI Agent
 
-The **Chat** page (`/chat`) is where you interact with the AI yield optimizer. Every query is paid for via the x402 protocol — `0.01 USDC` deducted from your vault per question.
+The **Chat** page (`/app/chat`) is where you interact with the AI yield optimizer. Every query is paid for via the x402 protocol — `0.01 USDC` deducted from your vault per question.
 
 ---
 
@@ -27,7 +27,7 @@ The AI agent knows about live Stellar DeFi rates and can help you:
 
 ## What happens under the hood
 
-1. The frontend calls `buildX402Header()` with your vault's agent signer
+1. The frontend calls the backend `POST /api/x402/build-header` endpoint (which uses `buildX402Header()` under the hood)
 2. It sends the query to the backend with the `X-PAYMENT` header
 3. The backend's x402 middleware calls `settlePayment()` — your vault pays `0.01 USDC`
 4. The AI engine reads live Blend and Soroswap rates

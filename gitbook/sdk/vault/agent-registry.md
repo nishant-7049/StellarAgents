@@ -7,24 +7,24 @@ Read and write access to the on-chain `AgentRegistry` contract — an ERC-8004-i
 ```typescript
 import { AgentRegistry } from "@agenticocean/vault";
 
-const registry = new AgentRegistry({
+const AGENT_REGISTRY = "CC7CSOZE2KA2WVSFIQPJKGNHCETOKK4UCEHT66CGXLNA5ECA4HHPHH7V";
+
+const registry = new AgentRegistry(AGENT_REGISTRY, {
   rpcUrl: "https://soroban-testnet.stellar.org",
   networkPassphrase: "Test SDF Network ; September 2015",
 });
-
-const AGENT_REGISTRY = "CC7CSOZE2KA2WVSFIQPJKGNHCETOKK4UCEHT66CGXLNA5ECA4HHPHH7V";
 ```
 
 ---
 
 ## Read Methods
 
-### `listAgents(registryAddress, startId?, limit?)`
+### `listAgents(startId?, limit?)`
 
 Get a paginated list of active agents.
 
 ```typescript
-const agents = await registry.listAgents(AGENT_REGISTRY, 1, 20);
+const agents = await registry.listAgents(1, 20);
 agents.forEach(agent => {
   console.log(`[${agent.id}] ${agent.name} — ${agent.owner}`);
   const meta = JSON.parse(agent.agentUri);
@@ -37,12 +37,12 @@ agents.forEach(agent => {
 
 ---
 
-### `getAgent(registryAddress, agentId)`
+### `getAgent(agentId)`
 
 Fetch a single agent by its numeric ID.
 
 ```typescript
-const agent = await registry.getAgent(AGENT_REGISTRY, 1);
+const agent = await registry.getAgent(1);
 console.log(`Name: ${agent.name}`);
 console.log(`Owner: ${agent.owner}`);
 console.log(`Vault: ${agent.vaultAddress}`);
@@ -54,12 +54,12 @@ console.log(`Active: ${agent.isActive}`);
 
 ---
 
-### `getAgentByOwner(registryAddress, ownerAddress)`
+### `getAgentByOwner(ownerAddress)`
 
 Find the agent ID registered by a given owner.
 
 ```typescript
-const agentId = await registry.getAgentByOwner(AGENT_REGISTRY, "G...OWNER...");
+const agentId = await registry.getAgentByOwner("G...OWNER...");
 if (agentId !== null) {
   const agent = await registry.getAgent(AGENT_REGISTRY, agentId);
   console.log(`Your agent: ${agent.name}`);
@@ -70,12 +70,12 @@ if (agentId !== null) {
 
 ---
 
-### `getAgentCount(registryAddress)`
+### `getAgentCount()`
 
 Total number of active agents.
 
 ```typescript
-const count = await registry.getAgentCount(AGENT_REGISTRY);
+const count = await registry.getAgentCount();
 console.log(`${count} agents registered`);
 ```
 
@@ -157,9 +157,9 @@ const signed = await signTransaction(assembled.toXDR(), { networkPassphrase: Net
 
 ## ERC-8004 Mapping
 
-AgentiCOcean's registry implements the Stellar equivalent of [ERC-8004](https://github.com/agentsea/erc8004):
+AgenticOcean's registry implements the Stellar equivalent of [ERC-8004](https://github.com/agentsea/erc8004):
 
-| ERC-8004 | AgentiCOcean | Notes |
+| ERC-8004 | AgenticOcean | Notes |
 |----------|-------------|-------|
 | `tokenId` | `id` | Sequential u32 |
 | `owner` | `owner` | Stellar Address |

@@ -7,24 +7,24 @@ Read-only access to a deployed `UserVault` contract. Check balances, spending hi
 ```typescript
 import { UserVault } from "@agenticocean/vault";
 
-const vault = new UserVault({
+const VAULT_ADDRESS = "C...YOUR_VAULT_ADDRESS...";
+
+const vault = new UserVault(VAULT_ADDRESS, {
   rpcUrl: "https://soroban-testnet.stellar.org",
   networkPassphrase: "Test SDF Network ; September 2015",
 });
-
-const VAULT_ADDRESS = "C...YOUR_VAULT_ADDRESS...";
 ```
 
 ---
 
 ## Methods
 
-### `getBalance(vaultAddress)`
+### `getBalance()`
 
 Get the USDC balance held in the vault (in stroops).
 
 ```typescript
-const balanceStroops = await vault.getBalance(VAULT_ADDRESS);
+const balanceStroops = await vault.getBalance();
 const balanceUsdc = Number(balanceStroops) / 1e7;
 console.log(`Balance: $${balanceUsdc.toFixed(2)} USDC`);
 ```
@@ -35,12 +35,12 @@ console.log(`Balance: $${balanceUsdc.toFixed(2)} USDC`);
 
 ---
 
-### `getTotalSpent(vaultAddress)`
+### `getTotalSpent()`
 
 Lifetime USDC spent through `agent_pay()` — all agents combined.
 
 ```typescript
-const spent = await vault.getTotalSpent(VAULT_ADDRESS);
+const spent = await vault.getTotalSpent();
 const spentUsdc = Number(spent) / 1e7;
 console.log(`Total agent payments: $${spentUsdc.toFixed(4)} USDC`);
 ```
@@ -49,12 +49,12 @@ console.log(`Total agent payments: $${spentUsdc.toFixed(4)} USDC`);
 
 ---
 
-### `getAgentPolicy(vaultAddress, agentAddress)`
+### `getAgentPolicy(agentAddress)`
 
 Fetch a specific agent's spending policy on this vault.
 
 ```typescript
-const policy = await vault.getAgentPolicy(VAULT_ADDRESS, "G...AGENT_ADDRESS...");
+const policy = await vault.getAgentPolicy("G...AGENT_ADDRESS...");
 
 if (policy) {
   const limit = Number(policy.dailyLimit) / 1e7;
@@ -70,17 +70,17 @@ if (policy) {
 
 ---
 
-### `getRemainingLimit(vaultAddress, agentAddress)`
+### `getRemainingLimit(agentAddress)`
 
 How much USDC the agent can still spend today (auto-resets after 24 hours).
 
 ```typescript
-const remaining = await vault.getRemainingLimit(VAULT_ADDRESS, "G...AGENT...");
+const remaining = await vault.getRemainingLimit("G...AGENT...");
 const remainingUsdc = Number(remaining) / 1e7;
 console.log(`Remaining today: $${remainingUsdc.toFixed(4)} USDC`);
 ```
 
-**Returns:** `string | null` (stroops, or null if agent not found)
+**Returns:** `string` (stroops; returns `"0"` if agent not found)
 
 ---
 

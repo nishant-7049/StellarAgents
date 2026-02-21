@@ -1,6 +1,6 @@
 # Portfolio & Rebalancing
 
-The **Portfolio** page (`/portfolio`) shows your deployed DeFi positions, earnings, and lets you trigger or monitor automatic rebalancing.
+The **Portfolio** page (`/app/portfolio`) shows your deployed DeFi positions, earnings, and lets you trigger or monitor automatic rebalancing.
 
 ---
 

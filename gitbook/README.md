@@ -1,12 +1,12 @@
-# AgentiCOcean — Stellar DeFi Agent Infrastructure
+# AgenticOcean — Stellar DeFi Agent Infrastructure
 
 Welcome to the official documentation for the **@agenticocean** suite of open-source packages — a complete toolkit for building AI agents that autonomously manage DeFi positions on the Stellar blockchain.
 
 ---
 
-## What is AgentiCOcean?
+## What is AgenticOcean?
 
-AgentiCOcean is a three-layer infrastructure stack that lets AI agents earn yield, pay for services, and prove their identity on Stellar — all without any centralized custody.
+AgenticOcean is a three-layer infrastructure stack that lets AI agents earn yield, pay for services, and prove their identity on Stellar — all without any centralized custody.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -46,7 +46,7 @@ Implementation of the x402 HTTP payment protocol for Stellar. Agents include a c
 
 ## Dashboard
 
-If you want to use the full system without writing code, the AgentiCOcean **dashboard** at `localhost:3000` (or the hosted URL) lets you:
+If you want to use the full system without writing code, the AgenticOcean **dashboard** at `localhost:3000` (or the hosted URL) lets you:
 
 - Connect your Freighter wallet
 - Create and fund your vault
@@ -87,9 +87,9 @@ strategy.strategies.forEach(s =>
 
 ## Network
 
-All packages work with **Stellar Testnet** out of the box. Mainnet is supported by switching the `stellarRpcUrl` and `networkPassphrase` fields.
+All packages work with **Stellar Testnet** out of the box. Mainnet is supported by switching the `stellarRpcUrl` and `networkPassphrase` fields (or by using the `TESTNET` / `MAINNET` constants from `@agenticocean/x402-stellar`).
 
 | Network | RPC | Passphrase |
 |---------|-----|------------|
 | Testnet | `https://soroban-testnet.stellar.org` | `Test SDF Network ; September 2015` |
-| Mainnet | `https://soroban-mainnet.stellar.org` | `Public Global Stellar Network ; September 2015` |
+| Mainnet | `https://soroban.stellar.org` | `Public Global Stellar Network ; September 2015` |

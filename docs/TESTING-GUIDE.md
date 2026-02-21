@@ -1,4 +1,4 @@
-# AgentNet Stellar — Full Testing Guide
+# AgenticOcean — Full Testing Guide
 
 > **Network: Stellar TESTNET only.**
 > Testnet XLM is free via Friendbot. No real funds needed.

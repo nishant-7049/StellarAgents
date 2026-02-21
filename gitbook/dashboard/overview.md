@@ -1,6 +1,6 @@
 # Dashboard Overview
 
-The AgentiCOcean dashboard is a web interface that lets you manage your AI agent infrastructure without writing any code.
+The AgenticOcean dashboard is a web interface that lets you manage your AI agent infrastructure without writing any code.
 
 **URL:** `http://localhost:3000` (local) or your deployed URL
 
@@ -13,20 +13,20 @@ The sidebar gives you access to all features:
 | Page | URL | What you do there |
 |------|-----|-------------------|
 | Dashboard | `/app` | Overview — vault stats, agent status, quick actions |
-| Vault | `/vault` | Create vault, deposit USDC, manage agents |
-| Agents | `/agents` | Browse registered agents, see capabilities and pricing |
-| Chat | `/chat` | Ask the AI yield optimizer — pay per query via x402 |
-| Portfolio | `/portfolio` | See deployed positions, earnings, rebalance history |
-| Register | `/register` | Register your AI agent on-chain |
-| History | `/history` | Transaction history for your vault |
+| Vault | `/app/vault` | Create vault, deposit USDC, manage agents |
+| Agents | `/app/agents` | Browse registered agents, see capabilities and pricing |
+| Chat | `/app/chat` | Ask the AI yield optimizer — pay per query via x402 |
+| Portfolio | `/app/portfolio` | See deployed positions, earnings, rebalance history |
+| Register | `/app/register` | Register your AI agent on-chain |
+| History | `/app/history` | Transaction history for your vault |
 
 ---
 
 ## Prerequisites
 
 1. **Freighter wallet** — install the [Freighter browser extension](https://freighter.app) and create or import a Stellar account
-2. **Testnet XLM** — fund your Freighter account via [Stellar Friendbot](https://friendbot.stellar.org/?addr=YOUR_ADDRESS)
-3. **Testnet USDC** — contact the team for testnet USDC, or use the setup script
+2. **Testnet XLM** — for testnet development, fund your Freighter account via [Stellar Friendbot](https://friendbot.stellar.org/?addr=YOUR_ADDRESS)
+3. **USDC** — on testnet, use the setup script; on mainnet, deposit real USDC into your vault
 
 ---
 
@@ -65,3 +65,5 @@ The main dashboard (`/app`) shows:
 ## Testnet vs Mainnet
 
 The dashboard connects to **Stellar Testnet** by default. The network indicator in the top right shows the current network. Testnet transactions have no real-world value — ideal for development and demos.
+
+For mainnet, set `NEXT_PUBLIC_STELLAR_NETWORK=mainnet` and follow the [Mainnet guide](../getting-started/mainnet.md).

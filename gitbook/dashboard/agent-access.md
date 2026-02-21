@@ -1,6 +1,6 @@
 # Manage Agent Access
 
-The **Vault** page (`/vault`) lets you control exactly which agents can spend from your vault, how much they can spend per day, and which addresses they're allowed to pay.
+The **Vault** page (`/app/vault`) lets you control exactly which agents can spend from your vault, how much they can spend per day, and which addresses they're allowed to pay.
 
 ---
 
@@ -52,7 +52,14 @@ On the Vault page, each authorized agent shows:
 
 From the SDK:
 ```typescript
-const remaining = await vault.getRemainingLimit(vaultAddress, agentAddress);
+import { UserVault } from "@agenticocean/vault";
+
+const vault = new UserVault(vaultAddress, {
+  rpcUrl: "https://soroban-testnet.stellar.org",
+  networkPassphrase: "Test SDF Network ; September 2015",
+});
+
+const remaining = await vault.getRemainingLimit(agentAddress);
 const remainingUsdc = Number(remaining) / 1e7;
 console.log(`Agent can still spend: $${remainingUsdc.toFixed(4)} USDC today`);
 ```

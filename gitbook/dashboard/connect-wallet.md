@@ -45,6 +45,18 @@ This gives you 10,000 XLM — enough for thousands of testnet transactions.
 
 ---
 
+## Mainnet (Public Network)
+
+For mainnet:
+
+1. Open Freighter
+2. Switch network to **Public**
+3. Fund your account with real XLM (fees) and deposit real USDC before using x402 flows
+
+There is **no Friendbot** on mainnet. See: [Mainnet guide](../getting-started/mainnet.md)
+
+---
+
 ## Troubleshooting
 
 **"Freighter not detected"** — Make sure the extension is installed and enabled in your browser.

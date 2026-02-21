@@ -1,8 +1,8 @@
-# AgentNet Stellar
+# AgenticOcean — Agent Wallets + x402 on Stellar
 
-**Give Your AI Agents a Wallet on Stellar**
+**Give your AI agents a wallet on Stellar**
 
-AgentNet enables AI agents to autonomously pay for services using Stellar smart vaults with delegated spending controls, powered by the x402 payment protocol.
+AgenticOcean enables AI agents to autonomously pay for services using Stellar smart vaults with delegated spending controls, powered by the x402 payment protocol.
 
 ## Architecture
 
@@ -32,4 +32,4 @@ pnpm dev:web       # starts on :3000
 
 ## Built for
 
-SDF Issue #633 — Stellar Hackathon, February 2026
+SDF Issue #633 — Stellar Hackathon, February 2026 (now extended for mainnet)

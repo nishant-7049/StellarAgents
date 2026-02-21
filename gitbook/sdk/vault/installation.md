@@ -28,14 +28,23 @@ const config = {
   networkPassphrase: "Test SDF Network ; September 2015",
 };
 
-const vaultFactory = new VaultFactory(config);
-const userVault = new UserVault(config);
-const agentRegistry = new AgentRegistry(config);
+const CONTRACTS = {
+  vaultFactory: "CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW",
+  agentRegistry: "CC7CSOZE2KA2WVSFIQPJKGNHCETOKK4UCEHT66CGXLNA5ECA4HHPHH7V",
+};
+
+const vaultFactory = new VaultFactory(CONTRACTS.vaultFactory, config);
+const agentRegistry = new AgentRegistry(CONTRACTS.agentRegistry, config);
+
+// UserVault is constructed per-vault instance:
+const userVault = new UserVault("C...YOUR_VAULT_ADDRESS...", config);
 ```
 
 ## Contract Addresses
 
-You'll need the deployed contract addresses. For testnet, use these:
+You'll need the deployed contract addresses.
+
+For **testnet**, you can use the hackathon deployment addresses:
 
 ```typescript
 const CONTRACTS = {
@@ -44,3 +53,5 @@ const CONTRACTS = {
   usdcSac: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
 };
 ```
+
+For **mainnet**, you will deploy your own contracts (or use your production deployment) and set those addresses accordingly. See: [Mainnet guide](../../getting-started/mainnet.md)

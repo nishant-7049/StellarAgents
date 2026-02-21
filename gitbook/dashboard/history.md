@@ -1,6 +1,6 @@
 # Transaction History
 
-The **History** page (`/history`) shows the on-chain transaction history for your vault address, fetched live from Stellar Horizon.
+The **History** page (`/app/history`) shows the on-chain transaction history for your vault address, fetched live from Stellar Horizon.
 
 ---
 

@@ -1,4 +1,4 @@
-# x402 Protocol Specification for Stellar — AgentNet
+# x402 Protocol Specification for Stellar — AgenticOcean
 
 > **Verified on Stellar Testnet** — 2026-02-12
 > All addresses, flows, and transaction hashes are real testnet data.
@@ -25,7 +25,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    AgentNet System Architecture                  │
+│                  AgenticOcean System Architecture                │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  ┌──────────┐    HTTP 402     ┌──────────────┐                 │

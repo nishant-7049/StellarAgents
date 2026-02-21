@@ -4,6 +4,14 @@ AI-powered DeFi yield optimization for the Stellar blockchain. Query live rates 
 
 ---
 
+## When to use this SDK
+
+Use `@agenticocean/defi-agent` when you want:
+
+- A **structured yield strategy** response (`optimize()` returns a JSON allocation plan)
+- Live on-chain inputs from **Blend** and **Soroswap**
+- A lightweight **rebalancer loop** (drift monitoring + suggested moves)
+
 ## Install
 
 ```bash
@@ -91,3 +99,16 @@ interface AgentAIConfig {
 | USDC SAC | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
 
 These are Stellar testnet addresses. Mainnet addresses differ.
+
+---
+
+## Mainnet
+
+Switch to mainnet by changing endpoints + passphrase:
+
+- RPC: `https://soroban.stellar.org`
+- Passphrase: `Public Global Stellar Network ; September 2015`
+
+You’ll also need the **mainnet USDC SAC address** (derive it from the USDC issuer) and a **mainnet Blend pool ID** for the pool you want to query.
+
+See: [Mainnet guide](../../getting-started/mainnet.md)

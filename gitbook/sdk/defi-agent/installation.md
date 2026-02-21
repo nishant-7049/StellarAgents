@@ -42,6 +42,17 @@ BLEND_POOL_ID=CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF
 USDC_ADDRESS=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 ```
 
+### Mainnet
+
+For mainnet, use:
+
+```bash
+STELLAR_RPC_URL=https://soroban.stellar.org
+STELLAR_NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
+```
+
+Then set `USDC_ADDRESS` and `BLEND_POOL_ID` to your mainnet values.
+
 ## TypeScript
 
 The package ships with full TypeScript types (`dist/index.d.ts`). No `@types/` package needed.

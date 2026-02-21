@@ -4,6 +4,7 @@
 * [Introduction](README.md)
 * [Quick Start](getting-started/quick-start.md)
 * [Architecture](getting-started/architecture.md)
+* [Mainnet](getting-started/mainnet.md)
 
 **@agenticocean/defi-agent**
 * [Overview](sdk/defi-agent/overview.md)

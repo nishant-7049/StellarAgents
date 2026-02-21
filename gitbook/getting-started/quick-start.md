@@ -1,6 +1,6 @@
 # Quick Start
 
-Get up and running with AgentiCOcean in 5 minutes.
+Get up and running with AgenticOcean in 5 minutes.
 
 ---
 
@@ -108,13 +108,14 @@ If you have a deployed vault and want to check your position:
 ```typescript
 import { UserVault } from "@agenticocean/vault";
 
-const vault = new UserVault({
+const vault = new UserVault("C...YOUR_VAULT_ADDRESS...", {
   rpcUrl: "https://soroban-testnet.stellar.org",
   networkPassphrase: "Test SDF Network ; September 2015",
 });
 
-const balance = await vault.getBalance("C...YOUR_VAULT_ADDRESS...");
-console.log(`Vault balance: ${balance} USDC`);
+const balance = await vault.getBalance();
+const balanceUsdc = Number(balance) / 1e7;
+console.log(`Vault balance: $${balanceUsdc.toFixed(2)} USDC`);
 ```
 
 ---
@@ -125,3 +126,11 @@ console.log(`Vault balance: ${balance} USDC`);
 - [Rebalancer docs](../sdk/defi-agent/rebalancer.md) — set targets, auto-rebalance with drift thresholds
 - [Create a vault via the dashboard](../dashboard/create-vault.md) — no code required
 - [x402 payment protocol](../sdk/x402-stellar/overview.md) — make your API agent-payable
+
+---
+
+## Mainnet
+
+This quick start uses **testnet** by default. For **mainnet** setup (real funds, audited contracts, and mainnet USDC), follow:
+
+- [Mainnet guide](mainnet.md)

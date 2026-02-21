@@ -19,7 +19,7 @@ HTTP 402 is the "Payment Required" status code — unused since 1995, finally ge
 1. **No payment?** → `402 Payment Required` with payment instructions
 2. **Payment attached?** → verify + settle on-chain → `200 OK`
 
-In AgentiCOcean, payment is a signed Soroban auth entry that authorizes `vault.agent_pay()`. The facilitator submits it to Stellar and returns a `txHash` as proof.
+In AgenticOcean, payment is a signed Soroban auth entry that authorizes `vault.agent_pay()`. The facilitator submits it to Stellar and returns a `txHash` as proof.
 
 ---
 
@@ -103,7 +103,7 @@ formatUsdc(10000000n) // "1.00"
 
 ## Quick Demo
 
-**Server** — add payment gate to a route:
+**Server** — add a payment gate to a route (Express):
 
 ```typescript
 import express from "express";
@@ -111,14 +111,18 @@ import { createX402Middleware } from "@agenticocean/x402-stellar";
 
 const app = express();
 
-app.use("/api/yield/query", createX402Middleware({
-  price: "100000",  // 0.01 USDC per request
-  description: "AI yield optimization query",
-  vaultFactoryAddress: "CASU6...",
-  facilitatorSecret: process.env.FACILITATOR_SECRET_KEY,
-}));
+const x402 = createX402Middleware({
+  rpcUrl: "https://soroban-testnet.stellar.org",
+  horizonUrl: "https://horizon-testnet.stellar.org",
+  networkPassphrase: "Test SDF Network ; September 2015",
+  facilitatorSecret: process.env.FACILITATOR_SECRET_KEY!,
+  usdcAddress: "C...USDC_SAC_ADDRESS...",
+});
 
-app.get("/api/yield/query", (req, res) => {
+app.get("/api/yield/query", x402({
+  price: "100000", // 0.01 USDC in stroops
+  description: "AI yield optimization query",
+}), (req: any, res) => {
   res.json({ strategies: [...], x402: req.x402 });
 });
 ```
@@ -130,8 +134,13 @@ import { buildX402Header } from "@agenticocean/x402-stellar";
 
 const header = await buildX402Header({
   vaultContract: "C...VAULT...",
-  agentSignerSecret: process.env.AGENT_SIGNER_SECRET_KEY,
-  paymentRequirements: await fetch(url).then(r => r.json()),
+  agentSigner: "G...AGENT_PUBLIC_KEY...",
+  agentSecret: process.env.AGENT_SIGNER_SECRET_KEY!,
+  payTo: "G...FACILITATOR_PUBLIC_KEY...",
+  amount: "100000",
+  memo: "yield_query",
+  agentId: 1,
+  usdcAddress: "C...USDC_SAC_ADDRESS...",
   rpcUrl: "https://soroban-testnet.stellar.org",
   networkPassphrase: "Test SDF Network ; September 2015",
 });
@@ -140,3 +149,17 @@ const response = await fetch(url, {
   headers: { "X-PAYMENT": header },
 });
 ```
+
+---
+
+## Mainnet
+
+For mainnet, switch network config values:
+
+- Soroban RPC: `https://soroban.stellar.org`
+- Horizon: `https://horizon.stellar.org`
+- Passphrase: `Public Global Stellar Network ; September 2015`
+
+Then use the **mainnet USDC SAC** (derive it from the USDC issuer) and deploy your contracts. See:
+
+- [Mainnet guide](../../getting-started/mainnet.md)

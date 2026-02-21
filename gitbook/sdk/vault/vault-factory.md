@@ -7,27 +7,24 @@ Interacts with the on-chain `VaultFactory` contract, which deploys and tracks in
 ```typescript
 import { VaultFactory } from "@agenticocean/vault";
 
-const factory = new VaultFactory({
+const VAULT_FACTORY = "CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW";
+
+const factory = new VaultFactory(VAULT_FACTORY, {
   rpcUrl: "https://soroban-testnet.stellar.org",
   networkPassphrase: "Test SDF Network ; September 2015",
 });
-
-const VAULT_FACTORY = "CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW";
 ```
 
 ---
 
 ## Methods
 
-### `getVaultForOwner(factoryAddress, ownerAddress)`
+### `getVault(ownerAddress)`
 
 Look up a user's vault address. Returns `null` if the user hasn't created a vault yet.
 
 ```typescript
-const vaultAddress = await factory.getVaultForOwner(
-  VAULT_FACTORY,
-  "G...USER_PUBLIC_KEY..."
-);
+const vaultAddress = await factory.getVault("G...USER_PUBLIC_KEY...");
 
 if (vaultAddress) {
   console.log(`Vault: ${vaultAddress}`);
@@ -40,24 +37,24 @@ if (vaultAddress) {
 
 ---
 
-### `hasVault(factoryAddress, ownerAddress)`
+### `hasVault(ownerAddress)`
 
 Check if a user has a vault without fetching the address.
 
 ```typescript
-const has = await factory.hasVault(VAULT_FACTORY, "G...OWNER...");
+const has = await factory.hasVault("G...OWNER...");
 ```
 
 **Returns:** `boolean`
 
 ---
 
-### `getVaultCount(factoryAddress)`
+### `vaultCount()`
 
 Total number of vaults deployed through this factory.
 
 ```typescript
-const count = await factory.getVaultCount(VAULT_FACTORY);
+const count = await factory.vaultCount();
 console.log(`${count} vaults created`);
 ```
 
@@ -105,7 +102,7 @@ const result = await rpc.sendTransaction(
 );
 ```
 
-The vault address is deterministic — derived from the owner's public key as a salt — so you can look it up immediately after creation using `getVaultForOwner()`.
+The vault address is deterministic — derived from a monotonically increasing salt in the factory — and each owner can only register one vault. You can look it up after creation using `getVault()`.
 
 ---
 

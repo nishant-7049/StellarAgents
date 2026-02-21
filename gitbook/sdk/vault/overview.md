@@ -1,6 +1,6 @@
 # @agenticocean/vault
 
-TypeScript SDK for interacting with AgentiCOcean's Soroban smart contracts on Stellar. Provides a clean API for vault management, agent policy control, and on-chain agent identity.
+TypeScript SDK for interacting with AgenticOcean's Soroban smart contracts on Stellar. Provides a clean API for vault management, agent policy control, and on-chain agent identity.
 
 ---
 
@@ -41,7 +41,9 @@ interface StellarClientConfig {
 
 ## Contract Addresses
 
-The contracts are deployed on Stellar Testnet:
+You’ll need contract addresses for the network you’re targeting.
+
+The docs below include **testnet** addresses (from the hackathon deployment). For **mainnet**, you’ll deploy your own contracts (or use your production deployment) and set those addresses in env vars.
 
 | Contract | Address |
 |----------|---------|
@@ -50,6 +52,37 @@ The contracts are deployed on Stellar Testnet:
 | ReputationRegistry | `CDC4EGENNTNK5LVBSIHCGMZMPQQQ27FPT4CESNN5G7WZCZBUVRC6HJIZ` |
 | ValidationRegistry | `CC66BNPZXYYZQFPQHEEHHYLCWA7CWAKSNVJ5UDLTX32URXCOCVUADY3P` |
 | USDC SAC | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+
+---
+
+## Typical usage
+
+### 1) Look up a user’s vault
+
+```ts
+import { VaultFactory } from "@agenticocean/vault";
+
+const factory = new VaultFactory("C...VAULT_FACTORY_ADDRESS...", {
+  rpcUrl: "https://soroban-testnet.stellar.org",
+  networkPassphrase: "Test SDF Network ; September 2015",
+});
+
+const vault = await factory.getVault("G...OWNER_ADDRESS...");
+```
+
+### 2) Read vault balance + agent policies
+
+```ts
+import { UserVault } from "@agenticocean/vault";
+
+const userVault = new UserVault("C...VAULT_CONTRACT...", {
+  rpcUrl: "https://soroban-testnet.stellar.org",
+  networkPassphrase: "Test SDF Network ; September 2015",
+});
+
+const balance = await userVault.getBalance();
+const remaining = await userVault.getRemainingLimit("G...AGENT_ADDRESS...");
+```
 
 ---
 

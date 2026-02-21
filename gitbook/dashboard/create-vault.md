@@ -6,7 +6,7 @@ A **UserVault** is a Soroban smart contract that holds your USDC and lets author
 
 ## Step 1 — Open the Vault page
 
-Navigate to `/vault` in the sidebar. If you don't have a vault yet, you'll see the "Create Vault" card.
+Navigate to `/app/vault` in the sidebar. If you don't have a vault yet, you'll see the "Create Vault" card.
 
 ---
 
@@ -15,13 +15,22 @@ Navigate to `/vault` in the sidebar. If you don't have a vault yet, you'll see t
 Click **Create Vault**. Freighter will prompt you to sign a transaction that calls `VaultFactory.create_vault(yourAddress)`.
 
 - The transaction costs ~0.001 XLM in fees
-- The vault address is derived deterministically from your public key — it's always the same address for your wallet
+- Each wallet address can have exactly one vault (the factory enforces this)
 - Takes about 5–10 seconds on testnet
 
 Once created, the vault address appears at the top of the Vault page. You can also look it up any time from the SDK:
 
 ```typescript
-const vaultAddress = await factory.getVaultForOwner(VAULT_FACTORY, yourPublicKey);
+import { VaultFactory } from "@agenticocean/vault";
+
+const config = {
+  rpcUrl: "https://soroban-testnet.stellar.org",
+  networkPassphrase: "Test SDF Network ; September 2015",
+};
+
+const VAULT_FACTORY = "CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW";
+const factory = new VaultFactory(VAULT_FACTORY, config);
+const vaultAddress = await factory.getVault(yourPublicKey);
 ```
 
 ---

@@ -1,13 +1,13 @@
-# @agentsea/x402-stellar
+# @agenticocean/x402-stellar
 
 x402 payment protocol for Stellar — header builder, facilitator, and Express middleware for AI agent micropayments.
 
 ## Installation
 
 ```bash
-npm install @agentsea/x402-stellar
+npm install @agenticocean/x402-stellar
 # or
-pnpm add @agentsea/x402-stellar
+pnpm add @agenticocean/x402-stellar
 ```
 
 ## Quick Start
@@ -15,7 +15,7 @@ pnpm add @agentsea/x402-stellar
 ### 1. Build an x402 Payment Header (Agent side)
 
 ```typescript
-import { buildX402Header } from "@agentsea/x402-stellar";
+import { buildX402Header } from "@agenticocean/x402-stellar";
 
 const header = await buildX402Header({
   rpcUrl: "https://soroban-testnet.stellar.org",
@@ -40,7 +40,7 @@ const response = await fetch("https://api.example.com/yield/query", {
 
 ```typescript
 import express from "express";
-import { createX402Middleware } from "@agentsea/x402-stellar";
+import { createX402Middleware } from "@agenticocean/x402-stellar";
 
 const app = express();
 
@@ -63,7 +63,7 @@ app.listen(3001);
 ### 3. Settle a Payment (Facilitator side)
 
 ```typescript
-import { settlePayment } from "@agentsea/x402-stellar";
+import { settlePayment } from "@agenticocean/x402-stellar";
 
 const result = await settlePayment(paymentPayload, {
   rpcUrl: "https://soroban-testnet.stellar.org",
@@ -130,7 +130,7 @@ toStroops(5) // → 50000000n
 ### Network Config
 
 ```typescript
-import { TESTNET, MAINNET } from "@agentsea/x402-stellar";
+import { TESTNET, MAINNET } from "@agenticocean/x402-stellar";
 
 // TESTNET: soroban-testnet.stellar.org
 // MAINNET: soroban.stellar.org
