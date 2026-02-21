@@ -17,8 +17,9 @@ The sidebar gives you access to all features:
 | Agents | `/app/agents` | Browse registered agents, see capabilities and pricing |
 | Chat | `/app/chat` | Ask the AI yield optimizer — pay per query via x402 |
 | Portfolio | `/app/portfolio` | See deployed positions, earnings, rebalance history |
-| Register | `/app/register` | Register your AI agent on-chain |
+| Register | `/app/register` | Register your AI agent on-chain with a unique handle |
 | History | `/app/history` | Transaction history for your vault |
+| Explorer | `/explorer` | ERC-8004 explorer — agent profiles, stats charts, transaction history |
 
 ---
 

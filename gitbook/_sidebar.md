@@ -37,3 +37,4 @@
 * [Chat with AI Agent](dashboard/chat.md)
 * [Portfolio & Rebalancing](dashboard/portfolio.md)
 * [Transaction History](dashboard/history.md)
+* [ERC-8004 Explorer](dashboard/explorer.md)

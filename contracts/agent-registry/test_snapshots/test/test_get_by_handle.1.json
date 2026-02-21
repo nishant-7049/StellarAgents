@@ -38,10 +38,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "string": "A"
+                  "string": "DeFi Agent"
                 },
                 {
-                  "string": "meta-agent"
+                  "string": "defi-agent"
                 },
                 {
                   "string": "{}"
@@ -51,34 +51,6 @@
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-              "function_name": "set_metadata",
-              "args": [
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                },
-                {
-                  "u32": 1
-                },
-                {
-                  "string": "model"
-                },
-                {
-                  "string": "llama-3.3-70b-versatile"
                 }
               ]
             }
@@ -160,7 +132,7 @@
                       "symbol": "handle"
                     },
                     "val": {
-                      "string": "meta-agent"
+                      "string": "defi-agent"
                     }
                   },
                   {
@@ -184,7 +156,7 @@
                       "symbol": "name"
                     },
                     "val": {
-                      "string": "A"
+                      "string": "DeFi Agent"
                     }
                   },
                   {
@@ -232,43 +204,13 @@
                     "symbol": "HandleAgent"
                   },
                   {
-                    "string": "meta-agent"
+                    "string": "defi-agent"
                   }
                 ]
               },
               "durability": "persistent",
               "val": {
                 "u32": 1
-              }
-            }
-          },
-          "ext": "v0"
-        },
-        "live_until": 4095
-      },
-      {
-        "entry": {
-          "last_modified_ledger_seq": 0,
-          "data": {
-            "contract_data": {
-              "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-              "key": {
-                "vec": [
-                  {
-                    "symbol": "Metadata"
-                  },
-                  {
-                    "u32": 1
-                  },
-                  {
-                    "string": "model"
-                  }
-                ]
-              },
-              "durability": "persistent",
-              "val": {
-                "string": "llama-3.3-70b-versatile"
               }
             }
           },
@@ -362,26 +304,6 @@
           "ext": "v0"
         },
         "live_until": 4095
-      },
-      {
-        "entry": {
-          "last_modified_ledger_seq": 0,
-          "data": {
-            "contract_data": {
-              "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
-              "key": {
-                "ledger_key_nonce": {
-                  "nonce": "1033654523790656264"
-                }
-              },
-              "durability": "temporary",
-              "val": "void"
-            }
-          },
-          "ext": "v0"
-        },
-        "live_until": 6311999
       },
       {
         "entry": {

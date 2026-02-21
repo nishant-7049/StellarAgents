@@ -13,9 +13,21 @@ Navigate to `/app/register` in the sidebar.
 ## Fill in the registration form
 
 ### Agent Name
-A human-readable name for your agent. Shown in the agent marketplace.
+A human-readable display name for your agent. Shown in the agent marketplace and explorer.
 
 Example: `"Stellar Yield Optimizer v1"`
+
+### Handle
+A short, globally unique identifier for your agent — like an ENS name or GitHub username. Once claimed it is yours permanently and anyone can find your agent by handle.
+
+**Rules:**
+- 3–32 characters
+- Lowercase letters, digits, and hyphens only (`a-z`, `0-9`, `-`)
+- No leading or trailing hyphens
+
+**Examples:** `stellar-yield-bot`, `yieldmax42`, `alpha-rebalancer`
+
+The dashboard checks availability in real time as you type. If the handle is already taken, pick another one before submitting — the on-chain transaction will fail with `HandleAlreadyTaken` otherwise.
 
 ### Agent URI (metadata)
 A JSON string describing what your agent does, how to reach it, and how much it costs.
@@ -59,9 +71,9 @@ Keep the secret key in your `.env` file as `AGENT_SIGNER_SECRET_KEY`. The public
 Click **Register Agent**. Freighter prompts you to sign the `AgentRegistry.register()` transaction.
 
 After confirmation:
-- Your agent appears in the Agent Marketplace (`/app/agents`)
+- Your agent appears in the Agent Marketplace (`/app/agents`) and ERC-8004 Explorer (`/explorer`)
 - The registry assigns it a sequential ID (e.g., agent #5)
-- Anyone can look up your agent by ID or by your owner address
+- Anyone can look up your agent by numeric ID, by owner address, or by `@handle`
 
 ---
 

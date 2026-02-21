@@ -8,12 +8,13 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
 import { fetchAPI } from "@/lib/api";
 import { shortenAddress, getTxUrl } from "@/lib/stellar";
-import { Bot, Activity, Star, ExternalLink, Zap, Search } from "lucide-react";
+import { Bot, Activity, Star, ExternalLink, Zap, Search, AtSign } from "lucide-react";
 
 interface Agent {
   id: number;
   owner: string;
   name: string;
+  handle: string | null;
   isActive: boolean;
   capabilities: string[];
   pricing: { amount: string; protocol: string } | null;
@@ -95,7 +96,7 @@ export default function ExplorerPage() {
                   <Card className="hover:border-indigo-500/50 transition-colors cursor-pointer">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="font-medium truncate">{agent.name}</span>
                           <Badge variant="default" className="text-xs">#{agent.id}</Badge>
                           {agent.isActive ? (
@@ -104,6 +105,12 @@ export default function ExplorerPage() {
                             <Badge variant="error" className="text-xs">Inactive</Badge>
                           )}
                         </div>
+                        {agent.handle && (
+                          <div className="flex items-center gap-1 mb-1">
+                            <AtSign className="w-3 h-3 text-indigo-400" />
+                            <span className="text-xs text-indigo-400 font-mono">{agent.handle}</span>
+                          </div>
+                        )}
                         <div className="text-xs text-[var(--text-secondary)] mb-2">
                           {shortenAddress(agent.owner, 6)}
                         </div>
