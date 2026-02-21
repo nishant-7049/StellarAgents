@@ -101,7 +101,7 @@ Returns an Express middleware factory. Call with route config to create per-rout
 ```typescript
 const x402 = createX402Middleware({ ...options });
 
-// returns middleware:
+// Returns middleware:
 x402({ price: "100000", description: "..." })
 ```
 
@@ -114,7 +114,7 @@ Verifies and executes payment on-chain. Returns `{ success, txHash?, error? }`.
 Convert stroops to human-readable USDC string.
 
 ```typescript
-formatUsdc("100000") // → "0.01"
+formatUsdc("100000")    // → "0.01"
 formatUsdc(10_000_000n) // → "1.00"
 ```
 
@@ -124,7 +124,7 @@ Convert USDC amount to stroops (bigint).
 
 ```typescript
 toStroops(0.01) // → 100000n
-toStroops(5) // → 50000000n
+toStroops(5)    // → 50000000n
 ```
 
 ### Network Config
@@ -143,6 +143,18 @@ import { TESTNET, MAINNET } from "@agenticocean/x402-stellar";
 - `1 USDC = 10,000,000 stroops`
 - `0.01 USDC = 100,000 stroops`
 
+## How It Works
+
+The x402 flow on Stellar:
+
+1. Agent requests a paid route → receives `402 Payment Required` with amount + facilitator address
+2. Agent builds a `vault.agent_pay()` Soroban invocation, simulates it to get the auth entry + footprint
+3. Agent signs the `SorobanAuthorizationEntry` with their key (anti-replay nonce included)
+4. Agent sends the assembled transaction XDR + signed auth entry in the `X-PAYMENT` header
+5. Facilitator deserializes the pre-assembled tx, signs as source (pays XLM fees), submits
+6. Soroban verifies agent's signature, enforces daily spending limit, transfers USDC
+7. Route returns `200 OK` with strategy + `X-PAYMENT-RESPONSE: { txHash }`
+
 ## License
 
-MIT — StellarAgent402
+MIT — AgenticOcean

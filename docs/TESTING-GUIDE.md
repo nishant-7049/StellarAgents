@@ -31,14 +31,14 @@ rustc --version      # should be 1.70+
 
 ```bash
 node --version       # >= 20
-pnpm --version       # >= 9
+pnpm --version       # >= 10
 ```
 
 ---
 
 ## Step 1: Generate Testnet Accounts
 
-You need 3 accounts: **Admin** (deploys contracts), **Facilitator** (pays XLM fees for x402), **Agent Signer** (test AI agent).
+You need 4 accounts: **Admin** (deploys contracts), **Facilitator** (pays XLM fees for x402), **Agent Signer** (test AI agent), **User1** (test vault owner).
 
 ```bash
 # Generate Admin account
@@ -55,6 +55,11 @@ stellar keys address facilitator
 stellar keys generate agent-signer --network testnet --fund
 stellar keys address agent-signer
 # → GC9DEF... (copy this)
+
+# Generate User1 account
+stellar keys generate user1 --network testnet --fund
+stellar keys address user1
+# → GD0GHI... (copy this)
 ```
 
 Each `--fund` flag calls Friendbot automatically (10,000 testnet XLM each).
@@ -63,13 +68,9 @@ Each `--fund` flag calls Friendbot automatically (10,000 testnet XLM each).
 
 ```bash
 stellar keys show admin
-# → SABC...
-
 stellar keys show facilitator
-# → SDEF...
-
 stellar keys show agent-signer
-# → SGHI...
+stellar keys show user1
 ```
 
 ---
@@ -79,7 +80,7 @@ stellar keys show agent-signer
 ```bash
 cd contracts
 
-# Build all 3 contracts to WASM
+# Build all 5 contracts to WASM
 cargo build --release --target wasm32-unknown-unknown
 
 # Verify WASM outputs exist
@@ -88,7 +89,11 @@ ls -la target/wasm32-unknown-unknown/release/*.wasm
 #   user_vault.wasm
 #   vault_factory.wasm
 #   agent_registry.wasm
+#   reputation_registry.wasm
+#   validation_registry.wasm
 ```
+
+Soroban SDK version: `=25.0.2` (pinned in `contracts/Cargo.toml`).
 
 ---
 
@@ -105,8 +110,7 @@ stellar contract install \
 
 This prints a **WASM hash** (64-char hex). Save it:
 ```
-# Example output:
-# a1b2c3d4e5f6...  (this is your VAULT_WASM_HASH)
+# Example: 27b91b68f5c58464a69efd4ffb4e0a0761ba22da65a774e41fba3fdc7bdaf361
 ```
 
 ### 3b. Deploy VaultFactory
@@ -118,10 +122,7 @@ stellar contract deploy \
   --network testnet
 ```
 
-This prints the **factory contract address** (starts with `C`). Save it:
-```
-# Example: CBXYZ123...  (this is your VAULT_FACTORY_ADDRESS)
-```
+Save the **factory contract address** (starts with `C`).
 
 ### 3c. Deploy AgentRegistry
 
@@ -132,34 +133,37 @@ stellar contract deploy \
   --network testnet
 ```
 
-Save the **registry contract address**:
-```
-# Example: CABC456...  (this is your AGENT_REGISTRY_ADDRESS)
-```
+Save the **registry contract address**.
 
-### 3d. Deploy a test USDC token (SAC)
-
-For testnet, we create a mock USDC asset:
+### 3d. Deploy ReputationRegistry
 
 ```bash
-# Create the USDC asset issuer
-stellar keys generate usdc-issuer --network testnet --fund
-
-# Get issuer address
-stellar keys address usdc-issuer
-# → GUSDC_ISSUER...
-
-# Wrap as Soroban Asset Contract (SAC)
-stellar contract asset deploy \
-  --asset "USDC:$(stellar keys address usdc-issuer)" \
+stellar contract deploy \
+  --wasm target/wasm32-unknown-unknown/release/reputation_registry.wasm \
   --source admin \
   --network testnet
 ```
 
-Save the **USDC SAC address**:
+Save the **reputation registry address**.
+
+### 3e. Deploy ValidationRegistry
+
+```bash
+stellar contract deploy \
+  --wasm target/wasm32-unknown-unknown/release/validation_registry.wasm \
+  --source admin \
+  --network testnet
 ```
-# Example: CUSDC789...  (this is your USDC_SAC_ADDRESS)
+
+Save the **validation registry address**.
+
+### 3f. Use the USDC Testnet SAC
+
+Use the known testnet USDC SAC address:
 ```
+CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
+```
+Asset: `USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`
 
 ---
 
@@ -191,6 +195,30 @@ stellar contract invoke \
   --admin $(stellar keys address admin)
 ```
 
+### 4c. Initialize ReputationRegistry
+
+```bash
+stellar contract invoke \
+  --id <REPUTATION_REGISTRY_ADDRESS> \
+  --source admin \
+  --network testnet \
+  -- \
+  initialize \
+  --admin $(stellar keys address admin)
+```
+
+### 4d. Initialize ValidationRegistry
+
+```bash
+stellar contract invoke \
+  --id <VALIDATION_REGISTRY_ADDRESS> \
+  --source admin \
+  --network testnet \
+  -- \
+  initialize \
+  --admin $(stellar keys address admin)
+```
+
 ---
 
 ## Step 5: Write the .env files
@@ -201,7 +229,9 @@ Create `.env.contracts` in the project root:
 cat > .env.contracts << 'EOF'
 VAULT_FACTORY_ADDRESS=<paste factory address>
 AGENT_REGISTRY_ADDRESS=<paste registry address>
-USDC_SAC_ADDRESS=<paste USDC SAC address>
+REPUTATION_REGISTRY_ADDRESS=<paste reputation address>
+VALIDATION_REGISTRY_ADDRESS=<paste validation address>
+USDC_SAC_ADDRESS=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
 VAULT_WASM_HASH=<paste wasm hash>
 ADMIN_SECRET_KEY=<paste from: stellar keys show admin>
 FACILITATOR_SECRET_KEY=<paste from: stellar keys show facilitator>
@@ -217,6 +247,7 @@ cp .env.example .env
 # Also set:
 #   PORT=3001
 #   NODE_ENV=development
+#   AI_API_KEY=sk-ant-...   (or AIza..., gsk_..., xai-...)
 ```
 
 ---
@@ -228,79 +259,80 @@ cp .env.example .env
 ```bash
 stellar contract invoke \
   --id <VAULT_FACTORY_ADDRESS> \
-  --source admin \
+  --source user1 \
   --network testnet \
   -- \
   create_vault \
-  --owner $(stellar keys address admin)
+  --owner $(stellar keys address user1)
 ```
 
 This prints the **vault contract address**. Save it.
 
-### 6b. Mint test USDC to your account
+### 6b. Mint test USDC to User1
 
+First establish a trustline (classic Stellar):
 ```bash
-# Trustline (classic Stellar — needed before receiving asset)
 stellar tx new \
-  --source admin \
+  --source user1 \
   --network testnet \
   change-trust \
-  --asset "USDC:$(stellar keys address usdc-issuer)" \
+  --asset "USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5" \
   --limit 1000000 \
-  | stellar tx sign --source admin \
+  | stellar tx sign --source user1 \
   | stellar tx send --network testnet
+```
 
-# Mint 1000 USDC to admin
+Then mint USDC via the SAC (requires USDC issuer key — use testnet faucet or contact SDF):
+```bash
+# 10000000000 = 1000 USDC (7 decimal stroops)
 stellar contract invoke \
-  --id <USDC_SAC_ADDRESS> \
-  --source usdc-issuer \
+  --id CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA \
+  --source <usdc-issuer> \
   --network testnet \
   -- \
   mint \
-  --to $(stellar keys address admin) \
+  --to $(stellar keys address user1) \
   --amount 10000000000
 ```
-
-(10000000000 = 1000 USDC in stroops, 7 decimals)
 
 ### 6c. Deposit USDC into Vault
 
 ```bash
 stellar contract invoke \
   --id <VAULT_ADDRESS> \
-  --source admin \
+  --source user1 \
   --network testnet \
   -- \
   deposit \
-  --from $(stellar keys address admin) \
-  --amount 1000000000
+  --from $(stellar keys address user1) \
+  --amount 10000000000
 ```
 
-(1000000000 = 100 USDC)
+(10000000000 = 1000 USDC in stroops)
 
 ### 6d. Check Vault Balance
 
 ```bash
 stellar contract invoke \
   --id <VAULT_ADDRESS> \
-  --source admin \
+  --source user1 \
   --network testnet \
   -- \
   balance
 ```
 
-Should return `1000000000` (100 USDC).
+Should return `10000000000` (1000 USDC in stroops).
 
 ### 6e. Add Agent to Vault
 
 ```bash
 stellar contract invoke \
   --id <VAULT_ADDRESS> \
-  --source admin \
+  --source user1 \
   --network testnet \
   -- \
   add_agent \
-  --owner $(stellar keys address admin) \
+  --owner $(stellar keys address user1) \
   --agent $(stellar keys address agent-signer) \
   --daily_limit 100000000 \
   --allowed_destinations '{"vec":[]}'
@@ -320,7 +352,7 @@ stellar contract invoke \
   --agent $(stellar keys address agent-signer) \
   --pay_to $(stellar keys address facilitator) \
   --amount 100000 \
-  --memo "test_payment"
+  --memo "test_x402_001"
 ```
 
 (100000 = 0.01 USDC — the x402 query price)
@@ -328,10 +360,10 @@ stellar contract invoke \
 ### 6g. Verify the payment
 
 ```bash
-# Check vault balance (should be 100 USDC - 0.01 = 99.99)
+# Check vault balance (should be 1000 - 0.01 = 999.99 USDC)
 stellar contract invoke \
   --id <VAULT_ADDRESS> \
-  --source admin \
+  --source user1 \
   --network testnet \
   -- \
   balance
@@ -339,7 +371,7 @@ stellar contract invoke \
 # Check remaining daily limit
 stellar contract invoke \
   --id <VAULT_ADDRESS> \
-  --source admin \
+  --source user1 \
   --network testnet \
   -- \
   remaining_limit \
@@ -348,30 +380,58 @@ stellar contract invoke \
 
 ---
 
-## Step 7: Register an Agent in the Registry
+## Step 7: Register an Agent with Handle
 
 ```bash
 stellar contract invoke \
   --id <AGENT_REGISTRY_ADDRESS> \
-  --source admin \
+  --source user1 \
   --network testnet \
   -- \
   register \
-  --owner $(stellar keys address admin) \
+  --owner $(stellar keys address user1) \
   --name "Yield Optimizer v1" \
-  --agent_uri '{"capabilities":["yield"],"pricing":{"protocol":"x402","amount":"100000","asset":"USDC"},"model":"claude-sonnet-4-5-20250929"}' \
+  --handle "yield-optimizer-v1" \
+  --agent_uri '{"capabilities":["yield"],"pricing":{"protocol":"x402","amount":"100000","asset":"USDC"},"model":"claude-sonnet-4-6"}' \
   --vault_address <VAULT_ADDRESS> \
   --agent_signer $(stellar keys address agent-signer)
 ```
 
 Returns the agent ID (should be `1`).
 
-### Verify
+**Handle rules**: 3–32 chars, lowercase `a-z`, `0-9`, hyphens only, no leading/trailing hyphens.
+
+### Check handle availability
 
 ```bash
 stellar contract invoke \
   --id <AGENT_REGISTRY_ADDRESS> \
-  --source admin \
+  --source user1 \
+  --network testnet \
+  -- \
+  is_handle_available \
+  --handle "yield-optimizer-v1"
+# Returns false (just taken)
+```
+
+### Get agent by handle
+
+```bash
+stellar contract invoke \
+  --id <AGENT_REGISTRY_ADDRESS> \
+  --source user1 \
+  --network testnet \
+  -- \
+  get_agent_by_handle \
+  --handle "yield-optimizer-v1"
+```
+
+### Verify by ID
+
+```bash
+stellar contract invoke \
+  --id <AGENT_REGISTRY_ADDRESS> \
+  --source user1 \
   --network testnet \
   -- \
   get_agent \
@@ -380,23 +440,54 @@ stellar contract invoke \
 
 ---
 
-## Step 8: Test the Backend (Live)
+## Step 8: Post a Reputation Review
 
-### 8a. Start backend
+```bash
+stellar contract invoke \
+  --id <REPUTATION_REGISTRY_ADDRESS> \
+  --source user1 \
+  --network testnet \
+  -- \
+  post_feedback \
+  --agent_id 1 \
+  --reviewer $(stellar keys address user1) \
+  --score 5 \
+  --category "accuracy" \
+  --data_uri '{"comment":"Great yield strategy!","timestamp":1739000000}' \
+  --payment_proof_hash ""
+```
+
+### Check reputation summary
+
+```bash
+stellar contract invoke \
+  --id <REPUTATION_REGISTRY_ADDRESS> \
+  --source user1 \
+  --network testnet \
+  -- \
+  get_feedback_summary \
+  --agent_id 1
+```
+
+---
+
+## Step 9: Test the Backend (Live)
+
+### 9a. Start backend
 
 ```bash
 cd apps/backend
 pnpm dev
 ```
 
-### 8b. Health check
+### 9b. Health check
 
 ```bash
 curl http://localhost:3001/health | jq
 # Should show your real contract addresses
 ```
 
-### 8c. Test 402 flow
+### 9c. Test 402 flow
 
 ```bash
 # No payment header → 402
@@ -413,20 +504,30 @@ curl -s http://localhost:3001/api/yield/query?q=best+yield | jq
 # }
 ```
 
-### 8d. Test rebalancer status
+### 9d. Test explorer endpoints
 
 ```bash
-curl http://localhost:3001/api/rebalance/status | jq
+curl http://localhost:3001/api/explorer/agents | jq
+curl http://localhost:3001/api/explorer/agents/1 | jq
+curl http://localhost:3001/api/explorer/agents/1/stats | jq
+curl http://localhost:3001/api/explorer/activity | jq
+```
+
+### 9e. Test reputation endpoints
+
+```bash
+curl http://localhost:3001/api/reputation/1/summary | jq
+curl http://localhost:3001/api/reputation/1/feedback | jq
 ```
 
 ---
 
-## Step 9: Run Automated Tests
+## Step 10: Run Automated Tests
 
 ```bash
 # From project root:
 
-# Contract tests (mock environment)
+# Contract tests (21+ tests, mock environment)
 cd contracts && cargo test --workspace && cd ..
 
 # Unit tests (mock data, no network)
@@ -438,7 +539,7 @@ pnpm test:integration
 
 ---
 
-## Step 10: View on Stellar Expert
+## Step 11: View on Stellar Expert
 
 Every transaction you made is visible at:
 
@@ -446,9 +547,7 @@ Every transaction you made is visible at:
 https://stellar.expert/explorer/testnet/contract/<CONTRACT_ADDRESS>
 ```
 
-Replace `<CONTRACT_ADDRESS>` with your vault, factory, or registry address.
-
-You can also search by transaction hash to see the full operation details.
+Replace `<CONTRACT_ADDRESS>` with your vault, factory, registry, or reputation address.
 
 ---
 
@@ -461,7 +560,9 @@ You can also search by transaction hash to see the full operation details.
 | Agent Signer pubkey | `stellar keys address agent-signer` |
 | VaultFactory address | Output of `stellar contract deploy` (step 3b) |
 | AgentRegistry address | Output of `stellar contract deploy` (step 3c) |
-| USDC SAC address | Output of `stellar contract asset deploy` (step 3d) |
+| ReputationRegistry address | Output of `stellar contract deploy` (step 3d) |
+| ValidationRegistry address | Output of `stellar contract deploy` (step 3e) |
+| USDC SAC address | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
 | Your vault address | Output of `create_vault` (step 6a) |
 | WASM hash | Output of `stellar contract install` (step 3a) |
 
@@ -473,9 +574,11 @@ You can also search by transaction hash to see the full operation details.
 |---------|-----|
 | `stellar: command not found` | `brew install stellar-cli` or `cargo install stellar-cli --locked` |
 | `Account not found` | Fund it: `stellar keys generate <name> --network testnet --fund` |
-| `HostError: insufficient balance` | Mint more test USDC (step 6b) or get more XLM from friendbot |
+| `HostError: insufficient balance` | Mint more test USDC or get more XLM from friendbot |
 | `Contract not found` | Double-check the contract address, make sure you deployed to testnet |
 | `simulation failed` | Run with `--verbose` flag for detailed error output |
-| WASM build fails | Make sure `wasm32-unknown-unknown` target is installed: `rustup target add wasm32-unknown-unknown` |
+| WASM build fails | `rustup target add wasm32-unknown-unknown` |
 | `ExceedsDailyLimit` error | Wait 24h or re-add agent with higher limit |
+| `HandleAlreadyTaken` | Choose a different handle |
+| `HandleInvalidChars` | Use only lowercase a-z, 0-9, hyphens |
 | Backend won't start | Check `.env` has all required values, especially contract addresses |

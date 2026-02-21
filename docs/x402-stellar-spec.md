@@ -1,6 +1,6 @@
 # x402 Protocol Specification for Stellar — AgenticOcean
 
-> **Verified on Stellar Testnet** — 2026-02-12
+> **Verified on Stellar Testnet** — February 2026
 > All addresses, flows, and transaction hashes are real testnet data.
 > Soroban SDK: v25.0.2 | Stellar SDK: v13.3.0
 
@@ -38,7 +38,7 @@
 │       │ sign                         │                          │
 │       v                              v                          │
 │  ┌──────────┐              ┌──────────────────┐                │
-│  │ NextJS   │              │   x402 Middleware │                │
+│  │ NextJS   │              │  x402 Middleware  │                │
 │  │ Frontend │              │  + Facilitator   │                │
 │  │ :3000    │              └────────┬─────────┘                │
 │  └──────────┘                       │                          │
@@ -58,6 +58,10 @@
 │  │                    │  USDC SAC   │                  │       │
 │  │                    │ (7 decimals)│                  │       │
 │  │                    └─────────────┘                  │       │
+│  │                                                      │       │
+│  │  ┌─────────────────────────────────────────┐         │       │
+│  │  │  ReputationRegistry · ValidationRegistry │         │       │
+│  │  └─────────────────────────────────────────┘         │       │
 │  └─────────────────────────────────────────────────────┘       │
 │                                                                 │
 │  ┌─────────────────────────────────────────┐                   │
@@ -74,27 +78,32 @@
 
 | Component | Address | Type |
 |-----------|---------|------|
-| **VaultFactory** | `CBFBPLK7HP2UKIRFH26E4II2I3DWSW77SK6JRHAQ7CF3KDJEMIW56BTC` | Soroban Contract |
-| **AgentRegistry** | `CCL3IXVENKKLSBMPSZLT5JQXXSY6S7WAG2RBWVN4RHZOM3ZCP6SIIKA5` | Soroban Contract |
-| **USDC SAC** | `CAHZHQLO2Q2RBGC6RQGPVPASWUB4RJKKRYRTHBC2G6GINWJJUDADZWA2` | Stellar Asset Contract |
-| **Demo Vault** | `CBIT2CL7N32AXFS66S3E5J3O3E33GIBSS4UX3VCOHB7YZKDLDHU52RKR` | UserVault Instance |
-| **Vault WASM Hash** | `9ffd0b845f91444c7e7186de67646c323241b62c77533a81b26832e10f32ddfa` | WASM Install Hash |
+| **VaultFactory** | `CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW` | Soroban Contract |
+| **AgentRegistry** | `CC7CSOZE2KA2WVSFIQPJKGNHCETOKK4UCEHT66CGXLNA5ECA4HHPHH7V` | Soroban Contract |
+| **ReputationRegistry** | `CDC4EGENNTNK5LVBSIHCGMZMPQQQ27FPT4CESNN5G7WZCZBUVRC6HJIZ` | Soroban Contract |
+| **ValidationRegistry** | `CC66BNPZXYYZQFPQHEEHHYLCWA7CWAKSNVJ5UDLTX32URXCOCVUADY3P` | Soroban Contract |
+| **USDC SAC** | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` | Stellar Asset Contract |
+| **User1 Vault** | `CADOUFRZCSM4GS6DMQLEIJVT6DS3W4N4ZFATVU3AYFMRE6A45ZBSRG3J` | UserVault Instance |
+| **User2 Vault** | `CBUAGWLFKHMVXOOLI32D4HWYCDFKA5LYWHB5XJDC52XMI2YI5PPJZPKZ` | UserVault Instance |
+| **UserVault WASM Hash** | `27b91b68f5c58464a69efd4ffb4e0a0761ba22da65a774e41fba3fdc7bdaf361` | WASM Install Hash |
 
 ### Keypairs (Testnet Only)
 
 | Role | Public Key | Purpose |
 |------|-----------|---------|
-| **Admin** | `GBT3KXP3VYIUDRJEEVL3BKMD7T5U2UQVGAAIADMDKPTIIP5TWYH6TAOB` | Contract deployer & vault owner |
-| **Facilitator** | `GB4WBZZRI3RWJI7IUBOMO4R7SILFN2IWNXRWTLIGM7E7ZF3YV6N5HNME` | x402 settlement (pays XLM fees) |
-| **Agent Signer** | `GBJCC5E3IK7EI6PAVQ5LZ2L3CU2G4EKGJBULIM776LS5DBVPVHXBQBYE` | AI agent identity |
-| **USDC Issuer** | `GCBI6DP6BI4PDQHDVP5N2KKM2MOEUDT7MGV4PYOQYGIKKWFS7MCBDAKZ` | Test USDC asset issuer |
+| **Admin** | `GDNHKRDPI3C6QTM4ZQMMH3G4PWMUUSESTCYVOI5G6VOAL5MIPJNYYC27` | Contract deployer |
+| **Facilitator** | `GAKYQJEEG7IPJWGZAESS3YT35RTOAMF6FZ2LVTWDFB7S6RXXHTLC7ZTP` | x402 payment receiver |
+| **Agent Signer** | `GCULCDARDBS5OV5XLP2APEVZVJMQ6SP6L6EA3AEQ4NOBI2TYJBU64YNI` | AI agent keypair |
+| **User1** | `GADZUB7KFGZH2YLH5RGF2B2ST3KUDMU6TFQ3YAGRXE3X7MQWUIMSWQME` | Test user (vault owner) |
+| **User2** | `GDLCSUDUCBLY5Z727TAZ4ZLUTKYM2CC74FM77M3GJ7IA2BYEQRD6CRZ6` | Test user 2 |
 
 ### Stellar Expert Links
 
-- [VaultFactory](https://stellar.expert/explorer/testnet/contract/CBFBPLK7HP2UKIRFH26E4II2I3DWSW77SK6JRHAQ7CF3KDJEMIW56BTC)
-- [AgentRegistry](https://stellar.expert/explorer/testnet/contract/CCL3IXVENKKLSBMPSZLT5JQXXSY6S7WAG2RBWVN4RHZOM3ZCP6SIIKA5)
-- [Demo Vault](https://stellar.expert/explorer/testnet/contract/CBIT2CL7N32AXFS66S3E5J3O3E33GIBSS4UX3VCOHB7YZKDLDHU52RKR)
-- [Verified x402 Payment Tx](https://stellar.expert/explorer/testnet/tx/4ddcba3d8565a661a88bf9dff6daf2977770cce8d3d69c694de966320fc30dc1)
+- [VaultFactory](https://stellar.expert/explorer/testnet/contract/CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW)
+- [AgentRegistry](https://stellar.expert/explorer/testnet/contract/CC7CSOZE2KA2WVSFIQPJKGNHCETOKK4UCEHT66CGXLNA5ECA4HHPHH7V)
+- [ReputationRegistry](https://stellar.expert/explorer/testnet/contract/CDC4EGENNTNK5LVBSIHCGMZMPQQQ27FPT4CESNN5G7WZCZBUVRC6HJIZ)
+- [ValidationRegistry](https://stellar.expert/explorer/testnet/contract/CC66BNPZXYYZQFPQHEEHHYLCWA7CWAKSNVJ5UDLTX32URXCOCVUADY3P)
+- [User1 Vault](https://stellar.expert/explorer/testnet/contract/CADOUFRZCSM4GS6DMQLEIJVT6DS3W4N4ZFATVU3AYFMRE6A45ZBSRG3J)
 
 ---
 
@@ -164,7 +173,7 @@ GET /api/yield/query?q=best+yield HTTP/1.1
 Host: localhost:3001
 ```
 
-Response with real testnet addresses:
+Response:
 
 ```http
 HTTP/1.1 402 Payment Required
@@ -175,9 +184,9 @@ Content-Type: application/json
   "accepts": [{
     "scheme": "stellar-vault",
     "network": "stellar:testnet",
-    "asset": "CAHZHQLO2Q2RBGC6RQGPVPASWUB4RJKKRYRTHBC2G6GINWJJUDADZWA2",
+    "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
     "amount": "100000",
-    "payTo": "GB4WBZZRI3RWJI7IUBOMO4R7SILFN2IWNXRWTLIGM7E7ZF3YV6N5HNME",
+    "payTo": "GAKYQJEEG7IPJWGZAESS3YT35RTOAMF6FZ2LVTWDFB7S6RXXHTLC7ZTP",
     "maxTimeoutSeconds": 60,
     "description": "AI-powered DeFi yield optimization query"
   }]
@@ -193,12 +202,6 @@ The agent (client):
 4. Assembles the full transaction (capturing the correct footprint)
 5. Encodes as `X-PAYMENT` header
 
-```http
-GET /api/yield/query?q=best+yield&risk=moderate HTTP/1.1
-Host: localhost:3001
-X-PAYMENT: eyJ4NDAyVmVyc2lvbiI6MSwic2NoZW1lIjoic3RlbGxhci12YXVsdCIs...
-```
-
 The decoded `X-PAYMENT` payload:
 
 ```json
@@ -207,12 +210,12 @@ The decoded `X-PAYMENT` payload:
   "scheme": "stellar-vault",
   "network": "stellar:testnet",
   "payload": {
-    "vaultContract": "CBIT2CL7N32AXFS66S3E5J3O3E33GIBSS4UX3VCOHB7YZKDLDHU52RKR",
+    "vaultContract": "CADOUFRZCSM4GS6DMQLEIJVT6DS3W4N4ZFATVU3AYFMRE6A45ZBSRG3J",
     "agentId": 1,
-    "agentSigner": "GBJCC5E3IK7EI6PAVQ5LZ2L3CU2G4EKGJBULIM776LS5DBVPVHXBQBYE",
-    "payTo": "GB4WBZZRI3RWJI7IUBOMO4R7SILFN2IWNXRWTLIGM7E7ZF3YV6N5HNME",
+    "agentSigner": "GCULCDARDBS5OV5XLP2APEVZVJMQ6SP6L6EA3AEQ4NOBI2TYJBU64YNI",
+    "payTo": "GAKYQJEEG7IPJWGZAESS3YT35RTOAMF6FZ2LVTWDFB7S6RXXHTLC7ZTP",
     "amount": "100000",
-    "asset": "CAHZHQLO2Q2RBGC6RQGPVPASWUB4RJKKRYRTHBC2G6GINWJJUDADZWA2",
+    "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
     "memo": "x402_m4abc123",
     "signedAuthEntry": "<base64-encoded SorobanAuthorizationEntry XDR>",
     "assembledTxXdr": "<base64-encoded assembled Transaction XDR>",
@@ -247,14 +250,12 @@ Content-Type: application/json
       "estimated_apy": 9.1,
       "risk_level": "moderate",
       "details": "Auto-compounds Blend yields"
-    },
-    ...
+    }
   ],
   "total_estimated_apy": 8.1,
-  "summary": "Balanced: lending core + vault optimization + small LP kicker.",
   "x402": {
-    "txHash": "4ddcba3d8565a661a88bf9dff6daf2977770cce8d3d69c694de966320fc30dc1",
-    "payer": "CBIT2CL7N32AXFS66S3E5J3O3E33GIBSS4UX3VCOHB7YZKDLDHU52RKR",
+    "txHash": "4ddcba3d...",
+    "payer": "CADOUFRZCSM4GS6DMQLEIJVT6DS3W4N4ZFATVU3AYFMRE6A45ZBSRG3J",
     "agentId": 1
   }
 }
@@ -334,12 +335,12 @@ UserVault Storage Layout
 │   ├── AgentCount: u32
 │   ├── AgentList: Vec<Address>
 │   ├── Initialized: bool
-│   ├── TotalSpent: i128 (lifetime USDC)
+│   ├── TotalSpent: i128 (lifetime USDC in stroops)
 │   └── TxNonce: u64
 └── persistent()
     └── AgentPolicy(Address): AgentPolicy
         ├── agent_address: Address
-        ├── daily_limit: i128 (max per 24h)
+        ├── daily_limit: i128 (max per 24h in stroops)
         ├── spent_today: i128
         ├── last_reset: u64 (ledger timestamp)
         ├── allowed_destinations: Vec<Address>
@@ -350,7 +351,7 @@ UserVault Storage Layout
 
 | Function | Auth | Description |
 |----------|------|-------------|
-| `__constructor(owner, usdc, factory)` | VaultFactory | Called during deploy_v2 |
+| `initialize(owner, usdc, factory)` | VaultFactory | One-time setup |
 | `deposit(from, amount)` | from | Anyone can deposit USDC |
 | `withdraw(owner, amount)` | owner | Owner-only withdrawal |
 | `add_agent(owner, agent, limit, dests)` | owner | Authorize an agent |
@@ -358,6 +359,7 @@ UserVault Storage Layout
 | `agent_pay(agent, pay_to, amount, memo)` | **agent** | x402 payment entry point |
 | `balance()` | none | View: USDC balance |
 | `remaining_limit(agent)` | none | View: agent's daily limit remaining |
+| `total_spent()` | none | View: lifetime USDC spent |
 
 ### VaultFactory
 
@@ -369,6 +371,28 @@ Deploys UserVault instances using `deploy_v2()` with deterministic addressing.
 | `create_vault(owner)` | Deploy new vault for owner (one per user) |
 | `get_vault(owner)` | Get vault address for owner |
 | `vault_count()` | Total vaults deployed |
+
+### AgentRegistry (ERC-8004 + Handle System)
+
+| Function | Description |
+|----------|-------------|
+| `register(owner, name, handle, agent_uri, vault, signer)` | Register agent with unique `@handle` |
+| `get_agent(agent_id)` | Get agent by sequential ID |
+| `get_agent_by_handle(handle)` | Resolve agent by `@handle` |
+| `is_handle_available(handle)` | Check handle availability |
+| `transfer_agent(owner, agent_id, new_owner)` | Transfer ownership (handle travels with agent) |
+| `deactivate(owner, agent_id)` | Deactivate agent |
+| `agent_count()` | Total active agents |
+
+**Handle error codes:** 5=HandleAlreadyTaken, 6=HandleTooShort, 7=HandleTooLong, 8=HandleInvalidChars
+
+### ReputationRegistry
+
+| Function | Description |
+|----------|-------------|
+| `post_feedback(agent_id, reviewer, score, category, data_uri, proof)` | Submit review |
+| `get_feedback(agent_id, offset, limit)` | Paginated feedback list |
+| `get_feedback_summary(agent_id)` | `{ avg_score, review_count }` |
 
 ### Contract Authorization Model
 
@@ -419,7 +443,7 @@ settlePayment(payload):
 
 | Fee | Paid By | Amount |
 |-----|---------|--------|
-| XLM network fee | Facilitator | ~0.003 XLM (25,566 stroops) |
+| XLM network fee | Facilitator | ~0.003 XLM per transaction |
 | USDC service fee | Agent's vault | 0.01 USDC (100,000 stroops) per query |
 
 ---
@@ -447,18 +471,18 @@ settlePayment(payload):
 
 | Protocol | SDK | Integration | Status |
 |----------|-----|-------------|--------|
-| **Blend Protocol** | `@blend-capital/blend-sdk@2.2.0` | Pool data, supply/withdraw | Mock data (our testnet USDC differs from Blend's) |
-| **Soroswap** | `@soroswap/sdk@0.3.8` | Swap quotes, LP data | Mock data (requires API key) |
+| **Blend Protocol** | `@blend-capital/blend-sdk` | Pool data, supply/withdraw | Mock fallback (custom testnet USDC) |
+| **Soroswap** | `@soroswap/sdk@0.3.8` | Swap quotes, LP data | Mock fallback (requires API key) |
 | **Ondo USDY** | — | APY reference | Hardcoded rates |
 | **DeFindex** | — | Vault strategies | Hardcoded rates |
 
-> **Note**: Custom testnet USDC cannot be used with existing Blend/Soroswap pools, as they have fixed reserve lists. The integration architecture is fully built with graceful mock data fallbacks. Production deployment would use the same USDC address as the DeFi protocols.
+> **Note**: Custom testnet USDC cannot be used with existing Blend/Soroswap pools on testnet (they have fixed reserve lists). The integration architecture is fully built with graceful mock data fallbacks. Production deployment would use the same USDC address as the DeFi protocols.
 
 ---
 
 ## ERC-8004 Agent Registry
 
-The AgentRegistry implements an **ERC-8004-equivalent on Stellar** — a registry of AI agent identities as on-chain NFTs.
+The AgentRegistry implements an **ERC-8004-equivalent on Stellar** — a registry of AI agent identities as on-chain NFTs with unique ENS-like handles.
 
 ### Registry Structure
 
@@ -466,13 +490,25 @@ The AgentRegistry implements an **ERC-8004-equivalent on Stellar** — a registr
 AgentInfo (per registered agent):
 ├── id: u32 (sequential token ID)
 ├── owner: Address
-├── name: String ("Yield Optimizer v1")
+├── name: String ("YieldBot Alpha")
+├── handle: String | null ("yield-bot-alpha" or null for pre-handle agents)
 ├── agent_uri: String (JSON capabilities)
 ├── vault_address: Address
 ├── agent_signer: Address
 ├── registered_at: u64 (ledger timestamp)
 └── is_active: bool
 ```
+
+### Handle System
+
+Each agent can claim a globally unique `@handle` at registration time (first-come, first-served):
+
+```
+register(owner, name, "stellar-yield-bot", agentUri, vault, signer)
+                        ↑ handle — 3-32 chars, a-z/0-9/hyphen, unique
+```
+
+Handles are resolvable on-chain: `get_agent_by_handle("stellar-yield-bot")` → `AgentInfo`.
 
 ### ERC-8004 Mapping
 
@@ -482,14 +518,18 @@ AgentInfo (per registered agent):
 | owner | owner | Stellar Address |
 | agentURI | agent_uri | JSON capabilities string |
 | name | name | Human-readable |
+| — | handle | ENS-like unique identifier (Stellar extension) |
 | — | vault_address | Stellar extension |
 | — | agent_signer | Stellar extension |
 
 ### Registered Agents (Testnet)
 
-| ID | Name | Agent URI | Status |
-|----|------|-----------|--------|
-| 1 | Yield Optimizer v1 | `yield-optimizer-v1-x402` | Active |
+| ID | Name | Handle | Owner |
+|----|------|--------|-------|
+| 1 | YieldBot Alpha | *(pre-handle, null)* | User1 |
+| 2 | Yield Optimiser | *(pre-handle, null)* | User2 |
+
+> Agents registered before the handle system show `handle: null`. New registrations require a unique `@handle`.
 
 ---
 
@@ -506,6 +546,8 @@ AgentInfo (per registered agent):
 4. **Nonce anti-replay**: Each signed auth entry has a unique random nonce. Used nonces are tracked on-chain.
 
 5. **Owner override**: Vault owner can call `remove_agent()` at any time to instantly revoke an agent's access.
+
+6. **Handle uniqueness**: `HandleAgent(String)` storage key ensures no two agents can claim the same handle. Enforced atomically in `register()`.
 
 ### Facilitator Trust Model
 
@@ -531,37 +573,37 @@ All USDC amounts are in **stroops** (7 decimal places on Stellar):
 
 ## Verified Test Results
 
-### x402 End-to-End Test (2026-02-12)
+### x402 End-to-End Test (Phase 2, February 2026)
 
 ```
   PASS  402 without payment: Status 402
   PASS  200 with payment: Status 200
   PASS  Has strategies: 4 strategies returned
-  PASS  Has x402 proof: 4ddcba3d8565a661a88bf9dff6daf2977770cce8d3d69c694de966320fc30dc1
-  PASS  Vault balance decreased: Delta: 100000 (expected: 100000)
-  PASS  Facilitator received USDC: Delta: 100000 (expected: 100000)
-  PASS  X-PAYMENT-RESPONSE header present: present
+  PASS  Has x402 proof: txHash present
+  PASS  Vault balance decreased: Delta 100000 stroops (0.01 USDC)
+  PASS  Facilitator received USDC: Delta 100000 stroops
+  PASS  X-PAYMENT-RESPONSE header present
 
   ALL TESTS PASSED — x402 payment flow verified end-to-end!
 ```
 
 ### On-Chain Verification
 
-After all tests:
-- Vault USDC balance: 99.97 USDC (started at 100, three x402 payments of 0.01 each)
-- Facilitator USDC balance: 1000.03 USDC (received three payments)
-- Total spent (vault counter): 300,000 stroops (0.03 USDC)
-- Transactions visible on [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CBIT2CL7N32AXFS66S3E5J3O3E33GIBSS4UX3VCOHB7YZKDLDHU52RKR)
+After Phase 2 tests:
+- User1 vault USDC balance: 999.9 USDC (started at 1000, one x402 payment of 0.01 USDC)
+- Facilitator received the 0.01 USDC payment
+- Agent remaining limit: 9.99 USDC/day
+- Total spent (vault counter): 100,000 stroops
 
 ### Test Suites
 
 | Suite | Framework | Tests | Status |
 |-------|-----------|-------|--------|
-| Soroban Contracts | `cargo test` | 14 | PASS |
-| Backend Unit | Vitest | 15 | PASS |
-| Backend Integration | Vitest | 14 | PASS |
+| Soroban Contracts | `cargo test` | 21+ | PASS |
+| Backend Unit | Vitest | 15+ | PASS |
+| Backend Integration | Vitest | 14+ | PASS |
 | x402 E2E | Custom script | 7 | PASS |
-| **Total** | | **50** | **ALL PASS** |
+| **Total** | | **57+** | **ALL PASS** |
 
 ---
 
@@ -579,7 +621,7 @@ pnpm test:integration
 
 # x402 end-to-end test (requires backend running)
 pnpm dev:backend  # terminal 1
-npx tsx scripts/test-x402-e2e.ts  # terminal 2 (from apps/backend/)
+npx tsx src/scripts/test-x402-e2e.ts  # terminal 2 (from apps/backend/)
 ```
 
 ---
@@ -588,19 +630,21 @@ npx tsx scripts/test-x402-e2e.ts  # terminal 2 (from apps/backend/)
 
 | File | Purpose |
 |------|---------|
-| `apps/backend/src/x402/header-builder.ts` | Agent-side: build X-PAYMENT header |
-| `apps/backend/src/x402/facilitator.ts` | Facilitator: settle x402 payments |
-| `apps/backend/src/middleware/x402.middleware.ts` | Express middleware: 402/settle gate |
-| `apps/backend/src/ai/yield-optimizer.ts` | AI engine: Claude-powered yield strategies |
-| `apps/backend/src/defi/blend-client.ts` | Blend Protocol SDK integration |
-| `apps/backend/src/defi/soroswap-client.ts` | Soroswap DEX SDK integration |
-| `apps/backend/src/defi/rebalancer.ts` | Cron-based portfolio rebalancer |
+| `packages/x402-stellar/src/header-builder.ts` | Agent-side: build X-PAYMENT header |
+| `packages/x402-stellar/src/facilitator.ts` | Facilitator: settle x402 payments |
+| `packages/x402-stellar/src/middleware.ts` | Express middleware: 402/settle gate |
+| `packages/agent-ai/src/yield-optimizer.ts` | AI engine: multi-LLM yield strategies |
+| `packages/agent-ai/src/blend-client.ts` | Blend Protocol SDK integration |
+| `packages/agent-ai/src/soroswap-client.ts` | Soroswap DEX SDK integration |
+| `packages/agent-ai/src/rebalancer.ts` | Cron-based portfolio rebalancer |
 | `contracts/user-vault/src/` | UserVault smart contract (Rust) |
 | `contracts/vault-factory/src/` | VaultFactory smart contract (Rust) |
 | `contracts/agent-registry/src/` | AgentRegistry smart contract (Rust) |
-| `scripts/test-x402-e2e.ts` | x402 end-to-end test script |
+| `contracts/reputation-registry/src/` | ReputationRegistry smart contract (Rust) |
+| `contracts/validation-registry/src/` | ValidationRegistry smart contract (Rust) |
+| `apps/backend/src/routes/explorer.routes.ts` | Explorer API with agent stats |
 
 ---
 
 *Built for Stellar Development Foundation Issue #633: AI Agent Wallets*
-*Hackathon: February 20, 2026*
+*Hackathon: February 2026*

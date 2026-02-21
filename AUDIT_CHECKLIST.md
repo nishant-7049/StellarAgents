@@ -1,4 +1,4 @@
-# StellarAgent402 — Pre-Mainnet Security Audit Checklist
+# AgenticOcean — Pre-Mainnet Security Audit Checklist
 
 > Complete all items before mainnet deployment.
 > Use `pnpm deploy:contracts --network mainnet` only after audit sign-off.
@@ -27,11 +27,30 @@
 - [ ] WASM hash: verify vault WASM hash matches audited binary
 - [ ] Storage: verify factory admin cannot steal funds from vaults
 
-### AgentRegistry (`agent-registry/`)
+### AgentRegistry (`agent-registry/`) — includes handle system
 - [ ] `register()` — Verify no duplicate registrations per owner
+- [ ] `register()` — Verify handle uniqueness (HandleAlreadyTaken error)
+- [ ] `register()` — Verify handle length bounds (3–32 chars)
+- [ ] `register()` — Verify handle character whitelist (a-z, 0-9, hyphen only)
+- [ ] `register()` — Verify no leading/trailing hyphens in handle
+- [ ] `get_agent_by_handle()` — Verify returns correct agent for handle
+- [ ] `is_handle_available()` — Verify returns false for taken handles
+- [ ] `transfer_agent()` — Verify handle travels with agent on transfer
+- [ ] `transfer_agent()` — Verify old owner cannot retain control after transfer
 - [ ] `deactivate()` — Verify only agent owner can deactivate
 - [ ] `set_agent_uri()` — Verify only owner can update metadata
 - [ ] NFT-like semantics: verify IDs are sequential and immutable
+- [ ] Handle error codes: 5=HandleAlreadyTaken, 6=HandleTooShort, 7=HandleTooLong, 8=HandleInvalidChars
+
+### ReputationRegistry (`reputation-registry/`)
+- [ ] `post_feedback()` — Verify score range enforcement (1-5)
+- [ ] `post_feedback()` — Verify reviewer address is authenticated
+- [ ] `get_feedback_summary()` — Verify average calculation is correct
+- [ ] Running averages: verify they cannot be manipulated by self-review spam
+
+### ValidationRegistry (`validation-registry/`)
+- [ ] `initialize()` — Verify double-init protection
+- [ ] Access control: verify only authorized validators can submit
 
 ---
 
@@ -43,17 +62,21 @@
 - [ ] Facilitator: verify fee-bump uses facilitator as source (not user)
 - [ ] Middleware: verify 402 response does not leak secrets
 - [ ] Middleware: verify `paymentHeader` is validated before trusting
+- [ ] Nonce: verify each `SorobanAuthorizationEntry` nonce is used at most once
+- [ ] Expiry: verify `signatureExpirationLedger` is enforced on-chain
 
 ---
 
 ## Backend API
 
 - [ ] No secret keys returned in any API response
-- [ ] Input validation on all routes (`wallet`, `amount`, `agentId`)
-- [ ] Horizon transaction verification in `/api/credits/purchase` is robust
-- [ ] Platform fee (0.2%) applied correctly on all execute paths
-- [ ] Credit deductions are non-blocking (no critical path dependencies)
-- [ ] Credits store: verify JSON file write is atomic (race condition)
+- [ ] Input validation on all routes (`wallet`, `amount`, `agentId`, `handle`)
+- [ ] Explorer stats endpoint: verify `isMock` flag is set correctly
+- [ ] Handle lookup (`/api/agents/handle/:handle`): verify returns 404 for unknown handles
+- [ ] Reputation endpoints: verify agent ID bounds checking
+- [ ] No admin/facilitator keys exposed in error responses
+- [ ] MongoDB: verify no injection vectors in query parameters
+- [ ] Credits: verify credit deductions are atomic
 
 ---
 
@@ -63,32 +86,36 @@
 - [ ] `signTransaction()` uses correct network passphrase
 - [ ] No secrets in `NEXT_PUBLIC_*` env vars
 - [ ] Payment header never logged or exposed in client console
-- [ ] XDR assembled server-side (not in browser) to avoid bundling issues
+- [ ] Handle input: client-side validation matches contract rules
+- [ ] Handle availability check: debounced to avoid rate limiting
+- [ ] Explorer stats: "Demo data" badge shown when `isMock: true`
 
 ---
 
 ## Infrastructure
 
 - [ ] `.env` with secrets is not committed to git
-- [ ] `.env.contracts` contains no funds private keys in prod
 - [ ] Railway/Fly.io env vars set via secrets manager (not inline)
 - [ ] CORS restricted to production domain only
 - [ ] Backend does not expose Soroban RPC URL in error responses
+- [ ] MongoDB connection string not logged
 
 ---
 
 ## Mainnet Pre-Deployment Steps
 
 1. Complete all items above
-2. Deploy to Testnet and run full integration test suite
+2. Deploy to Testnet and run full integration test suite (`cargo test --workspace`)
 3. Get third-party audit report sign-off
 4. Deploy USDC SAC using mainnet USDC issuer (`GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN`)
 5. Fund admin/facilitator wallets with XLM for fees
-6. Deploy contracts: `pnpm deploy:contracts --network mainnet`
+6. Deploy all 5 contracts: `pnpm deploy:contracts --network mainnet`
 7. Initialize factory with audited UserVault WASM hash
-8. Verify via Stellar Expert: all contracts initialized correctly
-9. Register initial agents and set credit plan parameters
-10. Enable mainnet in frontend: `NEXT_PUBLIC_STELLAR_NETWORK=mainnet`
+8. Initialize AgentRegistry, ReputationRegistry, ValidationRegistry
+9. Verify via Stellar Expert: all contracts initialized correctly
+10. Regenerate all keypairs with hardware wallet backing
+11. Register initial agents with unique `@handle` values
+12. Enable mainnet in frontend: `NEXT_PUBLIC_STELLAR_NETWORK=mainnet`
 
 ---
 
@@ -100,4 +127,4 @@
 
 ---
 
-*Last updated: 2026-02-20*
+*Last updated: February 2026*
