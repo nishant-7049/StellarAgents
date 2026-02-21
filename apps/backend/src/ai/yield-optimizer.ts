@@ -18,7 +18,7 @@ const optimizer = new SdkYieldOptimizer(
   {
     stellarRpcUrl: config.STELLAR_RPC_URL,
     networkPassphrase: config.STELLAR_NETWORK_PASSPHRASE,
-    anthropicApiKey: config.ANTHROPIC_API_KEY,
+    aiApiKey: config.AI_API_KEY,
     soroswapApiKey: config.SOROSWAP_API_KEY,
     usdcAddress: config.USDC_SAC_ADDRESS,
     blendPoolId: config.BLEND_POOL_USDC,

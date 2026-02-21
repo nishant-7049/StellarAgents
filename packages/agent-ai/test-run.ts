@@ -16,7 +16,7 @@ import type { AgentAIConfig } from "./src/index.js";
 const config: AgentAIConfig = {
   stellarRpcUrl: "https://soroban-testnet.stellar.org",
   networkPassphrase: "Test SDF Network ; September 2015",
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+  aiApiKey: process.env.AI_API_KEY,
   // Testnet USDC SAC (from blend-utils testnet.contracts.json)
   usdcAddress: "CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU",
   // Blend TestnetV2 pool (from blend-utils testnet.contracts.json)

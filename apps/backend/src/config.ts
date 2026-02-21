@@ -40,7 +40,7 @@ const envSchema = z.object({
   ADMIN_SECRET_KEY: z.string().default(""),
   FACILITATOR_SECRET_KEY: z.string().default(""),
   AGENT_SIGNER_SECRET_KEY: z.string().optional(),
-  ANTHROPIC_API_KEY: z.string().optional(),
+  AI_API_KEY: z.string().optional(),
   SOROSWAP_API_KEY: z.string().optional(),
   BLEND_POOL_USDC: z.string().optional(),
   BLEND_BACKSTOP: z.string().optional(),

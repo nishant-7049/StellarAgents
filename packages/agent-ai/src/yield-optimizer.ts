@@ -1,4 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { BlendClient } from "./blend-client.js";
 import { SoroswapClient } from "./soroswap-client.js";
 import { Rebalancer } from "./rebalancer.js";
@@ -13,18 +15,40 @@ import type {
   LoggerLike,
 } from "./types.js";
 
+type AIProvider =
+  | { type: "anthropic"; client: Anthropic }
+  | { type: "gemini";    client: GoogleGenerativeAI }
+  | { type: "groq";      client: OpenAI }
+  | { type: "xai";       client: OpenAI };
+
+function detectProvider(apiKey: string): AIProvider {
+  if (apiKey.startsWith("sk-ant-")) {
+    return { type: "anthropic", client: new Anthropic({ apiKey }) };
+  }
+  if (apiKey.startsWith("AIza")) {
+    return { type: "gemini", client: new GoogleGenerativeAI(apiKey) };
+  }
+  if (apiKey.startsWith("gsk_")) {
+    return { type: "groq", client: new OpenAI({ apiKey, baseURL: "https://api.groq.com/openai/v1" }) };
+  }
+  if (apiKey.startsWith("xai-")) {
+    return { type: "xai", client: new OpenAI({ apiKey, baseURL: "https://api.x.ai/v1" }) };
+  }
+  // Unknown prefix — try as Anthropic
+  return { type: "anthropic", client: new Anthropic({ apiKey }) };
+}
+
 /**
  * AI-powered yield optimization engine.
  *
- * Pipeline:
- * 1. Fetch live data from Blend (APYs, utilization) + Soroswap (swap rates)
- * 2. Format as structured context for Claude
- * 3. Claude generates allocation strategy based on risk tolerance
- * 4. Parse + validate strategy
- * 5. Optionally trigger rebalancer with new targets
+ * Set a single `aiApiKey` in config — the provider is auto-detected:
+ *   sk-ant-*  → Anthropic Claude
+ *   AIza*     → Google Gemini
+ *   gsk_*     → Groq / Llama
+ *   xai-*     → xAI Grok
  */
 export class YieldOptimizer {
-  private anthropic: Anthropic | null;
+  private provider: AIProvider | null;
   private blendClient: BlendClient;
   private soroswapClient: SoroswapClient;
   private rebalancer: Rebalancer | null;
@@ -34,25 +58,19 @@ export class YieldOptimizer {
 
   constructor(config: AgentAIConfig, rebalancer?: Rebalancer) {
     this.config = config;
-    this.anthropic = config.anthropicApiKey
-      ? new Anthropic({ apiKey: config.anthropicApiKey })
-      : null;
+    this.provider = config.aiApiKey ? detectProvider(config.aiApiKey) : null;
     this.blendClient = new BlendClient(config);
     this.soroswapClient = new SoroswapClient(config);
     this.rebalancer = rebalancer ?? null;
     this.usdcAddress = config.usdcAddress || "";
     this.log = config.logger ?? console;
+    if (this.provider) {
+      this.log.info(`AI provider: ${this.provider.type}`);
+    }
   }
 
-  /** Get the internal BlendClient instance. */
-  getBlendClient(): BlendClient {
-    return this.blendClient;
-  }
-
-  /** Get the internal SoroswapClient instance. */
-  getSoroswapClient(): SoroswapClient {
-    return this.soroswapClient;
-  }
+  getBlendClient(): BlendClient { return this.blendClient; }
+  getSoroswapClient(): SoroswapClient { return this.soroswapClient; }
 
   async optimize(
     query: string,
@@ -64,12 +82,14 @@ export class YieldOptimizer {
       this.soroswapClient.getPools(),
     ]);
     const poolContext = this.formatPoolContext(blendData, soroswapPools);
+
     let strategy;
-    if (this.anthropic) {
+    if (this.provider) {
       try {
-        strategy = await this.generateWithClaude(query, poolContext, riskTolerance, amount);
+        strategy = await this.callProvider(this.provider, query, poolContext, riskTolerance, amount);
+        this.log.info(`Strategy generated via ${this.provider.type}`);
       } catch (err) {
-        this.log.warn("Claude unavailable, using fallback strategy", { error: err });
+        this.log.warn(`${this.provider.type} failed, using hardcoded fallback`, { error: String(err).slice(0, 150) });
         strategy = this.fallbackStrategy(riskTolerance, amount);
       }
     } else {
@@ -85,17 +105,11 @@ export class YieldOptimizer {
           this.log.warn("Could not read current portfolio, using currentPct: 0", { error: err });
         }
       }
-
       this.rebalancer.setTargetAllocation(
         strategy.strategies.map(s => {
           const protocol = s.protocol.toLowerCase().includes("blend") ? "blend" : "soroswap";
           const pos = snapshot?.positions.find(p => p.protocol === protocol);
-          return {
-            protocol,
-            asset: this.usdcAddress,
-            targetPct: s.allocation_pct,
-            currentPct: pos?.pct ?? 0,
-          };
+          return { protocol, asset: this.usdcAddress, targetPct: s.allocation_pct, currentPct: pos?.pct ?? 0 };
         })
       );
     }
@@ -116,25 +130,49 @@ export class YieldOptimizer {
     };
   }
 
-  private async generateWithClaude(
+  private async callProvider(
+    provider: AIProvider,
     query: string, poolContext: string, risk: string, amount?: number,
   ): Promise<{ strategies: YieldStrategy[]; total_estimated_apy: number; summary: string }> {
     const userPrompt = buildUserPrompt(query, poolContext, risk, amount);
-    const response = await this.anthropic!.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 1500,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
-    try {
-      const start = text.indexOf("{");
-      const end = text.lastIndexOf("}") + 1;
-      return JSON.parse(text.slice(start, end));
-    } catch {
-      this.log.error("Failed to parse Claude response", { text });
-      return this.fallbackStrategy(risk, amount);
+
+    if (provider.type === "anthropic") {
+      const res = await provider.client.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1500,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: userPrompt }],
+      });
+      const text = res.content[0].type === "text" ? res.content[0].text : "";
+      return this.parseJson(text);
     }
+
+    if (provider.type === "gemini") {
+      const model = provider.client.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+      const res = await model.generateContent(`${SYSTEM_PROMPT}\n\n${userPrompt}`);
+      return this.parseJson(res.response.text());
+    }
+
+    // groq or xai — both OpenAI-compatible
+    const model = provider.type === "xai" ? "grok-3-mini" : "llama-3.3-70b-versatile";
+    const res = await (provider.client as OpenAI).chat.completions.create({
+      model,
+      max_tokens: 1500,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+    });
+    return this.parseJson(res.choices[0]?.message?.content ?? "");
+  }
+
+  private parseJson(
+    text: string,
+  ): { strategies: YieldStrategy[]; total_estimated_apy: number; summary: string } {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}") + 1;
+    if (start === -1 || end === 0) throw new Error("No JSON in response");
+    return JSON.parse(text.slice(start, end));
   }
 
   private formatPoolContext(blend: BlendPoolData, soroswap: PoolData[]): string {

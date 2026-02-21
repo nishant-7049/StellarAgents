@@ -96,7 +96,14 @@ export interface PortfolioSnapshot {
 export interface AgentAIConfig {
   stellarRpcUrl: string;
   networkPassphrase: string;
-  anthropicApiKey?: string;
+  /**
+   * Single AI API key — provider is auto-detected from the key prefix:
+   *   sk-ant-*  → Anthropic Claude
+   *   AIza*     → Google Gemini
+   *   gsk_*     → Groq (Llama)
+   *   xai-*     → xAI Grok
+   */
+  aiApiKey?: string;
   soroswapApiKey?: string;
   usdcAddress?: string;
   blendPoolId?: string;

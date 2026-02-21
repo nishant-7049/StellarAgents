@@ -2,8 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 
-const anthropic = config.ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: config.ANTHROPIC_API_KEY })
+const anthropic = config.AI_API_KEY
+  ? new Anthropic({ apiKey: config.AI_API_KEY })
   : null;
 
 export async function queryAI(systemPrompt: string, userMessage: string): Promise<string> {

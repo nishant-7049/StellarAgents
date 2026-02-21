@@ -9,8 +9,8 @@ import { portfolioService } from "../services/portfolio.service.js";
 import { vaultService } from "../services/vault.service.js";
 import { config } from "../config.js";
 
-const anthropic = config.ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: config.ANTHROPIC_API_KEY })
+const anthropic = config.AI_API_KEY
+  ? new Anthropic({ apiKey: config.AI_API_KEY })
   : null;
 
 const SYSTEM_CONTEXT = `You are a friendly, expert DeFi yield optimizer AI for Stellar blockchain. You help users:
