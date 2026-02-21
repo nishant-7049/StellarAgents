@@ -12,12 +12,15 @@
       --sidebar-background: #0f0f1a;
       --content-background: #13131f;
     }
-    /* hide the loading progress bar in the sidebar */
-    .progress-bar,
-    .app-nav .progress-bar,
+    /* hide every form of docsify loading indicator */
     #nprogress,
     #nprogress .bar,
-    .docsify-progress-bar { display: none !important; }
+    #nprogress .peg,
+    #nprogress .spinner,
+    #nprogress .spinner-icon,
+    .progress-bar,
+    .app-nav .progress-bar,
+    .docsify-progress-bar { display: none !important; opacity: 0 !important; }
   </style>
 </head>
 <body>
@@ -29,6 +32,11 @@
       loadNavbar: false,
       homepage: 'README.md',
       subMaxLevel: 2,
+      // always use the root sidebar — prevents per-directory re-fetch and sidebar flicker
+      alias: {
+        '/.*/_sidebar.md': '/_sidebar.md',
+        '/.*/_navbar.md': '/_navbar.md',
+      },
       search: {
         maxAge: 86400000,
         paths: 'auto',
