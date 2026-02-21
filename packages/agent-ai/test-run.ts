@@ -1,5 +1,5 @@
 /**
- * Quick smoke test for @agentsea/agent-ai
+ * Quick smoke test for @agenticocean/agent-ai
  * Run: npx tsx test-run.ts
  */
 import { config as dotenvConfig } from "dotenv";

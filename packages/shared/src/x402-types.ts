@@ -3,4 +3,4 @@ export type {
   PaymentAccept,
   PaymentPayload,
   PaymentResponse,
-} from "@agentsea/x402-stellar";
+} from "@agenticocean/x402-stellar";

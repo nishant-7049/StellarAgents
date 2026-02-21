@@ -1,1 +1,1 @@
-export { SYSTEM_PROMPT, buildUserPrompt } from "@agentsea/defi-agent";
+export { SYSTEM_PROMPT, buildUserPrompt } from "@agenticocean/defi-agent";

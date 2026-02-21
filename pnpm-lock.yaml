@@ -20,13 +20,13 @@ importers:
 
   apps/backend:
     dependencies:
-      '@agentsea/defi-agent':
+      '@agenticocean/defi-agent':
         specifier: workspace:*
         version: link:../../packages/agent-ai
-      '@agentsea/vault':
+      '@agenticocean/vault':
         specifier: workspace:*
         version: link:../../packages/vault
-      '@agentsea/x402-stellar':
+      '@agenticocean/x402-stellar':
         specifier: workspace:*
         version: link:../../packages/x402-stellar
       '@anthropic-ai/sdk':
@@ -93,7 +93,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@agentsea/x402-stellar':
+      '@agenticocean/x402-stellar':
         specifier: workspace:*
         version: link:../../packages/x402-stellar
       '@stellar/freighter-api':
@@ -161,7 +161,7 @@ importers:
 
   packages/shared:
     dependencies:
-      '@agentsea/x402-stellar':
+      '@agenticocean/x402-stellar':
         specifier: workspace:*
         version: link:../x402-stellar
     devDependencies:

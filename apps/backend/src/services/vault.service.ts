@@ -1,4 +1,4 @@
-import { VaultFactory, UserVault } from "@agentsea/vault";
+import { VaultFactory, UserVault } from "@agenticocean/vault";
 import { Keypair } from "@stellar/stellar-sdk";
 import { config } from "../config.js";
 import { logger } from "../logger.js";

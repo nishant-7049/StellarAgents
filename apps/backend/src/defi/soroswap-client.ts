@@ -1,8 +1,8 @@
-import { SoroswapClient } from "@agentsea/defi-agent";
+import { SoroswapClient } from "@agenticocean/defi-agent";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 
-export type { SwapQuote, PoolData } from "@agentsea/defi-agent";
+export type { SwapQuote, PoolData } from "@agenticocean/defi-agent";
 
 export const soroswapClient = new SoroswapClient({
   stellarRpcUrl: config.STELLAR_RPC_URL,

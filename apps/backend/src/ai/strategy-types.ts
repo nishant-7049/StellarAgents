@@ -1,1 +1,1 @@
-export type { YieldStrategy, StrategyResponse } from "@agentsea/defi-agent";
+export type { YieldStrategy, StrategyResponse } from "@agenticocean/defi-agent";

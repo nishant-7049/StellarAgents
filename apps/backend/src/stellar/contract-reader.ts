@@ -1,4 +1,4 @@
-import { ContractReader } from "@agentsea/vault";
+import { ContractReader } from "@agenticocean/vault";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 import { Keypair, nativeToScVal } from "@stellar/stellar-sdk";

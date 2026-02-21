@@ -7,7 +7,7 @@
  * - Generic invoke_host_function operations
  */
 
-import { formatUsdc } from "@agentsea/x402-stellar";
+import { formatUsdc } from "@agenticocean/x402-stellar";
 
 export interface DecodedEvent {
   type: "vault" | "payment" | "agent" | "other";

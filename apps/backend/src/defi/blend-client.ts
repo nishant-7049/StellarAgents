@@ -1,8 +1,8 @@
-import { BlendClient } from "@agentsea/defi-agent";
+import { BlendClient } from "@agenticocean/defi-agent";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 
-export type { BlendPoolData, UserBlendPosition } from "@agentsea/defi-agent";
+export type { BlendPoolData, UserBlendPosition } from "@agenticocean/defi-agent";
 
 export const blendClient = new BlendClient({
   stellarRpcUrl: config.STELLAR_RPC_URL,

@@ -4,7 +4,7 @@ import { agentService } from "../services/agent.service.js";
 import { creditsService } from "../services/credits.service.js";
 import { logger } from "../logger.js";
 import { config } from "../config.js";
-import { formatUsdc } from "@agentsea/x402-stellar";
+import { formatUsdc } from "@agenticocean/x402-stellar";
 
 export const dashboardRoutes = Router();
 

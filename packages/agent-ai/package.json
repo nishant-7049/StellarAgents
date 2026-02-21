@@ -1,5 +1,5 @@
 {
-  "name": "@agentsea/defi-agent",
+  "name": "@agenticocean/defi-agent",
   "version": "0.2.0",
   "description": "AI-powered DeFi agent toolkit for Stellar — yield optimization, Blend, Soroswap",
   "type": "module",

@@ -1,4 +1,4 @@
-import { ValidationRegistry } from "@agentsea/vault";
+import { ValidationRegistry } from "@agenticocean/vault";
 import { Keypair } from "@stellar/stellar-sdk";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
