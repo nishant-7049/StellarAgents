@@ -10,7 +10,8 @@
     "deploy:contracts": "tsx src/scripts/deploy-contracts.ts",
     "setup:testnet": "tsx src/scripts/setup-testnet.ts",
     "seed": "tsx src/scripts/seed-agents.ts",
-    "test:registry": "tsx src/scripts/test-agent-registry.ts"
+    "test:registry": "tsx src/scripts/test-agent-registry.ts",
+    "test:flow": "tsx src/scripts/test-complete-flow.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",

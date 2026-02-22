@@ -15,6 +15,7 @@
     "deploy:contracts": "pnpm --filter @agentnet/backend exec tsx src/scripts/deploy-contracts.ts",
     "setup:testnet": "pnpm --filter @agentnet/backend exec tsx src/scripts/setup-testnet.ts",
     "test:registry:testnet": "pnpm --filter @agentnet/backend exec tsx src/scripts/test-agent-registry.ts",
+    "test:flow:testnet": "pnpm --filter @agentnet/backend exec tsx src/scripts/test-complete-flow.ts",
     "lint": "turbo lint",
     "clean": "turbo clean && rm -rf node_modules"
   },
