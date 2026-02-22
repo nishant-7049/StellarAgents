@@ -64,6 +64,7 @@ async function main() {
   const demoAgents = [
     {
       name: "Yield Optimizer v1",
+      handle: "yield-optimizer-v1",
       uri: JSON.stringify({
         endpoints: { query: "https://agentnet-backend.railway.app/api/yield/query" },
         capabilities: ["yield", "rebalance"],
@@ -79,13 +80,13 @@ async function main() {
     try {
       // Check current count first
       const nextId = run(
-        `stellar contract invoke --id ${registryAddress} --source-account agentnet-admin --network ${NETWORK} -- next_id`
+        `stellar contract invoke --id ${registryAddress} --source-account agentnet-admin --network ${NETWORK} -- next_token_id`
       );
       console.log(`  Next ID will be: ${nextId}`);
 
       // Strings need to be passed with proper escaping for Soroban
       const id = run(
-        `stellar contract invoke --id ${registryAddress} --source-account agentnet-admin --network ${NETWORK} -- register --owner ${adminPubkey} --name '${agent.name}' --agent_uri '${agent.uri}' --vault_address ${vaultAddress} --agent_signer ${agentSignerPubkey}`
+        `stellar contract invoke --id ${registryAddress} --source-account agentnet-admin --network ${NETWORK} -- mint_identity --owner ${adminPubkey} --name '${agent.name}' --handle '${agent.handle}' --agent_uri '${agent.uri}' --vault_address ${vaultAddress} --agent_signer ${agentSignerPubkey}`
       );
       console.log(`  Registered with ID: ${id}`);
     } catch (err: any) {
@@ -98,12 +99,12 @@ async function main() {
   console.log("\nVerifying registrations...");
   try {
     const count = run(
-      `stellar contract invoke --id ${registryAddress} --source-account agentnet-admin --network ${NETWORK} -- agent_count`
+      `stellar contract invoke --id ${registryAddress} --source-account agentnet-admin --network ${NETWORK} -- active_count`
     );
     console.log(`  Total active agents: ${count}`);
 
     const agent1 = run(
-      `stellar contract invoke --id ${registryAddress} --source-account agentnet-admin --network ${NETWORK} -- get_agent --agent_id 1`
+      `stellar contract invoke --id ${registryAddress} --source-account agentnet-admin --network ${NETWORK} -- get_agent --token_id 1`
     );
     console.log(`  Agent #1: ${agent1}`);
   } catch (err: any) {

@@ -4,13 +4,15 @@ import path from "path";
 
 const ROOT = path.resolve(process.cwd(), "../..");
 const CONTRACTS_DIR = path.join(ROOT, "contracts");
-const WASM_DIR = path.join(CONTRACTS_DIR, "target/wasm32-unknown-unknown/release");
+const WASM_DIR = path.join(CONTRACTS_DIR, "target/wasm32v1-none/release");
 const ENV_CONTRACTS_PATH = path.join(ROOT, ".env.contracts");
 
 // Support --network mainnet flag for post-audit mainnet deployment
 const NETWORK_ARG = process.argv.find(a => a.startsWith("--network="))?.split("=")[1]
   || process.argv[process.argv.indexOf("--network") + 1];
 const NETWORK = (NETWORK_ARG === "mainnet") ? "mainnet" : "testnet";
+const SKIP_BUILD = process.argv.includes("--skip-build");
+const EXPLORER_NETWORK = NETWORK === "mainnet" ? "public" : "testnet";
 
 if (NETWORK === "mainnet") {
   console.warn("⚠️  MAINNET DEPLOYMENT — Ensure contracts have been audited before proceeding.");
@@ -39,8 +41,34 @@ function runInherit(cmd: string, opts?: { cwd?: string }): void {
   });
 }
 
+function extractHash(output: string, contractName: string): string {
+  const hashMatch = output.match(/[0-9a-f]{64}/i);
+  if (!hashMatch) {
+    throw new Error(`Could not parse uploaded hash for ${contractName}: ${output}`);
+  }
+  return hashMatch[0];
+}
+
+function uploadWasm(contractName: string): string {
+  const uploadCmd =
+    `stellar contract upload --wasm ${WASM_DIR}/${contractName}.wasm ` +
+    `--source-account agentnet-admin --network ${NETWORK}`;
+  try {
+    const out = run(uploadCmd);
+    return extractHash(out, contractName);
+  } catch (err: any) {
+    const msg = err?.stderr?.toString?.() || err?.message || String(err);
+    // Some CLI/RPC combinations emit an xdr parsing error even when the upload actually landed.
+    if (msg.includes("xdr processing error: xdr value invalid")) {
+      const out = run(uploadCmd.replace("stellar contract upload", "stellar --very-verbose contract upload"));
+      return extractHash(out, contractName);
+    }
+    throw err;
+  }
+}
+
 async function main() {
-  console.log("=== AgentNet Stellar: Testnet Deployment ===\n");
+  console.log(`=== AgentNet Stellar: ${NETWORK} Deployment ===\n`);
 
   // ── Step 0: Verify stellar CLI ──
   console.log("[0] Verifying stellar CLI...");
@@ -54,10 +82,20 @@ async function main() {
 
   // ── Step 1: Build WASM contracts ──
   console.log("\n[1] Building WASM contracts...");
-  if (!existsSync(path.join(WASM_DIR, "user_vault.wasm"))) {
-    runInherit("cargo build --release --target wasm32-unknown-unknown", { cwd: CONTRACTS_DIR });
+  if (SKIP_BUILD) {
+    console.log("  --skip-build set, using existing WASM artifacts.");
   } else {
-    console.log("  WASM binaries already exist, skipping build.");
+    try {
+      // Always rebuild to avoid deploying stale ABI changes.
+      runInherit("cargo build --release --target wasm32v1-none", { cwd: CONTRACTS_DIR });
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      if (msg.includes("can't find crate for `core`") || msg.includes("wasm32v1-none")) {
+        console.error("  Missing rust target wasm32v1-none.");
+        console.error("  Install with: rustup target add wasm32v1-none");
+      }
+      throw err;
+    }
   }
 
   // Verify all 5 WASM files exist
@@ -121,35 +159,27 @@ async function main() {
     }
   }
 
-  // ── Step 4: Install user_vault WASM (get hash) ──
-  console.log("\n[4] Installing user_vault WASM...");
+  // ── Step 4: Upload WASM blobs ──
+  console.log("\n[4] Uploading WASM blobs...");
   let vaultWasmHash: string;
+  let factoryWasmHash: string;
+  let registryWasmHash: string;
+  let reputationWasmHash: string;
+  let validationWasmHash: string;
   try {
-    vaultWasmHash = run(
-      `stellar contract install --wasm ${WASM_DIR}/user_vault.wasm --source-account agentnet-admin --network ${NETWORK}`
-    );
-    console.log(`  VAULT_WASM_HASH: ${vaultWasmHash}`);
+    vaultWasmHash = uploadWasm("user_vault");
+    factoryWasmHash = uploadWasm("vault_factory");
+    registryWasmHash = uploadWasm("agent_registry");
+    reputationWasmHash = uploadWasm("reputation_registry");
+    validationWasmHash = uploadWasm("validation_registry");
+    console.log(`  USER_VAULT_WASM_HASH: ${vaultWasmHash}`);
+    console.log(`  VAULT_FACTORY_WASM_HASH: ${factoryWasmHash}`);
+    console.log(`  AGENT_REGISTRY_WASM_HASH: ${registryWasmHash}`);
+    console.log(`  REPUTATION_REGISTRY_WASM_HASH: ${reputationWasmHash}`);
+    console.log(`  VALIDATION_REGISTRY_WASM_HASH: ${validationWasmHash}`);
   } catch (err: any) {
-    const stderr = err.stderr?.toString() || err.message;
-    if (stderr.includes("ExistingValue") || stderr.includes("already exists")) {
-      console.log("  WASM already installed, computing hash locally...");
-      // Get the hash from a re-install attempt or compute it
-      vaultWasmHash = run(
-        `stellar contract install --wasm ${WASM_DIR}/user_vault.wasm --source-account agentnet-admin --network ${NETWORK} 2>&1 || true`
-      );
-      // Try to extract the hash from the output
-      const hashMatch = vaultWasmHash.match(/[0-9a-f]{64}/);
-      if (hashMatch) {
-        vaultWasmHash = hashMatch[0];
-      } else {
-        console.error("  Could not determine WASM hash");
-        process.exit(1);
-      }
-      console.log(`  VAULT_WASM_HASH: ${vaultWasmHash}`);
-    } else {
-      console.error(`  Install error: ${stderr}`);
-      process.exit(1);
-    }
+    console.error(`  Upload error: ${err.stderr?.toString() || err.message}`);
+    process.exit(1);
   }
 
   // ── Step 5: Deploy VaultFactory ──
@@ -157,7 +187,7 @@ async function main() {
   let factoryAddress: string;
   try {
     factoryAddress = run(
-      `stellar contract deploy --wasm ${WASM_DIR}/vault_factory.wasm --source-account agentnet-admin --network ${NETWORK}`
+      `stellar contract deploy --wasm-hash ${factoryWasmHash} --source-account agentnet-admin --network ${NETWORK}`
     );
     console.log(`  VAULT_FACTORY: ${factoryAddress}`);
   } catch (err: any) {
@@ -170,7 +200,7 @@ async function main() {
   let registryAddress: string;
   try {
     registryAddress = run(
-      `stellar contract deploy --wasm ${WASM_DIR}/agent_registry.wasm --source-account agentnet-admin --network ${NETWORK}`
+      `stellar contract deploy --wasm-hash ${registryWasmHash} --source-account agentnet-admin --network ${NETWORK}`
     );
     console.log(`  AGENT_REGISTRY: ${registryAddress}`);
   } catch (err: any) {
@@ -183,7 +213,7 @@ async function main() {
   let reputationAddress: string;
   try {
     reputationAddress = run(
-      `stellar contract deploy --wasm ${WASM_DIR}/reputation_registry.wasm --source-account agentnet-admin --network ${NETWORK}`
+      `stellar contract deploy --wasm-hash ${reputationWasmHash} --source-account agentnet-admin --network ${NETWORK}`
     );
     console.log(`  REPUTATION_REGISTRY: ${reputationAddress}`);
   } catch (err: any) {
@@ -196,7 +226,7 @@ async function main() {
   let validationAddress: string;
   try {
     validationAddress = run(
-      `stellar contract deploy --wasm ${WASM_DIR}/validation_registry.wasm --source-account agentnet-admin --network ${NETWORK}`
+      `stellar contract deploy --wasm-hash ${validationWasmHash} --source-account agentnet-admin --network ${NETWORK}`
     );
     console.log(`  VALIDATION_REGISTRY: ${validationAddress}`);
   } catch (err: any) {
@@ -285,9 +315,9 @@ async function main() {
 
   try {
     const agentCount = run(
-      `stellar contract invoke --id ${registryAddress} --source-account agentnet-admin --network ${NETWORK} -- agent_count`
+      `stellar contract invoke --id ${registryAddress} --source-account agentnet-admin --network ${NETWORK} -- active_count`
     );
-    console.log(`  AgentRegistry.agent_count() = ${agentCount}`);
+    console.log(`  AgentRegistry.active_count() = ${agentCount}`);
   } catch (err: any) {
     console.warn(`  Could not verify AgentRegistry: ${err.message}`);
   }
@@ -295,7 +325,7 @@ async function main() {
   // ── Step 10: Write .env.contracts ──
   console.log("\n[10] Writing .env.contracts...");
   const envContent = `# AgentNet Contract Deployment — ${new Date().toISOString()}
-# Network: Stellar Testnet
+# Network: Stellar ${NETWORK}
 
 # ── Contract Addresses ──
 VAULT_FACTORY_ADDRESS=${factoryAddress}
@@ -336,11 +366,11 @@ NEXT_PUBLIC_USDC_SAC_ADDRESS=${usdcSacAddress}
 
   console.log("\n=== Deployment Complete ===");
   console.log(`\nView contracts on Stellar Expert:`);
-  console.log(`  Factory:    https://stellar.expert/explorer/testnet/contract/${factoryAddress}`);
-  console.log(`  Registry:   https://stellar.expert/explorer/testnet/contract/${registryAddress}`);
-  console.log(`  Reputation: https://stellar.expert/explorer/testnet/contract/${reputationAddress}`);
-  console.log(`  Validation: https://stellar.expert/explorer/testnet/contract/${validationAddress}`);
-  console.log(`  USDC SAC:   https://stellar.expert/explorer/testnet/contract/${usdcSacAddress}`);
+  console.log(`  Factory:    https://stellar.expert/explorer/${EXPLORER_NETWORK}/contract/${factoryAddress}`);
+  console.log(`  Registry:   https://stellar.expert/explorer/${EXPLORER_NETWORK}/contract/${registryAddress}`);
+  console.log(`  Reputation: https://stellar.expert/explorer/${EXPLORER_NETWORK}/contract/${reputationAddress}`);
+  console.log(`  Validation: https://stellar.expert/explorer/${EXPLORER_NETWORK}/contract/${validationAddress}`);
+  console.log(`  USDC SAC:   https://stellar.expert/explorer/${EXPLORER_NETWORK}/contract/${usdcSacAddress}`);
 }
 
 main().catch((err) => {

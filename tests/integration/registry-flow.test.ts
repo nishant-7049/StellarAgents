@@ -22,6 +22,7 @@ describe("Agent Registry Flow (Testnet)", () => {
     const account = await rpc.getAccount(owner.publicKey());
     const vault = Keypair.random().publicKey();
     const signer = Keypair.random().publicKey();
+    const handle = `test-agent-${Date.now()}`;
 
     const tx = new TransactionBuilder(account, {
       fee: "1000000",
@@ -29,9 +30,10 @@ describe("Agent Registry Flow (Testnet)", () => {
     })
       .addOperation(
         registry.call(
-          "register",
+          "mint_identity",
           nativeToScVal(owner.publicKey(), { type: "address" }),
           nativeToScVal("Test Yield Agent", { type: "string" }),
+          nativeToScVal(handle, { type: "string" }),
           nativeToScVal('{"capabilities":["yield"]}', { type: "string" }),
           nativeToScVal(vault, { type: "address" }),
           nativeToScVal(signer, { type: "address" }),
@@ -79,7 +81,7 @@ describe("Agent Registry Flow (Testnet)", () => {
       fee: "1000000",
       networkPassphrase: Networks.TESTNET,
     })
-      .addOperation(registry.call("agent_count"))
+      .addOperation(registry.call("active_count"))
       .setTimeout(30)
       .build();
 

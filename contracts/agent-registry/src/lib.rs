@@ -1,22 +1,85 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
+use soroban_sdk::{
+    contract, contractimpl, panic_with_error, Address, Env, String, Symbol, Vec,
+};
 
 pub mod types;
-use types::{AgentInfo, DataKey, RegistryError};
+use types::{AgentIdentity, DataKey, RegistryError};
+
+const NAME_MAX_LEN: u32 = 64;
+const URI_MAX_LEN: u32 = 2048;
+const METADATA_KEY_MAX_LEN: u32 = 64;
+const METADATA_VALUE_MAX_LEN: u32 = 2048;
 
 #[contract]
 pub struct AgentRegistry;
 
 #[contractimpl]
 impl AgentRegistry {
-    pub fn initialize(env: Env, admin: Address) -> Result<(), RegistryError> {
-        admin.require_auth();
-        if env.storage().instance().has(&DataKey::Admin) {
-            return Err(RegistryError::AlreadyInitialized);
+    fn ttl_params(env: &Env) -> Option<(u32, u32)> {
+        let max = env.storage().max_ttl();
+        if max == 0 {
+            return None;
         }
-        env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::NextId, &1u32);
-        env.storage().instance().set(&DataKey::TotalActive, &0u32);
+        let extend_to = core::cmp::max(1, max.saturating_sub(max / 20)); // keep 95% of max TTL
+        let threshold = core::cmp::max(1, extend_to / 2);
+        Some((threshold, extend_to))
+    }
+
+    fn bump_instance_ttl(env: &Env) {
+        if let Some((threshold, extend_to)) = Self::ttl_params(env) {
+            env.storage().instance().extend_ttl(threshold, extend_to);
+        }
+    }
+
+    fn bump_persistent_ttl(env: &Env, key: &DataKey) {
+        if let Some((threshold, extend_to)) = Self::ttl_params(env) {
+            env.storage()
+                .persistent()
+                .extend_ttl(key, threshold, extend_to);
+        }
+    }
+
+    fn require_initialized(env: &Env) -> Result<(), RegistryError> {
+        if !env.storage().instance().has(&DataKey::Admin) {
+            return Err(RegistryError::NotInitialized);
+        }
+        Self::bump_instance_ttl(env);
+        Ok(())
+    }
+
+    fn require_initialized_or_panic(env: &Env) {
+        if let Err(err) = Self::require_initialized(env) {
+            panic_with_error!(env, err);
+        }
+    }
+
+    fn validate_max_len(
+        value: &String,
+        max_len: u32,
+        error: RegistryError,
+    ) -> Result<(), RegistryError> {
+        if value.to_bytes().len() > max_len {
+            return Err(error);
+        }
+        Ok(())
+    }
+
+    fn validate_name(name: &String) -> Result<(), RegistryError> {
+        Self::validate_max_len(name, NAME_MAX_LEN, RegistryError::NameTooLong)
+    }
+
+    fn validate_agent_uri(agent_uri: &String) -> Result<(), RegistryError> {
+        Self::validate_max_len(agent_uri, URI_MAX_LEN, RegistryError::AgentUriTooLong)
+    }
+
+    fn validate_metadata(key: &String, value: &String) -> Result<(), RegistryError> {
+        Self::validate_max_len(key, METADATA_KEY_MAX_LEN, RegistryError::MetadataKeyTooLong)?;
+        Self::validate_max_len(
+            value,
+            METADATA_VALUE_MAX_LEN,
+            RegistryError::MetadataValueTooLong,
+        )?;
         Ok(())
     }
 
@@ -33,16 +96,13 @@ impl AgentRegistry {
             return Err(RegistryError::HandleTooLong);
         }
 
-        // No leading or trailing hyphens
         if bytes.get(0) == Some(b'-') || bytes.get(len - 1) == Some(b'-') {
             return Err(RegistryError::HandleInvalidChars);
         }
 
         for i in 0..len {
             let c = bytes.get(i).unwrap();
-            let valid = (c >= b'a' && c <= b'z')
-                || (c >= b'0' && c <= b'9')
-                || c == b'-';
+            let valid = (c >= b'a' && c <= b'z') || (c >= b'0' && c <= b'9') || c == b'-';
             if !valid {
                 return Err(RegistryError::HandleInvalidChars);
             }
@@ -50,15 +110,224 @@ impl AgentRegistry {
         Ok(())
     }
 
-    /// Register a new agent with a unique handle.
-    /// Returns the assigned numeric agent ID.
-    ///
-    /// # Handle rules
-    /// - 3–32 characters
-    /// - Lowercase letters (a-z), digits (0-9), hyphens only
-    /// - No leading or trailing hyphens
-    /// - Globally unique — first come, first served (like ENS)
-    pub fn register(
+    fn get_token(env: &Env, token_id: u64) -> Result<AgentIdentity, RegistryError> {
+        let key = DataKey::Token(token_id);
+        let token = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(RegistryError::TokenNotFound)?;
+        Self::bump_persistent_ttl(env, &key);
+        Ok(token)
+    }
+
+    fn is_operator_approved(env: &Env, owner: &Address, operator: &Address) -> bool {
+        let key = DataKey::OperatorApproval(owner.clone(), operator.clone());
+        let approved: bool = env.storage().persistent().get(&key).unwrap_or(false);
+        if env.storage().persistent().has(&key) {
+            Self::bump_persistent_ttl(env, &key);
+        }
+        approved
+    }
+
+    fn is_approved_or_owner(
+        env: &Env,
+        caller: &Address,
+        token_id: u64,
+        owner: &Address,
+    ) -> bool {
+        if *caller == *owner {
+            return true;
+        }
+
+        let approval_key = DataKey::TokenApproval(token_id);
+        if let Some(approved) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, Address>(&approval_key)
+        {
+            Self::bump_persistent_ttl(env, &approval_key);
+            if approved == caller.clone() {
+                return true;
+            }
+        }
+
+        Self::is_operator_approved(env, owner, caller)
+    }
+
+    fn clear_token_approval(env: &Env, token_id: u64) {
+        env.storage()
+            .persistent()
+            .remove(&DataKey::TokenApproval(token_id));
+    }
+
+    fn add_owner_token(env: &Env, owner: &Address, token_id: u64) {
+        let count_key = DataKey::OwnerTokenCount(owner.clone());
+        let count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
+
+        let owner_slot_key = DataKey::OwnerToken(owner.clone(), count);
+        let owner_index_key = DataKey::TokenOwnerIndex(token_id);
+
+        env.storage()
+            .persistent()
+            .set(&owner_slot_key, &token_id);
+        env.storage()
+            .persistent()
+            .set(&owner_index_key, &count);
+        env.storage()
+            .persistent()
+            .set(&count_key, &count.saturating_add(1));
+
+        Self::bump_persistent_ttl(env, &owner_slot_key);
+        Self::bump_persistent_ttl(env, &owner_index_key);
+        Self::bump_persistent_ttl(env, &count_key);
+    }
+
+    fn remove_owner_token(env: &Env, owner: &Address, token_id: u64) {
+        let count_key = DataKey::OwnerTokenCount(owner.clone());
+        let count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
+        if count == 0 {
+            return;
+        }
+
+        let owner_index_key = DataKey::TokenOwnerIndex(token_id);
+        let Some(index) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, u32>(&owner_index_key)
+        else {
+            return;
+        };
+        Self::bump_persistent_ttl(env, &owner_index_key);
+
+        if index >= count {
+            return;
+        }
+
+        let last_index = count.saturating_sub(1);
+        let last_slot_key = DataKey::OwnerToken(owner.clone(), last_index);
+        let last_token: u64 = env
+            .storage()
+            .persistent()
+            .get(&last_slot_key)
+            .unwrap_or(token_id);
+
+        if index != last_index {
+            let move_slot_key = DataKey::OwnerToken(owner.clone(), index);
+            env.storage().persistent().set(&move_slot_key, &last_token);
+            Self::bump_persistent_ttl(env, &move_slot_key);
+
+            let moved_token_index_key = DataKey::TokenOwnerIndex(last_token);
+            env.storage()
+                .persistent()
+                .set(&moved_token_index_key, &index);
+            Self::bump_persistent_ttl(env, &moved_token_index_key);
+        }
+
+        env.storage().persistent().remove(&last_slot_key);
+        env.storage().persistent().remove(&owner_index_key);
+
+        if last_index == 0 {
+            env.storage().persistent().remove(&count_key);
+        } else {
+            env.storage().persistent().set(&count_key, &last_index);
+            Self::bump_persistent_ttl(env, &count_key);
+        }
+    }
+
+    fn add_active_token(env: &Env, token_id: u64) {
+        let active_count: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::ActiveCount)
+            .unwrap_or(0);
+
+        let active_slot_key = DataKey::ActiveToken(active_count);
+        let active_index_key = DataKey::TokenActiveIndex(token_id);
+
+        env.storage()
+            .persistent()
+            .set(&active_slot_key, &token_id);
+        env.storage()
+            .persistent()
+            .set(&active_index_key, &active_count);
+        env.storage()
+            .instance()
+            .set(&DataKey::ActiveCount, &active_count.saturating_add(1));
+
+        Self::bump_persistent_ttl(env, &active_slot_key);
+        Self::bump_persistent_ttl(env, &active_index_key);
+        Self::bump_instance_ttl(env);
+    }
+
+    fn remove_active_token(env: &Env, token_id: u64) {
+        let active_count: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::ActiveCount)
+            .unwrap_or(0);
+        if active_count == 0 {
+            return;
+        }
+
+        let active_index_key = DataKey::TokenActiveIndex(token_id);
+        let Some(index) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, u64>(&active_index_key)
+        else {
+            return;
+        };
+        Self::bump_persistent_ttl(env, &active_index_key);
+
+        if index >= active_count {
+            return;
+        }
+
+        let last_index = active_count.saturating_sub(1);
+        let last_slot_key = DataKey::ActiveToken(last_index);
+        let last_token: u64 = env
+            .storage()
+            .persistent()
+            .get(&last_slot_key)
+            .unwrap_or(token_id);
+
+        if index != last_index {
+            let move_slot_key = DataKey::ActiveToken(index);
+            env.storage().persistent().set(&move_slot_key, &last_token);
+            Self::bump_persistent_ttl(env, &move_slot_key);
+
+            let moved_token_index_key = DataKey::TokenActiveIndex(last_token);
+            env.storage()
+                .persistent()
+                .set(&moved_token_index_key, &index);
+            Self::bump_persistent_ttl(env, &moved_token_index_key);
+        }
+
+        env.storage().persistent().remove(&last_slot_key);
+        env.storage().persistent().remove(&active_index_key);
+        env.storage()
+            .instance()
+            .set(&DataKey::ActiveCount, &last_index);
+
+        Self::bump_instance_ttl(env);
+    }
+
+    pub fn initialize(env: Env, admin: Address) -> Result<(), RegistryError> {
+        admin.require_auth();
+        if env.storage().instance().has(&DataKey::Admin) {
+            return Err(RegistryError::AlreadyInitialized);
+        }
+
+        env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage().instance().set(&DataKey::NextTokenId, &1u64);
+        env.storage().instance().set(&DataKey::TotalSupply, &0u64);
+        env.storage().instance().set(&DataKey::ActiveCount, &0u64);
+        Self::bump_instance_ttl(&env);
+        Ok(())
+    }
+
+    pub fn mint_identity(
         env: Env,
         owner: Address,
         name: String,
@@ -66,210 +335,528 @@ impl AgentRegistry {
         agent_uri: String,
         vault_address: Address,
         agent_signer: Address,
-    ) -> Result<u32, RegistryError> {
+    ) -> Result<u64, RegistryError> {
+        Self::require_initialized(&env)?;
         owner.require_auth();
 
-        // Validate handle format
+        Self::validate_name(&name)?;
         Self::validate_handle(&handle)?;
+        Self::validate_agent_uri(&agent_uri)?;
 
-        // Enforce uniqueness — reject if handle is already claimed
-        if env.storage().persistent().has(&DataKey::HandleAgent(handle.clone())) {
+        let handle_key = DataKey::HandleToken(handle.clone());
+        if env.storage().persistent().has(&handle_key) {
+            Self::bump_persistent_ttl(&env, &handle_key);
             return Err(RegistryError::HandleAlreadyTaken);
         }
 
-        let id: u32 = env.storage().instance().get(&DataKey::NextId).unwrap();
+        let token_id: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::NextTokenId)
+            .unwrap_or(1);
+        let now = env.ledger().timestamp();
 
-        let agent = AgentInfo {
-            id,
+        let token = AgentIdentity {
+            token_id,
             owner: owner.clone(),
             name,
             handle: handle.clone(),
             agent_uri,
             vault_address,
             agent_signer,
-            registered_at: env.ledger().timestamp(),
+            registered_at: now,
+            updated_at: now,
             is_active: true,
         };
 
-        env.storage().persistent().set(&DataKey::Agent(id), &agent);
-        env.storage().persistent().set(&DataKey::OwnerAgent(owner), &id);
-        // Claim the handle — maps "stellar-yield-bot" → agent ID
-        env.storage().persistent().set(&DataKey::HandleAgent(handle), &id);
+        let token_key = DataKey::Token(token_id);
+        let owner_key = DataKey::TokenOwner(token_id);
 
-        env.storage().instance().set(&DataKey::NextId, &(id + 1));
-        let total: u32 = env.storage().instance().get(&DataKey::TotalActive).unwrap_or(0);
-        env.storage().instance().set(&DataKey::TotalActive, &(total + 1));
+        env.storage().persistent().set(&token_key, &token);
+        env.storage().persistent().set(&owner_key, &owner);
+        env.storage().persistent().set(&handle_key, &token_id);
+        Self::bump_persistent_ttl(&env, &token_key);
+        Self::bump_persistent_ttl(&env, &owner_key);
+        Self::bump_persistent_ttl(&env, &handle_key);
 
-        Ok(id)
+        Self::add_owner_token(&env, &owner, token_id);
+        Self::add_active_token(&env, token_id);
+
+        let balance_key = DataKey::Balance(owner.clone());
+        let balance: u32 = env.storage().persistent().get(&balance_key).unwrap_or(0);
+        env.storage()
+            .persistent()
+            .set(&balance_key, &balance.saturating_add(1));
+        Self::bump_persistent_ttl(&env, &balance_key);
+
+        let total: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TotalSupply)
+            .unwrap_or(0);
+        env.storage()
+            .instance()
+            .set(&DataKey::TotalSupply, &total.saturating_add(1));
+        env.storage()
+            .instance()
+            .set(&DataKey::NextTokenId, &token_id.saturating_add(1));
+        Self::bump_instance_ttl(&env);
+
+        env.events().publish(
+            (Symbol::new(&env, "identity_minted"), token_id, owner),
+            handle,
+        );
+
+        Ok(token_id)
+    }
+
+    pub fn owner_of(env: Env, token_id: u64) -> Result<Address, RegistryError> {
+        Self::require_initialized(&env)?;
+        let key = DataKey::TokenOwner(token_id);
+        let owner = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(RegistryError::TokenNotFound)?;
+        Self::bump_persistent_ttl(&env, &key);
+        Ok(owner)
+    }
+
+    pub fn balance_of(env: Env, owner: Address) -> u64 {
+        Self::require_initialized_or_panic(&env);
+        let key = DataKey::Balance(owner);
+        if env.storage().persistent().has(&key) {
+            Self::bump_persistent_ttl(&env, &key);
+        }
+        let balance: u32 = env.storage().persistent().get(&key).unwrap_or(0);
+        balance as u64
+    }
+
+    pub fn get_agent(env: Env, token_id: u64) -> Result<AgentIdentity, RegistryError> {
+        Self::require_initialized(&env)?;
+        Self::get_token(&env, token_id)
+    }
+
+    pub fn get_agent_by_handle(env: Env, handle: String) -> Result<AgentIdentity, RegistryError> {
+        Self::require_initialized(&env)?;
+        let key = DataKey::HandleToken(handle);
+        let token_id: u64 = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(RegistryError::TokenNotFound)?;
+        Self::bump_persistent_ttl(&env, &key);
+        Self::get_token(&env, token_id)
+    }
+
+    pub fn token_uri(env: Env, token_id: u64) -> Result<String, RegistryError> {
+        Self::require_initialized(&env)?;
+        let token = Self::get_token(&env, token_id)?;
+        Ok(token.agent_uri)
+    }
+
+    pub fn approve(
+        env: Env,
+        owner: Address,
+        to: Address,
+        token_id: u64,
+    ) -> Result<(), RegistryError> {
+        Self::require_initialized(&env)?;
+        owner.require_auth();
+
+        let token_owner = Self::owner_of(env.clone(), token_id)?;
+        if token_owner == to {
+            return Err(RegistryError::ApprovalToCurrentOwner);
+        }
+
+        let can_approve =
+            owner == token_owner || Self::is_operator_approved(&env, &token_owner, &owner);
+        if !can_approve {
+            return Err(RegistryError::ApproveCallerNotOwnerNorOperator);
+        }
+
+        let approval_key = DataKey::TokenApproval(token_id);
+        env.storage().persistent().set(&approval_key, &to.clone());
+        Self::bump_persistent_ttl(&env, &approval_key);
+
+        env.events().publish(
+            (Symbol::new(&env, "approval"), token_owner, to, token_id),
+            (),
+        );
+        Ok(())
+    }
+
+    pub fn get_approved(env: Env, token_id: u64) -> Option<Address> {
+        Self::require_initialized_or_panic(&env);
+
+        let token_key = DataKey::Token(token_id);
+        if !env.storage().persistent().has(&token_key) {
+            return None;
+        }
+        Self::bump_persistent_ttl(&env, &token_key);
+
+        let approval_key = DataKey::TokenApproval(token_id);
+        let approved = env.storage().persistent().get(&approval_key);
+        if env.storage().persistent().has(&approval_key) {
+            Self::bump_persistent_ttl(&env, &approval_key);
+        }
+        approved
+    }
+
+    pub fn set_approval_for_all(
+        env: Env,
+        owner: Address,
+        operator: Address,
+        approved: bool,
+    ) -> Result<(), RegistryError> {
+        Self::require_initialized(&env)?;
+        owner.require_auth();
+
+        let key = DataKey::OperatorApproval(owner.clone(), operator.clone());
+        env.storage().persistent().set(&key, &approved);
+        Self::bump_persistent_ttl(&env, &key);
+
+        env.events().publish(
+            (Symbol::new(&env, "approval_for_all"), owner, operator),
+            approved,
+        );
+        Ok(())
+    }
+
+    pub fn is_approved_for_all(env: Env, owner: Address, operator: Address) -> bool {
+        Self::require_initialized_or_panic(&env);
+        Self::is_operator_approved(&env, &owner, &operator)
+    }
+
+    pub fn transfer_from(
+        env: Env,
+        caller: Address,
+        from: Address,
+        to: Address,
+        token_id: u64,
+    ) -> Result<(), RegistryError> {
+        Self::require_initialized(&env)?;
+        caller.require_auth();
+
+        if to == env.current_contract_address() {
+            return Err(RegistryError::InvalidRecipient);
+        }
+
+        let mut token = Self::get_token(&env, token_id)?;
+        let token_owner = token.owner.clone();
+
+        if token_owner != from {
+            return Err(RegistryError::NotTokenOwner);
+        }
+        if !Self::is_approved_or_owner(&env, &caller, token_id, &token_owner) {
+            return Err(RegistryError::NotApprovedOrOwner);
+        }
+
+        if from != to {
+            Self::remove_owner_token(&env, &from, token_id);
+            Self::add_owner_token(&env, &to, token_id);
+
+            let from_balance_key = DataKey::Balance(from.clone());
+            let from_balance: u32 = env
+                .storage()
+                .persistent()
+                .get(&from_balance_key)
+                .unwrap_or(0);
+            env.storage().persistent().set(
+                &from_balance_key,
+                &from_balance.saturating_sub(1),
+            );
+            Self::bump_persistent_ttl(&env, &from_balance_key);
+
+            let to_balance_key = DataKey::Balance(to.clone());
+            let to_balance: u32 = env.storage().persistent().get(&to_balance_key).unwrap_or(0);
+            env.storage()
+                .persistent()
+                .set(&to_balance_key, &to_balance.saturating_add(1));
+            Self::bump_persistent_ttl(&env, &to_balance_key);
+        }
+
+        token.owner = to.clone();
+        token.updated_at = env.ledger().timestamp();
+
+        let token_key = DataKey::Token(token_id);
+        let owner_key = DataKey::TokenOwner(token_id);
+        env.storage().persistent().set(&token_key, &token);
+        env.storage().persistent().set(&owner_key, &to.clone());
+        Self::bump_persistent_ttl(&env, &token_key);
+        Self::bump_persistent_ttl(&env, &owner_key);
+
+        Self::clear_token_approval(&env, token_id);
+
+        env.events()
+            .publish((Symbol::new(&env, "transfer"), from, to, token_id), ());
+        Ok(())
     }
 
     pub fn set_agent_uri(
         env: Env,
-        owner: Address,
-        agent_id: u32,
+        caller: Address,
+        token_id: u64,
         new_uri: String,
     ) -> Result<(), RegistryError> {
-        owner.require_auth();
-        let mut agent: AgentInfo = env
-            .storage()
-            .persistent()
-            .get(&DataKey::Agent(agent_id))
-            .ok_or(RegistryError::AgentNotFound)?;
-        if agent.owner != owner {
-            return Err(RegistryError::NotAgentOwner);
+        Self::require_initialized(&env)?;
+        caller.require_auth();
+        Self::validate_agent_uri(&new_uri)?;
+
+        let mut token = Self::get_token(&env, token_id)?;
+        if !Self::is_approved_or_owner(&env, &caller, token_id, &token.owner) {
+            return Err(RegistryError::NotApprovedOrOwner);
         }
-        agent.agent_uri = new_uri;
+
+        token.agent_uri = new_uri;
+        token.updated_at = env.ledger().timestamp();
+
+        let token_key = DataKey::Token(token_id);
+        env.storage().persistent().set(&token_key, &token);
+        Self::bump_persistent_ttl(&env, &token_key);
+
+        env.events()
+            .publish((Symbol::new(&env, "uri_updated"), token_id), ());
+        Ok(())
+    }
+
+    pub fn set_handle(
+        env: Env,
+        caller: Address,
+        token_id: u64,
+        new_handle: String,
+    ) -> Result<(), RegistryError> {
+        Self::require_initialized(&env)?;
+        caller.require_auth();
+        Self::validate_handle(&new_handle)?;
+
+        let mut token = Self::get_token(&env, token_id)?;
+        if !Self::is_approved_or_owner(&env, &caller, token_id, &token.owner) {
+            return Err(RegistryError::NotApprovedOrOwner);
+        }
+
+        if token.handle == new_handle {
+            return Ok(());
+        }
+
+        let new_handle_key = DataKey::HandleToken(new_handle.clone());
+        if env.storage().persistent().has(&new_handle_key) {
+            Self::bump_persistent_ttl(&env, &new_handle_key);
+            return Err(RegistryError::HandleAlreadyTaken);
+        }
+
+        let old_handle = token.handle.clone();
         env.storage()
             .persistent()
-            .set(&DataKey::Agent(agent_id), &agent);
+            .remove(&DataKey::HandleToken(old_handle.clone()));
+        env.storage()
+            .persistent()
+            .set(&new_handle_key, &token_id);
+        Self::bump_persistent_ttl(&env, &new_handle_key);
+
+        token.handle = new_handle.clone();
+        token.updated_at = env.ledger().timestamp();
+        let token_key = DataKey::Token(token_id);
+        env.storage().persistent().set(&token_key, &token);
+        Self::bump_persistent_ttl(&env, &token_key);
+
+        env.events().publish(
+            (Symbol::new(&env, "handle_updated"), token_id),
+            (old_handle, new_handle),
+        );
         Ok(())
     }
 
     pub fn set_metadata(
         env: Env,
-        owner: Address,
-        agent_id: u32,
+        caller: Address,
+        token_id: u64,
         key: String,
         value: String,
     ) -> Result<(), RegistryError> {
-        owner.require_auth();
-        let agent: AgentInfo = env
-            .storage()
-            .persistent()
-            .get(&DataKey::Agent(agent_id))
-            .ok_or(RegistryError::AgentNotFound)?;
-        if agent.owner != owner {
-            return Err(RegistryError::NotAgentOwner);
+        Self::require_initialized(&env)?;
+        caller.require_auth();
+        Self::validate_metadata(&key, &value)?;
+
+        let token = Self::get_token(&env, token_id)?;
+        if !Self::is_approved_or_owner(&env, &caller, token_id, &token.owner) {
+            return Err(RegistryError::NotApprovedOrOwner);
         }
-        env.storage()
-            .persistent()
-            .set(&DataKey::Metadata(agent_id, key), &value);
+
+        let metadata_key = DataKey::Metadata(token_id, key);
+        env.storage().persistent().set(&metadata_key, &value);
+        Self::bump_persistent_ttl(&env, &metadata_key);
         Ok(())
     }
 
-    pub fn get_metadata(env: Env, agent_id: u32, key: String) -> Option<String> {
-        env.storage()
-            .persistent()
-            .get(&DataKey::Metadata(agent_id, key))
+    pub fn get_metadata(env: Env, token_id: u64, key: String) -> Option<String> {
+        Self::require_initialized_or_panic(&env);
+        let metadata_key = DataKey::Metadata(token_id, key);
+        let value = env.storage().persistent().get(&metadata_key);
+        if value.is_some() {
+            Self::bump_persistent_ttl(&env, &metadata_key);
+        }
+        value
     }
 
-    pub fn deactivate(env: Env, owner: Address, agent_id: u32) -> Result<(), RegistryError> {
-        owner.require_auth();
-        let mut agent: AgentInfo = env
-            .storage()
-            .persistent()
-            .get(&DataKey::Agent(agent_id))
-            .ok_or(RegistryError::AgentNotFound)?;
-        if agent.owner != owner {
-            return Err(RegistryError::NotAgentOwner);
+    pub fn deactivate(env: Env, caller: Address, token_id: u64) -> Result<(), RegistryError> {
+        Self::require_initialized(&env)?;
+        caller.require_auth();
+
+        let mut token = Self::get_token(&env, token_id)?;
+        if !Self::is_approved_or_owner(&env, &caller, token_id, &token.owner) {
+            return Err(RegistryError::NotApprovedOrOwner);
         }
-        agent.is_active = false;
-        env.storage()
-            .persistent()
-            .set(&DataKey::Agent(agent_id), &agent);
-        let total: u32 = env
-            .storage()
-            .instance()
-            .get(&DataKey::TotalActive)
-            .unwrap_or(1);
-        env.storage()
-            .instance()
-            .set(&DataKey::TotalActive, &total.saturating_sub(1));
+        if !token.is_active {
+            return Err(RegistryError::AlreadyInactive);
+        }
+
+        token.is_active = false;
+        token.updated_at = env.ledger().timestamp();
+        let token_key = DataKey::Token(token_id);
+        env.storage().persistent().set(&token_key, &token);
+        Self::bump_persistent_ttl(&env, &token_key);
+
+        Self::remove_active_token(&env, token_id);
+
+        env.events().publish(
+            (Symbol::new(&env, "status_changed"), token_id),
+            false,
+        );
         Ok(())
     }
 
-    pub fn get_agent(env: Env, agent_id: u32) -> Result<AgentInfo, RegistryError> {
-        env.storage()
-            .persistent()
-            .get(&DataKey::Agent(agent_id))
-            .ok_or(RegistryError::AgentNotFound)
+    pub fn reactivate(env: Env, caller: Address, token_id: u64) -> Result<(), RegistryError> {
+        Self::require_initialized(&env)?;
+        caller.require_auth();
+
+        let mut token = Self::get_token(&env, token_id)?;
+        if !Self::is_approved_or_owner(&env, &caller, token_id, &token.owner) {
+            return Err(RegistryError::NotApprovedOrOwner);
+        }
+        if token.is_active {
+            return Err(RegistryError::AlreadyActive);
+        }
+
+        token.is_active = true;
+        token.updated_at = env.ledger().timestamp();
+        let token_key = DataKey::Token(token_id);
+        env.storage().persistent().set(&token_key, &token);
+        Self::bump_persistent_ttl(&env, &token_key);
+
+        Self::add_active_token(&env, token_id);
+
+        env.events()
+            .publish((Symbol::new(&env, "status_changed"), token_id), true);
+        Ok(())
     }
 
-    pub fn get_agent_by_owner(env: Env, owner: Address) -> Option<u32> {
-        env.storage().persistent().get(&DataKey::OwnerAgent(owner))
-    }
+    /// Lists active agents using a bounded active index.
+    /// `start_token_id` behaves as a 1-based cursor into active agents.
+    pub fn list_agents(env: Env, start_token_id: u64, limit: u64) -> Vec<AgentIdentity> {
+        Self::require_initialized_or_panic(&env);
+        if limit == 0 {
+            return Vec::new(&env);
+        }
 
-    /// Resolve a human-readable handle to the full AgentInfo.
-    /// e.g. "stellar-yield-bot" → AgentInfo { id: 1, name: "...", ... }
-    pub fn get_agent_by_handle(env: Env, handle: String) -> Result<AgentInfo, RegistryError> {
-        let id: u32 = env
+        let active_count: u64 = env
             .storage()
-            .persistent()
-            .get(&DataKey::HandleAgent(handle))
-            .ok_or(RegistryError::AgentNotFound)?;
-        env.storage()
-            .persistent()
-            .get(&DataKey::Agent(id))
-            .ok_or(RegistryError::AgentNotFound)
+            .instance()
+            .get(&DataKey::ActiveCount)
+            .unwrap_or(0);
+        if active_count == 0 {
+            return Vec::new(&env);
+        }
+
+        let start_index = if start_token_id <= 1 {
+            0
+        } else {
+            start_token_id.saturating_sub(1)
+        };
+        if start_index >= active_count {
+            return Vec::new(&env);
+        }
+
+        let end = core::cmp::min(start_index.saturating_add(limit), active_count);
+        let mut out = Vec::new(&env);
+        let mut i = start_index;
+        while i < end {
+            let active_slot_key = DataKey::ActiveToken(i);
+            if let Some(token_id) = env
+                .storage()
+                .persistent()
+                .get::<DataKey, u64>(&active_slot_key)
+            {
+                Self::bump_persistent_ttl(&env, &active_slot_key);
+                if let Ok(token) = Self::get_token(&env, token_id) {
+                    out.push_back(token);
+                }
+            }
+            i = i.saturating_add(1);
+        }
+        out
     }
 
-    /// Check if a handle is still available before registering.
+    pub fn list_tokens_by_owner(env: Env, owner: Address, offset: u64, limit: u64) -> Vec<u64> {
+        Self::require_initialized_or_panic(&env);
+        if limit == 0 {
+            return Vec::new(&env);
+        }
+
+        let count_key = DataKey::OwnerTokenCount(owner.clone());
+        let count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
+        let count_u64 = count as u64;
+        if count == 0 || offset >= count_u64 {
+            return Vec::new(&env);
+        }
+        Self::bump_persistent_ttl(&env, &count_key);
+
+        let end = core::cmp::min(offset.saturating_add(limit), count_u64);
+        let mut out = Vec::new(&env);
+        let mut i = offset;
+        while i < end {
+            let key = DataKey::OwnerToken(owner.clone(), i as u32);
+            if let Some(token_id) = env.storage().persistent().get::<DataKey, u64>(&key) {
+                Self::bump_persistent_ttl(&env, &key);
+                out.push_back(token_id);
+            }
+            i = i.saturating_add(1);
+        }
+        out
+    }
+
     pub fn is_handle_available(env: Env, handle: String) -> bool {
-        !env.storage().persistent().has(&DataKey::HandleAgent(handle))
+        Self::require_initialized_or_panic(&env);
+        let key = DataKey::HandleToken(handle);
+        let available = !env.storage().persistent().has(&key);
+        if !available {
+            Self::bump_persistent_ttl(&env, &key);
+        }
+        available
     }
 
-    pub fn agent_count(env: Env) -> u32 {
+    pub fn total_supply(env: Env) -> u64 {
+        Self::require_initialized_or_panic(&env);
         env.storage()
             .instance()
-            .get(&DataKey::TotalActive)
+            .get(&DataKey::TotalSupply)
             .unwrap_or(0)
     }
 
-    pub fn next_id(env: Env) -> u32 {
+    pub fn active_count(env: Env) -> u64 {
+        Self::require_initialized_or_panic(&env);
         env.storage()
             .instance()
-            .get(&DataKey::NextId)
-            .unwrap_or(1)
+            .get(&DataKey::ActiveCount)
+            .unwrap_or(0)
     }
 
-    /// Transfer agent ownership to a new address.
-    /// The handle stays the same — it travels with the agent, not the owner.
-    pub fn transfer_agent(
-        env: Env,
-        current_owner: Address,
-        agent_id: u32,
-        new_owner: Address,
-    ) -> Result<(), RegistryError> {
-        current_owner.require_auth();
-        let mut agent: AgentInfo = env
-            .storage()
-            .persistent()
-            .get(&DataKey::Agent(agent_id))
-            .ok_or(RegistryError::AgentNotFound)?;
-        if agent.owner != current_owner {
-            return Err(RegistryError::NotAgentOwner);
-        }
-        // Update owner lookups — handle mapping stays unchanged
-        env.storage().persistent().remove(&DataKey::OwnerAgent(current_owner));
-        env.storage().persistent().set(&DataKey::OwnerAgent(new_owner.clone()), &agent_id);
-        agent.owner = new_owner;
-        env.storage().persistent().set(&DataKey::Agent(agent_id), &agent);
-        Ok(())
-    }
-
-    pub fn list_agents(env: Env, start_id: u32, limit: u32) -> Vec<AgentInfo> {
-        let next: u32 = env
-            .storage()
+    pub fn next_token_id(env: Env) -> u64 {
+        Self::require_initialized_or_panic(&env);
+        env.storage()
             .instance()
-            .get(&DataKey::NextId)
-            .unwrap_or(1);
-        let mut result = Vec::new(&env);
-        let mut id = start_id;
-        let mut count = 0u32;
-        while id < next && count < limit {
-            if let Some(a) =
-                env.storage()
-                    .persistent()
-                    .get::<DataKey, AgentInfo>(&DataKey::Agent(id))
-            {
-                if a.is_active {
-                    result.push_back(a);
-                    count += 1;
-                }
-            }
-            id += 1;
-        }
-        result
+            .get(&DataKey::NextTokenId)
+            .unwrap_or(1)
     }
 }
 

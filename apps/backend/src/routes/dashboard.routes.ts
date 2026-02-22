@@ -60,7 +60,7 @@ dashboardRoutes.get("/:walletAddress", async (req, res) => {
     let agentInfo: any = null;
     if (config.AGENT_REGISTRY_ADDRESS) {
       try {
-        agentId = await agentService.getAgentByOwner(walletAddress);
+        agentId = await agentService.getPrimaryAgentToken(walletAddress);
         if (agentId !== null) {
           agentInfo = await agentService.getAgent(agentId);
         }

@@ -23,6 +23,7 @@ export default function RegisterPage() {
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
+  const [handle, setHandle] = useState("");
   const [selectedCaps, setSelectedCaps] = useState<string[]>(["yield"]);
   const [price, setPrice] = useState("100000"); // 0.01 USDC in stroops
   const [vault, setVault] = useState(vaultAddress || DEMO_VAULT_ADDRESS);
@@ -52,6 +53,7 @@ export default function RegisterPage() {
   const handleRegister = () => {
     registerAgent({
       name,
+      handle,
       capabilities: selectedCaps,
       pricing: price,
       vaultAddress: vault,
@@ -87,6 +89,12 @@ export default function RegisterPage() {
               onChange={e => setName(e.target.value)}
               placeholder="Yield Optimizer Pro"
             />
+            <Input
+              label="Unique Handle"
+              value={handle}
+              onChange={e => setHandle(e.target.value)}
+              placeholder="yield-optimizer-pro"
+            />
             <div>
               <label className="block text-sm text-[var(--text-secondary)] mb-2">Capabilities</label>
               <div className="flex flex-wrap gap-2">
@@ -114,7 +122,7 @@ export default function RegisterPage() {
             <p className="text-xs text-[var(--text-secondary)]">
               {(parseInt(price || "0") / 10_000_000).toFixed(4)} USDC per query
             </p>
-            <Button onClick={() => setStep(2)} disabled={!name} className="w-full">
+            <Button onClick={() => setStep(2)} disabled={!name || !handle} className="w-full">
               Review
             </Button>
           </div>
@@ -140,6 +148,7 @@ export default function RegisterPage() {
               </div>
               <div className="text-sm text-[var(--text-secondary)] space-y-1">
                 <div>Price: {(parseInt(price || "0") / 10_000_000).toFixed(4)} USDC/query</div>
+                <div>Handle: @{handle}</div>
                 <div>Vault: {shortenAddress(vault, 6)}</div>
                 <div>Signer: {shortenAddress(signer, 6)}</div>
               </div>
@@ -195,6 +204,7 @@ export default function RegisterPage() {
               onClick={() => {
                 setStep(1);
                 setName("");
+                setHandle("");
                 setSelectedCaps(["yield"]);
                 resetTxState();
               }}

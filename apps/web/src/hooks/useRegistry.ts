@@ -7,7 +7,9 @@ import { AGENT_REGISTRY_ADDRESS } from "@/lib/contracts";
 
 export interface AgentData {
   id: number;
+  token_id: number;
   name: string;
+  handle: string;
   owner: string;
   agent_uri: string;
   vault_address: string;
@@ -37,7 +39,7 @@ export function useRegistry() {
         AGENT_REGISTRY_ADDRESS,
         "list_agents",
         [
-          nativeToScVal(1, { type: "u32" }),
+          nativeToScVal(BigInt(1), { type: "u64" }),
           nativeToScVal(20, { type: "u32" }),
         ],
       );
@@ -52,9 +54,13 @@ export function useRegistry() {
           pricing = uri.pricing;
         } catch {}
 
+        const tokenId = Number(a.token_id ?? a.id);
+
         return {
-          id: Number(a.id),
-          name: a.name || `Agent #${a.id}`,
+          id: tokenId,
+          token_id: tokenId,
+          name: a.name || `Agent #${tokenId}`,
+          handle: a.handle || "",
           owner: a.owner,
           agent_uri: a.agent_uri || "{}",
           vault_address: a.vault_address || "",
@@ -76,6 +82,7 @@ export function useRegistry() {
 
   const registerAgent = useCallback(async (params: {
     name: string;
+    handle: string;
     capabilities: string[];
     pricing: string;
     vaultAddress: string;
@@ -95,10 +102,11 @@ export function useRegistry() {
 
       const xdr = await buildContractTx({
         contractId: AGENT_REGISTRY_ADDRESS,
-        method: "register",
+        method: "mint_identity",
         args: [
           nativeToScVal(address, { type: "address" }),
           nativeToScVal(params.name, { type: "string" }),
+          nativeToScVal(params.handle, { type: "string" }),
           nativeToScVal(uri, { type: "string" }),
           nativeToScVal(params.vaultAddress, { type: "address" }),
           nativeToScVal(params.agentSigner, { type: "address" }),
@@ -110,11 +118,16 @@ export function useRegistry() {
       const txHash = await signAndSubmit(xdr);
       setTxState("confirming");
 
-      // Read the agent ID by checking next_id
+      // Read minted token IDs for this owner and pick the latest token.
       await new Promise(r => setTimeout(r, 2000));
       try {
-        const nextId = await readContract<number>(AGENT_REGISTRY_ADDRESS, "next_id", []);
-        setRegisteredId(nextId - 1);
+        const tokenIds = await readContract<any[]>(AGENT_REGISTRY_ADDRESS, "list_tokens_by_owner", [
+          nativeToScVal(address, { type: "address" }),
+          nativeToScVal(0, { type: "u32" }),
+          nativeToScVal(50, { type: "u32" }),
+        ]);
+        const latest = (tokenIds || []).length > 0 ? Number((tokenIds as any[])[(tokenIds as any[]).length - 1]) : null;
+        setRegisteredId(latest);
       } catch {
         setRegisteredId(null);
       }

@@ -10,51 +10,60 @@ fn setup(env: &Env) -> (Address, Address) {
     (admin, reg_id)
 }
 
-#[test]
-fn test_register_and_get() {
-    let env = Env::default();
-    env.mock_all_auths();
-    let (_, reg_id) = setup(&env);
-    let reg = AgentRegistryClient::new(&env, &reg_id);
-    let owner = Address::generate(&env);
-
-    let id = reg.register(
-        &owner,
-        &String::from_str(&env, "Yield Optimizer"),
-        &String::from_str(&env, "stellar-yield-bot"),
-        &String::from_str(&env, r#"{"capabilities":["yield"],"pricing":{"amount":"100000"}}"#),
-        &Address::generate(&env),
-        &Address::generate(&env),
-    );
-    assert_eq!(id, 1);
-    assert_eq!(reg.agent_count(), 1);
-
-    let agent = reg.get_agent(&1u32);
-    assert_eq!(agent.owner, owner);
-    assert_eq!(agent.handle, String::from_str(&env, "stellar-yield-bot"));
-    assert!(agent.is_active);
+fn mint_default(
+    env: &Env,
+    reg: &AgentRegistryClient,
+    owner: &Address,
+    handle: &str,
+) -> u64 {
+    reg.mint_identity(
+        owner,
+        &String::from_str(env, "Yield Bot"),
+        &String::from_str(env, handle),
+        &String::from_str(env, r#"{"capabilities":["yield"]}"#),
+        &Address::generate(env),
+        &Address::generate(env),
+    )
 }
 
 #[test]
-fn test_get_by_handle() {
+fn test_not_initialized_rejected() {
     let env = Env::default();
     env.mock_all_auths();
-    let (_, reg_id) = setup(&env);
+    let reg_id = env.register(AgentRegistry, ());
     let reg = AgentRegistryClient::new(&env, &reg_id);
     let owner = Address::generate(&env);
 
-    reg.register(
+    let result = reg.try_mint_identity(
         &owner,
-        &String::from_str(&env, "DeFi Agent"),
-        &String::from_str(&env, "defi-agent"),
+        &String::from_str(&env, "Agent"),
+        &String::from_str(&env, "init-check"),
         &String::from_str(&env, "{}"),
         &Address::generate(&env),
         &Address::generate(&env),
     );
+    assert_eq!(result, Err(Ok(RegistryError::NotInitialized)));
+}
 
-    let agent = reg.get_agent_by_handle(&String::from_str(&env, "defi-agent"));
-    assert_eq!(agent.owner, owner);
-    assert_eq!(agent.id, 1);
+#[test]
+fn test_mint_and_get() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+
+    let token_id = mint_default(&env, &reg, &owner, "stellar-yield-bot");
+    assert_eq!(token_id, 1);
+    assert_eq!(reg.balance_of(&owner), 1);
+    assert_eq!(reg.owner_of(&token_id), owner);
+    assert_eq!(reg.total_supply(), 1);
+    assert_eq!(reg.active_count(), 1);
+
+    let agent = reg.get_agent(&token_id);
+    assert_eq!(agent.token_id, token_id);
+    assert_eq!(agent.handle, String::from_str(&env, "stellar-yield-bot"));
+    assert!(agent.is_active);
 }
 
 #[test]
@@ -67,17 +76,8 @@ fn test_handle_uniqueness() {
     let owner1 = Address::generate(&env);
     let owner2 = Address::generate(&env);
 
-    reg.register(
-        &owner1,
-        &String::from_str(&env, "First"),
-        &String::from_str(&env, "my-agent"),
-        &String::from_str(&env, "{}"),
-        &Address::generate(&env),
-        &Address::generate(&env),
-    );
-
-    // Second owner tries to claim same handle — must fail
-    let result = reg.try_register(
+    mint_default(&env, &reg, &owner1, "my-agent");
+    let result = reg.try_mint_identity(
         &owner2,
         &String::from_str(&env, "Second"),
         &String::from_str(&env, "my-agent"),
@@ -89,58 +89,196 @@ fn test_handle_uniqueness() {
 }
 
 #[test]
-fn test_handle_availability_check() {
+fn test_multiple_identities_per_owner() {
     let env = Env::default();
     env.mock_all_auths();
     let (_, reg_id) = setup(&env);
     let reg = AgentRegistryClient::new(&env, &reg_id);
     let owner = Address::generate(&env);
 
-    assert!(reg.is_handle_available(&String::from_str(&env, "free-handle")));
+    let id1 = mint_default(&env, &reg, &owner, "bot-one");
+    let id2 = mint_default(&env, &reg, &owner, "bot-two");
 
-    reg.register(
-        &owner,
-        &String::from_str(&env, "Agent"),
-        &String::from_str(&env, "free-handle"),
-        &String::from_str(&env, "{}"),
-        &Address::generate(&env),
-        &Address::generate(&env),
-    );
+    assert_eq!(id1, 1);
+    assert_eq!(id2, 2);
+    assert_eq!(reg.balance_of(&owner), 2);
 
-    assert!(!reg.is_handle_available(&String::from_str(&env, "free-handle")));
+    let ids = reg.list_tokens_by_owner(&owner, &0u64, &10u64);
+    assert_eq!(ids.len(), 2);
+    assert_eq!(ids.get(0), Some(1));
+    assert_eq!(ids.get(1), Some(2));
 }
 
 #[test]
-fn test_handle_validation_too_short() {
+fn test_owner_transfer() {
     let env = Env::default();
     env.mock_all_auths();
     let (_, reg_id) = setup(&env);
     let reg = AgentRegistryClient::new(&env, &reg_id);
     let owner = Address::generate(&env);
+    let recipient = Address::generate(&env);
 
-    let result = reg.try_register(
-        &owner,
-        &String::from_str(&env, "Agent"),
-        &String::from_str(&env, "ab"), // 2 chars — too short
-        &String::from_str(&env, "{}"),
-        &Address::generate(&env),
-        &Address::generate(&env),
-    );
-    assert_eq!(result, Err(Ok(RegistryError::HandleTooShort)));
+    let token_id = mint_default(&env, &reg, &owner, "xfer-owner");
+    reg.transfer_from(&owner, &owner, &recipient, &token_id);
+
+    assert_eq!(reg.owner_of(&token_id), recipient);
+    assert_eq!(reg.balance_of(&owner), 0);
+    assert_eq!(reg.balance_of(&recipient), 1);
+
+    let owner_tokens = reg.list_tokens_by_owner(&owner, &0u64, &10u64);
+    assert_eq!(owner_tokens.len(), 0);
+    let recipient_tokens = reg.list_tokens_by_owner(&recipient, &0u64, &10u64);
+    assert_eq!(recipient_tokens.len(), 1);
+    assert_eq!(recipient_tokens.get(0), Some(token_id));
 }
 
 #[test]
-fn test_handle_validation_invalid_chars() {
+fn test_approve_then_transfer() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+    let operator = Address::generate(&env);
+    let recipient = Address::generate(&env);
+
+    let token_id = mint_default(&env, &reg, &owner, "xfer-approved");
+    reg.approve(&owner, &operator, &token_id);
+    assert_eq!(reg.get_approved(&token_id), Some(operator.clone()));
+
+    reg.transfer_from(&operator, &owner, &recipient, &token_id);
+    assert_eq!(reg.owner_of(&token_id), recipient);
+    assert_eq!(reg.get_approved(&token_id), None);
+}
+
+#[test]
+fn test_operator_transfer() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+    let operator = Address::generate(&env);
+    let recipient = Address::generate(&env);
+
+    let token_id = mint_default(&env, &reg, &owner, "xfer-operator");
+    reg.set_approval_for_all(&owner, &operator, &true);
+    assert!(reg.is_approved_for_all(&owner, &operator));
+
+    reg.transfer_from(&operator, &owner, &recipient, &token_id);
+    assert_eq!(reg.owner_of(&token_id), recipient);
+}
+
+#[test]
+fn test_set_handle_releases_old_handle() {
     let env = Env::default();
     env.mock_all_auths();
     let (_, reg_id) = setup(&env);
     let reg = AgentRegistryClient::new(&env, &reg_id);
     let owner = Address::generate(&env);
 
-    let result = reg.try_register(
+    let token_id = mint_default(&env, &reg, &owner, "old-handle");
+    reg.set_handle(&owner, &token_id, &String::from_str(&env, "new-handle"));
+
+    assert!(reg.is_handle_available(&String::from_str(&env, "old-handle")));
+    assert!(!reg.is_handle_available(&String::from_str(&env, "new-handle")));
+
+    let by_handle = reg.get_agent_by_handle(&String::from_str(&env, "new-handle"));
+    assert_eq!(by_handle.token_id, token_id);
+}
+
+#[test]
+fn test_deactivate_and_reactivate() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+
+    let token_id = mint_default(&env, &reg, &owner, "active-bot");
+    reg.deactivate(&owner, &token_id);
+    assert_eq!(reg.active_count(), 0);
+
+    let result = reg.try_deactivate(&owner, &token_id);
+    assert_eq!(result, Err(Ok(RegistryError::AlreadyInactive)));
+
+    reg.reactivate(&owner, &token_id);
+    assert_eq!(reg.active_count(), 1);
+    let listed = reg.list_agents(&1u64, &10u64);
+    assert_eq!(listed.len(), 1);
+}
+
+#[test]
+fn test_owner_token_pagination() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+
+    mint_default(&env, &reg, &owner, "pag-1");
+    mint_default(&env, &reg, &owner, "pag-2");
+    mint_default(&env, &reg, &owner, "pag-3");
+
+    let page = reg.list_tokens_by_owner(&owner, &1u64, &1u64);
+    assert_eq!(page.len(), 1);
+    assert_eq!(page.get(0), Some(2));
+}
+
+#[test]
+fn test_owner_index_swap_remove_after_transfer() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+    let recipient = Address::generate(&env);
+
+    let id1 = mint_default(&env, &reg, &owner, "swap-a");
+    let id2 = mint_default(&env, &reg, &owner, "swap-b");
+    assert_eq!(reg.list_tokens_by_owner(&owner, &0u64, &10u64).len(), 2);
+
+    reg.transfer_from(&owner, &owner, &recipient, &id1);
+
+    let owner_tokens = reg.list_tokens_by_owner(&owner, &0u64, &10u64);
+    assert_eq!(owner_tokens.len(), 1);
+    assert_eq!(owner_tokens.get(0), Some(id2));
+
+    let recipient_tokens = reg.list_tokens_by_owner(&recipient, &0u64, &10u64);
+    assert_eq!(recipient_tokens.len(), 1);
+    assert_eq!(recipient_tokens.get(0), Some(id1));
+}
+
+#[test]
+fn test_unauthorized_update_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+    let stranger = Address::generate(&env);
+
+    let token_id = mint_default(&env, &reg, &owner, "private-bot");
+    let result = reg.try_set_agent_uri(
+        &stranger,
+        &token_id,
+        &String::from_str(&env, "ipfs://new-uri"),
+    );
+    assert_eq!(result, Err(Ok(RegistryError::NotApprovedOrOwner)));
+}
+
+#[test]
+fn test_handle_validation() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+
+    let result = reg.try_mint_identity(
         &owner,
         &String::from_str(&env, "Agent"),
-        &String::from_str(&env, "My Agent!"), // spaces and uppercase
+        &String::from_str(&env, "Bad Handle!"),
         &String::from_str(&env, "{}"),
         &Address::generate(&env),
         &Address::generate(&env),
@@ -149,100 +287,31 @@ fn test_handle_validation_invalid_chars() {
 }
 
 #[test]
-fn test_handle_no_leading_trailing_hyphen() {
+fn test_length_limits_enforced() {
     let env = Env::default();
     env.mock_all_auths();
     let (_, reg_id) = setup(&env);
     let reg = AgentRegistryClient::new(&env, &reg_id);
     let owner = Address::generate(&env);
 
-    let result = reg.try_register(
+    let long_uri = [b'a'; 2050];
+    let result = reg.try_mint_identity(
         &owner,
         &String::from_str(&env, "Agent"),
-        &String::from_str(&env, "-bad-handle"),
-        &String::from_str(&env, "{}"),
+        &String::from_str(&env, "long-uri-agent"),
+        &String::from_bytes(&env, &long_uri),
         &Address::generate(&env),
         &Address::generate(&env),
     );
-    assert_eq!(result, Err(Ok(RegistryError::HandleInvalidChars)));
-}
+    assert_eq!(result, Err(Ok(RegistryError::AgentUriTooLong)));
 
-#[test]
-fn test_deactivate() {
-    let env = Env::default();
-    env.mock_all_auths();
-    let (_, reg_id) = setup(&env);
-    let reg = AgentRegistryClient::new(&env, &reg_id);
-    let owner = Address::generate(&env);
-
-    let id = reg.register(
+    let token_id = mint_default(&env, &reg, &owner, "meta-limits");
+    let long_key = [b'k'; 70];
+    let bad_meta = reg.try_set_metadata(
         &owner,
-        &String::from_str(&env, "Agent"),
-        &String::from_str(&env, "my-defi-bot"),
-        &String::from_str(&env, "{}"),
-        &Address::generate(&env),
-        &Address::generate(&env),
+        &token_id,
+        &String::from_bytes(&env, &long_key),
+        &String::from_str(&env, "value"),
     );
-    reg.deactivate(&owner, &id);
-    let agent = reg.get_agent(&id);
-    assert!(!agent.is_active);
-    assert_eq!(reg.agent_count(), 0);
-}
-
-#[test]
-fn test_metadata() {
-    let env = Env::default();
-    env.mock_all_auths();
-    let (_, reg_id) = setup(&env);
-    let reg = AgentRegistryClient::new(&env, &reg_id);
-    let owner = Address::generate(&env);
-
-    let id = reg.register(
-        &owner,
-        &String::from_str(&env, "A"),
-        &String::from_str(&env, "meta-agent"),
-        &String::from_str(&env, "{}"),
-        &Address::generate(&env),
-        &Address::generate(&env),
-    );
-    reg.set_metadata(
-        &owner,
-        &id,
-        &String::from_str(&env, "model"),
-        &String::from_str(&env, "llama-3.3-70b-versatile"),
-    );
-
-    let val = reg.get_metadata(&id, &String::from_str(&env, "model"));
-    assert_eq!(val, Some(String::from_str(&env, "llama-3.3-70b-versatile")));
-}
-
-#[test]
-fn test_transfer_agent_handle_stays() {
-    let env = Env::default();
-    env.mock_all_auths();
-    let (_, reg_id) = setup(&env);
-    let reg = AgentRegistryClient::new(&env, &reg_id);
-    let owner = Address::generate(&env);
-    let new_owner = Address::generate(&env);
-
-    let id = reg.register(
-        &owner,
-        &String::from_str(&env, "Agent"),
-        &String::from_str(&env, "transfer-me"),
-        &String::from_str(&env, "{}"),
-        &Address::generate(&env),
-        &Address::generate(&env),
-    );
-
-    reg.transfer_agent(&owner, &id, &new_owner);
-
-    let agent = reg.get_agent(&id);
-    assert_eq!(agent.owner, new_owner);
-    // Handle still resolves to the same agent after transfer
-    assert_eq!(
-        reg.get_agent_by_handle(&String::from_str(&env, "transfer-me")).owner,
-        new_owner
-    );
-    assert_eq!(reg.get_agent_by_owner(&owner), None);
-    assert_eq!(reg.get_agent_by_owner(&new_owner), Some(id));
+    assert_eq!(bad_meta, Err(Ok(RegistryError::MetadataKeyTooLong)));
 }

@@ -14,37 +14,72 @@ export class AgentRegistry {
     this.reader = new ContractReader(config, logger);
   }
 
-  /** List active agents starting from startId, up to limit. */
-  async listAgents(startId: number = 1, limit: number = 10): Promise<AgentInfo[]> {
+  /** List active agents starting from token ID, up to limit. */
+  async listAgents(startTokenId: number = 1, limit: number = 10): Promise<AgentInfo[]> {
     const result = await this.reader.readContractValue(
       this.registryAddress,
       "list_agents",
-      [nativeToScVal(startId, { type: "u32" }), nativeToScVal(limit, { type: "u32" })],
+      [nativeToScVal(BigInt(startTokenId), { type: "u64" }), nativeToScVal(limit, { type: "u32" })],
     );
     return result || [];
   }
 
-  /** Get a specific agent by ID. */
-  async getAgent(agentId: number): Promise<AgentInfo | null> {
+  /** Get a specific agent by token ID. */
+  async getAgent(tokenId: number): Promise<AgentInfo | null> {
     return await this.reader.readContractValue(
       this.registryAddress,
       "get_agent",
-      [nativeToScVal(agentId, { type: "u32" })],
+      [nativeToScVal(BigInt(tokenId), { type: "u64" })],
     );
   }
 
-  /** Get the agent ID registered by a given owner address. */
-  async getAgentByOwner(owner: string): Promise<number | null> {
+  /** Get all token IDs held by an owner. */
+  async listTokensByOwner(owner: string, offset: number = 0, limit: number = 20): Promise<number[]> {
+    const result = await this.reader.readContractValue(
+      this.registryAddress,
+      "list_tokens_by_owner",
+      [
+        nativeToScVal(owner, { type: "address" }),
+        nativeToScVal(offset, { type: "u32" }),
+        nativeToScVal(limit, { type: "u32" }),
+      ],
+    );
+    return (result || []).map((id: any) => Number(id));
+  }
+
+  async getAgentByHandle(handle: string): Promise<AgentInfo | null> {
     return await this.reader.readContractValue(
       this.registryAddress,
-      "get_agent_by_owner",
+      "get_agent_by_handle",
+      [nativeToScVal(handle, { type: "string" })],
+    );
+  }
+
+  async ownerOf(tokenId: number): Promise<string | null> {
+    return await this.reader.readContractValue(
+      this.registryAddress,
+      "owner_of",
+      [nativeToScVal(BigInt(tokenId), { type: "u64" })],
+    );
+  }
+
+  async balanceOf(owner: string): Promise<number> {
+    const balance = await this.reader.readContractValue(
+      this.registryAddress,
+      "balance_of",
       [nativeToScVal(owner, { type: "address" })],
     );
+    return Number(balance || 0);
   }
 
   /** Get the total number of active agents. */
-  async getAgentCount(): Promise<number> {
-    const count = await this.reader.readContractValue(this.registryAddress, "agent_count");
-    return count || 0;
+  async getActiveCount(): Promise<number> {
+    const count = await this.reader.readContractValue(this.registryAddress, "active_count");
+    return Number(count || 0);
+  }
+
+  async getTotalSupply(): Promise<number> {
+    const count = await this.reader.readContractValue(this.registryAddress, "total_supply");
+    return Number(count || 0);
   }
 }

@@ -21,7 +21,7 @@ export function StatsCards() {
     try {
       const [vc, ac] = await Promise.all([
         readContract<number>(VAULT_FACTORY_ADDRESS, "vault_count", []).catch(() => 0),
-        readContract<number>(AGENT_REGISTRY_ADDRESS, "agent_count", []).catch(() => 0),
+        readContract<number>(AGENT_REGISTRY_ADDRESS, "active_count", []).catch(() => 0),
       ]);
       setVaultCount(Number(vc));
       setAgentCount(Number(ac));

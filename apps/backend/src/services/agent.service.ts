@@ -25,28 +25,34 @@ export class AgentService {
     return config.AGENT_REGISTRY_ADDRESS;
   }
 
-  async listAgents(startId: number = 1, limit: number = 10) {
+  async listAgents(startTokenId: number = 1, limit: number = 10) {
     if (!config.AGENT_REGISTRY_ADDRESS) return [];
     const registry = new AgentRegistry(config.AGENT_REGISTRY_ADDRESS, stellarConfig, logger);
-    return registry.listAgents(startId, limit);
+    return registry.listAgents(startTokenId, limit);
   }
 
-  async getAgent(agentId: number) {
+  async getAgent(tokenId: number) {
     if (!config.AGENT_REGISTRY_ADDRESS) return null;
     const registry = new AgentRegistry(config.AGENT_REGISTRY_ADDRESS, stellarConfig, logger);
-    return registry.getAgent(agentId);
+    return registry.getAgent(tokenId);
   }
 
-  async getAgentByOwner(owner: string): Promise<number | null> {
-    if (!config.AGENT_REGISTRY_ADDRESS) return null;
+  async listOwnerTokens(owner: string, offset: number = 0, limit: number = 20): Promise<number[]> {
+    if (!config.AGENT_REGISTRY_ADDRESS) return [];
     const registry = new AgentRegistry(config.AGENT_REGISTRY_ADDRESS, stellarConfig, logger);
-    return registry.getAgentByOwner(owner);
+    return registry.listTokensByOwner(owner, offset, limit);
+  }
+
+  async getPrimaryAgentToken(owner: string): Promise<number | null> {
+    const tokens = await this.listOwnerTokens(owner, 0, 1);
+    if (!tokens || tokens.length === 0) return null;
+    return Number(tokens[0]);
   }
 
   async getAgentCount(): Promise<number> {
     if (!config.AGENT_REGISTRY_ADDRESS) return 0;
     const registry = new AgentRegistry(config.AGENT_REGISTRY_ADDRESS, stellarConfig, logger);
-    return registry.getAgentCount();
+    return registry.getActiveCount();
   }
 }
 

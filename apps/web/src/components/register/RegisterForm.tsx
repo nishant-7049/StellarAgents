@@ -13,6 +13,7 @@ export function RegisterForm() {
   const { isConnected, connect } = useWallet();
   const { registerAgent, txState, lastTxHash } = useRegistry();
   const [name, setName] = useState("");
+  const [handle, setHandle] = useState("");
   const [capabilities, setCapabilities] = useState("");
   const [pricing, setPricing] = useState("0.01");
 
@@ -30,12 +31,13 @@ export function RegisterForm() {
     const amount = toStroops(parseFloat(pricing || "0.01")).toString();
     await registerAgent({
       name,
+      handle,
       capabilities: caps,
       pricing: amount,
       vaultAddress: DEMO_VAULT_ADDRESS,
       agentSigner: AGENT_SIGNER_PUBLIC_KEY,
     });
-    setName(""); setCapabilities(""); setPricing("0.01");
+    setName(""); setHandle(""); setCapabilities(""); setPricing("0.01");
   };
 
   return (
@@ -43,11 +45,12 @@ export function RegisterForm() {
       <h3 className="text-lg font-semibold mb-4">Register New Agent</h3>
       <div className="space-y-4">
         <Input label="Agent Name" placeholder="Yield Optimizer" value={name} onChange={e => setName(e.target.value)} />
+        <Input label="Unique Handle" placeholder="yield-optimizer" value={handle} onChange={e => setHandle(e.target.value)} />
         <Input label="Capabilities (comma-separated)" placeholder="yield, rebalance" value={capabilities} onChange={e => setCapabilities(e.target.value)} />
         <Input label="Price per Query (USDC)" type="number" placeholder="0.01" value={pricing} onChange={e => setPricing(e.target.value)} />
         <Button
           onClick={handleSubmit}
-          disabled={!name || (txState !== "idle" && txState !== "error")}
+          disabled={!name || !handle || (txState !== "idle" && txState !== "error")}
           className="w-full"
         >
           {txState !== "idle" && txState !== "error" ? "Registering..." : "Register Agent"}

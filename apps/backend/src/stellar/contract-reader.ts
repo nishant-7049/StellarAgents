@@ -33,8 +33,8 @@ export async function getVaultBalance(vaultAddress: string): Promise<string> {
 }
 
 export async function getAgentCount(registryAddress: string): Promise<number> {
-  const count = await reader.readContractValue(registryAddress, "agent_count");
-  return count || 0;
+  const count = await reader.readContractValue(registryAddress, "active_count");
+  return Number(count || 0);
 }
 
 export async function getVaultForOwner(factoryAddress: string, owner: string): Promise<string | null> {
@@ -59,7 +59,7 @@ export async function listAgents(registryAddress: string, startId: number, limit
   const result = await reader.readContractValue(
     registryAddress,
     "list_agents",
-    [nativeToScVal(startId, { type: "u32" }), nativeToScVal(limit, { type: "u32" })],
+    [nativeToScVal(BigInt(startId), { type: "u64" }), nativeToScVal(limit, { type: "u32" })],
   );
   return result || [];
 }
@@ -68,7 +68,7 @@ export async function getAgent(registryAddress: string, agentId: number): Promis
   return await reader.readContractValue(
     registryAddress,
     "get_agent",
-    [nativeToScVal(agentId, { type: "u32" })],
+    [nativeToScVal(BigInt(agentId), { type: "u64" })],
   );
 }
 

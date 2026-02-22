@@ -21,13 +21,15 @@ export interface AgentPolicy {
 // ── Agent Types ──
 
 export interface AgentInfo {
-  id: number;
+  token_id: number;
   owner: string;
   name: string;
+  handle: string;
   agent_uri: string;
   vault_address: string;
   agent_signer: string;
   registered_at: number;
+  updated_at: number;
   is_active: boolean;
 }
 

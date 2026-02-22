@@ -67,9 +67,10 @@ explorerRoutes.get("/agents", async (req, res) => {
     // Enrich with reputation data
     const enriched = await Promise.all(
       agents.map(async (agent: any) => {
+        const tokenId = Number(agent.token_id ?? agent.id);
         let reputation = null;
         try {
-          reputation = await reputationService.getSummary(agent.id);
+          reputation = await reputationService.getSummary(tokenId);
         } catch {
           // no reputation yet
         }
@@ -90,7 +91,7 @@ explorerRoutes.get("/agents", async (req, res) => {
         }
 
         return {
-          id: agent.id,
+          id: tokenId,
           owner: agent.owner,
           name: agent.name,
           handle: agent.handle || null,
@@ -180,7 +181,7 @@ explorerRoutes.get("/agents/:agentId", async (req, res) => {
     }
 
     res.json({
-      id: agent.id,
+      id: Number((agent as any).token_id ?? (agent as any).id),
       owner: agent.owner,
       name: agent.name,
       handle: (agent as any).handle || null,
