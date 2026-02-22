@@ -247,7 +247,7 @@ export async function generatePortfolioStatus(wallet: string): Promise<{ type: "
     blendApy = blend.reserves[0]?.supplyApy || 7.2;
   } catch {}
 
-  const portfolio = portfolioService.getPortfolio(wallet);
+  const portfolio = await portfolioService.getPortfolio(wallet);
 
   if (!portfolio || portfolio.positions.length === 0) {
     const content = vaultAddress

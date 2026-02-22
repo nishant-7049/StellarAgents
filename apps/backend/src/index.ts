@@ -7,6 +7,7 @@ import { routes } from "./routes/index.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { loggerMiddleware } from "./middleware/logger.middleware.js";
 import { startRebalancer } from "./defi/rebalancer.js";
+import { startPortfolioMonitor } from "./defi/portfolio-monitor.js";
 import { startEventIndexer } from "./stellar/event-indexer.js";
 import { creditsService } from "./services/credits.service.js";
 import { connectDB } from "./db/mongoose.js";
@@ -15,7 +16,10 @@ import { logger } from "./logger.js";
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: ["http://localhost:3000", "https://agentnet.vercel.app"] }));
+app.use(cors({
+  origin: ["http://localhost:3000", "https://agentnet.vercel.app"],
+  exposedHeaders: ["X-Admin-Session", "X-Payment-Response"],
+}));
 // Capture raw body for Stripe webhook signature verification
 app.use(express.json({
   verify: (req: any, _res, buf) => { req.rawBody = buf; },
@@ -40,6 +44,7 @@ app.use(errorMiddleware);
 // Connect to MongoDB, then start server
 connectDB().then(() => {
   startRebalancer();
+  startPortfolioMonitor();
   startEventIndexer();
 
   // Nightly cron: downgrade expired paid plans to free (runs at midnight UTC)

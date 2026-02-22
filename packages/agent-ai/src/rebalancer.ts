@@ -39,6 +39,14 @@ export interface RebalancerOptions {
  * await rebalancer.checkAndRebalance();
  * ```
  */
+export interface RebalanceResult {
+  executedActions: Array<{
+    protocol: string;
+    type: "supply" | "withdraw";
+    txHash: string;
+  }>;
+}
+
 export class Rebalancer {
   private blendClient: BlendClient;
   private soroswapClient: SoroswapClient;
@@ -106,11 +114,13 @@ export class Rebalancer {
     return { totalUSDC, positions };
   }
 
-  /** Check if rebalancing is needed and execute if so. */
-  async checkAndRebalance(): Promise<void> {
+  /** Check if rebalancing is needed and execute if so. Returns executed actions. */
+  async checkAndRebalance(): Promise<RebalanceResult> {
+    const executed: RebalanceResult["executedActions"] = [];
+
     if (this.lastStrategy.length === 0) {
       this.log.debug("No target strategy set, skipping rebalance check");
-      return;
+      return { executedActions: executed };
     }
 
     const { agentSignerSecret, vaultContract, facilitatorUrl } = this.options;
@@ -120,7 +130,7 @@ export class Rebalancer {
         "Rebalancer: agentSignerSecret and vaultContract are required for execution. " +
         "Set them in RebalancerOptions to enable on-chain rebalancing."
       );
-      return;
+      return { executedActions: executed };
     }
 
     try {
@@ -158,53 +168,71 @@ export class Rebalancer {
       if (toWithdraw.length === 0 && toSupply.length === 0) {
         this.log.debug("Portfolio within threshold, no rebalance needed");
         this.rebalanceCount++;
-        return;
+        return { executedActions: executed };
       }
 
       // 4. Execute ALL withdraws first
       for (const { target, delta } of toWithdraw) {
         if (target.protocol === "blend") {
+          // delta is in percentage points (e.g. -10 = 10% over-allocated)
+          // USDC to move = abs(delta) / 100 * totalUSDC, converted to stroops (7 decimals)
+          const usdcAmount = (Math.abs(delta) / 100) * snapshot.totalUSDC;
+          const stroops = BigInt(Math.round(usdcAmount * 1e7));
+          if (stroops <= 0n) continue;
           try {
             const result = await this.blendClient.executeViaVault({
               poolId: blendData.poolId,
               agentSignerSecret,
               vaultContract,
               asset: target.asset,
-              amount: BigInt(Math.round(Math.abs(delta) * 100_0000000)),
+              amount: stroops,
               facilitatorUrl: url,
               memo: "rebalance_withdraw",
             });
-            this.log.info("Rebalance withdraw executed via vault", { txHash: result.txHash, target });
+            this.log.info("Rebalance withdraw executed via vault", { txHash: result.txHash, usdcAmount, target });
+            executed.push({ protocol: target.protocol, type: "withdraw", txHash: result.txHash });
           } catch (err) {
             this.log.error("Rebalance withdraw failed", { target, error: err });
           }
+        } else {
+          this.log.info(`Skipping ${target.protocol} withdraw — not executable via vault agent_pay`, { target });
         }
       }
 
       // 5. Then execute ALL supplies
       for (const { target, delta } of toSupply) {
         if (target.protocol === "blend") {
+          // delta is in percentage points (e.g. +10 = 10% under-allocated)
+          // USDC to move = abs(delta) / 100 * totalUSDC, converted to stroops (7 decimals)
+          const usdcAmount = (Math.abs(delta) / 100) * snapshot.totalUSDC;
+          const stroops = BigInt(Math.round(usdcAmount * 1e7));
+          if (stroops <= 0n) continue;
           try {
             const result = await this.blendClient.executeViaVault({
               poolId: blendData.poolId,
               agentSignerSecret,
               vaultContract,
               asset: target.asset,
-              amount: BigInt(Math.round(Math.abs(delta) * 100_0000000)),
+              amount: stroops,
               facilitatorUrl: url,
               memo: "rebalance_supply",
             });
-            this.log.info("Rebalance supply executed via vault", { txHash: result.txHash, target });
+            this.log.info("Rebalance supply executed via vault", { txHash: result.txHash, usdcAmount, target });
+            executed.push({ protocol: target.protocol, type: "supply", txHash: result.txHash });
           } catch (err) {
             this.log.error("Rebalance supply failed", { target, error: err });
           }
+        } else {
+          this.log.info(`Skipping ${target.protocol} supply — not executable via vault agent_pay`, { target });
         }
       }
 
       this.rebalanceCount++;
-      this.log.debug("Rebalance check complete", { count: this.rebalanceCount });
+      this.log.debug("Rebalance check complete", { count: this.rebalanceCount, executed: executed.length });
     } catch (err) {
       this.log.error("Rebalance check failed", { error: err });
     }
+
+    return { executedActions: executed };
   }
 }

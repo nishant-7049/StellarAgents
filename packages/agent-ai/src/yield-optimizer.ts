@@ -71,6 +71,7 @@ export class YieldOptimizer {
 
   getBlendClient(): BlendClient { return this.blendClient; }
   getSoroswapClient(): SoroswapClient { return this.soroswapClient; }
+  getRebalancer(): Rebalancer | null { return this.rebalancer; }
 
   async optimize(
     query: string,

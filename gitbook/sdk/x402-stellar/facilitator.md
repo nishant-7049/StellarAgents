@@ -44,13 +44,13 @@ interface SettlementOptions {
 ## How Settlement Works
 
 1. **Decode payload** — extract vault address, agent signer, amount, payTo, and signed auth entry
-2. **Build transaction** — construct `vault.agent_pay(agent, payTo, amount, memo)` call
+2. **Build transaction** — construct `vault.agent_pay(agent, payTo, amount, memo)` call (or deserialize `assembledTxXdr` if provided)
 3. **Simulate** — call Soroban RPC `simulateTransaction` to get the footprint
 4. **Inject auth** — replace the simulation's auth entry with the agent's pre-signed one
 5. **Assemble + sign** — facilitator signs with their own keypair (as the transaction source, paying XLM fees)
-6. **Submit** — send to Soroban RPC as a fee-bump transaction
-7. **Wait** — poll until confirmed or timeout (30 seconds)
-8. **Return** — `{success: true, txHash}` or `{success: false, error}`
+6. **Submit** — send to Soroban RPC
+7. **Wait** — poll `getTransaction` for up to 30 seconds; fall back to Horizon if the RPC poll throws a parse error
+8. **Return** — `{success: true, txHash}` on confirmation, or `{success: false, txHash?, error}` on any failure
 
 ---
 
@@ -59,10 +59,41 @@ interface SettlementOptions {
 ```typescript
 interface SettlementResult {
   success: boolean;
-  txHash?: string;   // present on success
-  error?: string;    // present on failure
+  txHash?: string;   // always present when tx was submitted (success or failure)
+  error?: string;    // present on failure, describes cause
 }
 ```
+
+`txHash` is returned on failure paths too (when the hash is known) so callers can look up the transaction manually.
+
+---
+
+## Timeout behavior
+
+If the 30-second RPC poll ends without confirmation:
+
+```json
+{ "success": false, "txHash": "abc123...", "error": "timeout: tx not confirmed after 30s" }
+```
+
+The transaction may still land on-chain after this point. Callers should treat this as **unknown** state and check the `txHash` on [Stellar Expert](https://stellar.expert/explorer/testnet) or Horizon before retrying — never resubmit the same auth entry without verifying.
+
+---
+
+## HTTP status codes (POST /api/x402/settle)
+
+The reference backend maps settlement results to HTTP status codes:
+
+| Condition | HTTP |
+|-----------|------|
+| `success: true` | `200` |
+| Timeout or Horizon inconclusive | `503` (retryable — check txHash first) |
+| `TRY_AGAIN_LATER` from RPC | `503` |
+| Schema validation failure | `400` |
+| Amount cap exceeded | `400` |
+| `payTo` not whitelisted | `400` |
+| Rate limit exceeded | `429` |
+| On-chain error (agent inactive, limit, etc.) | `400` |
 
 ---
 
@@ -77,6 +108,9 @@ interface SettlementResult {
 | `insufficient_balance` | Vault doesn't have enough USDC |
 | `auth_expired` | The signed auth entry's `expirationLedger` has passed |
 | `simulation failed` | Invalid transaction or contract not found |
+| `timeout: tx not confirmed after 30s` | Submitted but unconfirmed — check txHash |
+| `horizon: tx status unknown` | Horizon returned non-200 for the txHash |
+| `send: TRY_AGAIN_LATER` | RPC overloaded — retry after a brief wait |
 
 ---
 

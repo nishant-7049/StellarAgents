@@ -63,7 +63,7 @@ async function main() {
     { protocol: "Centrifuge",  protocolKey: "centrifuge",amountUsdc: 200, allocationPct: 20, entryApy: 4.5, deployedAt: "2026-02-01T00:00:00Z" },
   ];
 
-  portfolioService.recordPositions({
+  await portfolioService.recordPositions({
     wallet: TEST_WALLET,
     vaultAddress: TEST_VAULT,
     positions: initialPositions,
@@ -83,7 +83,7 @@ async function main() {
   // ── Rebalancer logic (same as autoRebalanceAll) ───────────────────────────
   sep("STEP 3 — Autonomous rebalancer checks wallet");
 
-  const portfolio = portfolioService.getPortfolio(TEST_WALLET)!;
+  const portfolio = (await portfolioService.getPortfolio(TEST_WALLET))!;
   const currentApy = portfolio.positions.reduce(
     (s, p) => s + ((liveApys[p.protocolKey] ?? p.entryApy) * p.allocationPct / 100), 0,
   );
@@ -110,7 +110,7 @@ async function main() {
   console.log(`  Decision:               ${improvement >= THRESHOLD ? "✅ REBALANCE" : "❌ HOLD"}`);
 
   if (improvement >= THRESHOLD) {
-    portfolioService.recordPositions({
+    await portfolioService.recordPositions({
       wallet: TEST_WALLET,
       vaultAddress: TEST_VAULT,
       positions: newPositions,
@@ -161,7 +161,7 @@ async function main() {
   // ── Final portfolio state ─────────────────────────────────────────────────
   sep("STEP 5 — Final portfolio state");
 
-  const final = portfolioService.getPortfolio(TEST_WALLET)!;
+  const final = (await portfolioService.getPortfolio(TEST_WALLET))!;
   const finalApy = final.positions.reduce((s, p) => s + (p.entryApy * p.allocationPct / 100), 0);
 
   console.log(`\nRebalance history: ${final.rebalanceHistory.length} event(s)`);

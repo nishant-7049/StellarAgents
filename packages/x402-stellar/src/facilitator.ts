@@ -82,7 +82,7 @@ export async function settlePayment(
 
     const result = await rpc.sendTransaction(assembled);
     if (result.status !== "PENDING") {
-      return { success: false, error: `send: ${result.status}` };
+      return { success: false, txHash: result.hash, error: `send: ${result.status}` };
     }
 
     try {
@@ -99,10 +99,10 @@ export async function settlePayment(
         return { success: true, txHash: result.hash };
       }
       if (txResult.status === "NOT_FOUND") {
-        log.warn("x402 tx still pending after 30s", { txHash: result.hash });
-        return { success: true, txHash: result.hash };
+        log.warn("x402 tx not confirmed after 30s", { txHash: result.hash });
+        return { success: false, txHash: result.hash, error: "timeout: tx not confirmed after 30s" };
       }
-      return { success: false, error: `tx: ${txResult.status}` };
+      return { success: false, txHash: result.hash, error: `tx: ${txResult.status}` };
     } catch (pollErr: any) {
       log.warn("getTransaction parse error, checking Horizon", {
         txHash: result.hash,
@@ -119,12 +119,12 @@ export async function settlePayment(
             log.info("x402 settled (Horizon)", { txHash: result.hash, amount: p.amount });
             return { success: true, txHash: result.hash };
           }
-          return { success: false, error: `tx failed: ${horizonTx.result_xdr}` };
+          return { success: false, txHash: result.hash, error: `tx failed: ${horizonTx.result_xdr}` };
         }
-        log.info("x402 tx submitted", { txHash: result.hash });
-        return { success: true, txHash: result.hash };
+        log.warn("x402 Horizon check inconclusive", { txHash: result.hash });
+        return { success: false, txHash: result.hash, error: "horizon: tx status unknown" };
       } catch {
-        return { success: true, txHash: result.hash };
+        return { success: false, txHash: result.hash, error: "horizon: fetch failed" };
       }
     }
   } catch (err: any) {

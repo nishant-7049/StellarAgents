@@ -6,6 +6,7 @@
 * [Quick Start](getting-started/quick-start.md)
 * [Architecture](getting-started/architecture.md)
 * [Mainnet](getting-started/mainnet.md)
+* [Building Custom Agents](getting-started/custom-agents.md)
 
 ## SDK Reference
 

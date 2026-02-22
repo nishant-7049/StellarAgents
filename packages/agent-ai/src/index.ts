@@ -26,4 +26,4 @@ export { SoroswapClient } from "./soroswap-client.js";
 
 // ── Rebalancer ──
 export { Rebalancer } from "./rebalancer.js";
-export type { RebalancerOptions } from "./rebalancer.js";
+export type { RebalancerOptions, RebalanceResult } from "./rebalancer.js";

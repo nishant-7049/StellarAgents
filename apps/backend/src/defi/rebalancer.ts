@@ -7,32 +7,56 @@
  *   1. Agent builds an x402 payment header using the user's vault + agent key
  *   2. Agent calls POST /api/yield/query — x402 middleware settles 0.01 USDC from vault
  *   3. AI returns the optimal strategy
- *   4. If APY improves ≥ threshold, positions are updated
- *   → USDC flows: user's vault → facilitator (platform fee for AI intelligence)
+ *   4. If position age ≥ 6h AND APY improvement ≥ 0.25%, execute on-chain via SDK
+ *   5. Record positions in MongoDB ONLY after confirmed tx hashes
  *
  * MODE B (no agent key — fallback algorithmic):
  *   1. Load live APYs from Blend/Soroswap directly
  *   2. Shift allocation toward highest-APY protocol (simple heuristic)
- *   → No x402, no AI — useful for demo without secret keys
+ *   3. Same 6h hold + 0.25% improvement gates apply
+ *   4. No on-chain execution — tracking only
  *
- * This is the core x402 use case: an agent autonomously pays for its own intelligence.
+ * Gates:
+ *   - 6-hour minimum position hold before rebalancer may move funds
+ *   - ≥ 0.25 percentage points APY improvement required to trigger
  */
 import cron from "node-cron";
 import { Keypair } from "@stellar/stellar-sdk";
 import { blendClient } from "./blend-client.js";
 import { soroswapClient } from "./soroswap-client.js";
 import { portfolioService, DeployedPosition } from "../services/portfolio.service.js";
+import { vaultService } from "../services/vault.service.js";
 import { buildX402Header } from "../x402/header-builder.js";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
+import { Rebalancer, BlendClient as SdkBlendClient, SoroswapClient as SdkSoroswapClient } from "@agenticocean/defi-agent";
 
-const DRIFT_THRESHOLD_PCT = parseFloat(config.REBALANCE_DRIFT_THRESHOLD_PCT || "0.5");
+const MIN_APY_IMPROVEMENT_PCT = parseFloat(config.MIN_APY_IMPROVEMENT_PCT || "0.25");
+const MIN_POSITION_HOLD_HOURS = parseFloat(config.MIN_POSITION_HOLD_HOURS || "6");
 const BACKEND_URL = `http://localhost:${config.PORT || "3001"}`;
 
 let rebalanceCount = 0;
 let x402PaymentCount = 0;
 let lastRunAt: string | null = null;
 let isRunning = false;
+let trackedWalletCount = 0;
+
+// SDK client instances (created once, shared across wallets)
+const sdkBlendClient = new SdkBlendClient({
+  stellarRpcUrl: config.STELLAR_RPC_URL,
+  networkPassphrase: config.STELLAR_NETWORK_PASSPHRASE,
+  usdcAddress: config.USDC_SAC_ADDRESS,
+  blendPoolId: config.BLEND_POOL_USDC,
+  logger,
+});
+
+const sdkSoroswapClient = new SdkSoroswapClient({
+  stellarRpcUrl: config.STELLAR_RPC_URL,
+  networkPassphrase: config.STELLAR_NETWORK_PASSPHRASE,
+  soroswapApiKey: config.SOROSWAP_API_KEY,
+  usdcAddress: config.USDC_SAC_ADDRESS,
+  logger,
+});
 
 // ── Live APY helpers ──────────────────────────────────────────────────────────
 
@@ -56,10 +80,6 @@ async function getLiveApys(): Promise<Record<string, number>> {
 
 // ── MODE A: x402-authenticated AI strategy call ───────────────────────────────
 
-/**
- * Agent autonomously pays 0.01 USDC via x402 to get an AI-powered strategy.
- * Returns the strategy if the call succeeds, null otherwise.
- */
 async function queryAIWithX402(wallet: string, vaultAddress: string, totalAmount: number) {
   try {
     const agentKeypair = Keypair.fromSecret(config.AGENT_SIGNER_SECRET_KEY!);
@@ -67,7 +87,6 @@ async function queryAIWithX402(wallet: string, vaultAddress: string, totalAmount
       ? Keypair.fromSecret(config.FACILITATOR_SECRET_KEY).publicKey()
       : agentKeypair.publicKey();
 
-    // Agent builds the x402 payment header — autonomous vault payment
     const paymentHeader = await buildX402Header({
       vaultContract: vaultAddress,
       agentSigner: agentKeypair.publicKey(),
@@ -78,7 +97,6 @@ async function queryAIWithX402(wallet: string, vaultAddress: string, totalAmount
       agentId: 1,
     });
 
-    // Call the x402-gated AI endpoint — middleware settles payment on-chain
     const response = await fetch(`${BACKEND_URL}/api/yield/query`, {
       method: "POST",
       headers: {
@@ -103,6 +121,12 @@ async function queryAIWithX402(wallet: string, vaultAddress: string, totalAmount
     logger.info(`Rebalancer x402 payment settled for ${wallet.slice(0, 8)}…`, {
       txHash: data.x402?.txHash,
       strategies: data.strategies?.length,
+    });
+    await portfolioService.recordPayment(wallet, {
+      purpose: "rebalance_check",
+      amountStroops: 100_000,
+      txHash: data.x402?.txHash,
+      status: "settled",
     });
     return data;
   } catch (err) {
@@ -143,6 +167,50 @@ function buildAlgorithmicRebalance(
   });
 }
 
+// ── On-chain execution via SDK Rebalancer ─────────────────────────────────────
+
+async function executeOnChain(
+  vaultAddress: string,
+  agentSecret: string,
+  newPositions: DeployedPosition[],
+): Promise<string[]> {
+  const rebalancer = new Rebalancer(sdkBlendClient, sdkSoroswapClient, {
+    driftThresholdPct: 0,   // always execute — we've already decided to rebalance
+    agentSignerSecret: agentSecret,
+    vaultContract: vaultAddress,
+    facilitatorUrl: BACKEND_URL,
+  }, logger);
+
+  // Only Blend positions are executable via vault.agent_pay() today.
+  // Soroswap LP add/remove requires a different mechanism (swap router auth)
+  // and is tracked in MongoDB but not moved on-chain here.
+  const soroswapPositions = newPositions.filter(p => p.protocolKey === "soroswap");
+  if (soroswapPositions.length > 0) {
+    logger.info("Soroswap positions tracked-only (on-chain LP execution not yet implemented)", {
+      positions: soroswapPositions.map(p => ({ allocationPct: p.allocationPct, amountUsdc: p.amountUsdc })),
+    });
+  }
+
+  // Map new positions to AllocationTarget format (currentPct: 0 → SDK reads actual on-chain state)
+  const targets = newPositions
+    .filter(p => p.protocolKey === "blend")
+    .map(p => ({
+      protocol: p.protocolKey,
+      asset: config.USDC_SAC_ADDRESS,
+      targetPct: p.allocationPct,
+      currentPct: 0,
+    }));
+
+  if (targets.length === 0) {
+    logger.info("executeOnChain: no executable targets (blend positions required)");
+    return [];
+  }
+
+  rebalancer.setTargetAllocation(targets);
+  const result = await rebalancer.checkAndRebalance();
+  return result.executedActions.map(a => a.txHash).filter(Boolean);
+}
+
 // ── Core loop ─────────────────────────────────────────────────────────────────
 
 async function autoRebalanceAll() {
@@ -150,7 +218,9 @@ async function autoRebalanceAll() {
   isRunning = true;
   lastRunAt = new Date().toISOString();
 
-  const wallets = portfolioService.getAllWallets();
+  const wallets = await portfolioService.getAllWallets();
+  trackedWalletCount = wallets.length;
+
   if (wallets.length === 0) {
     isRunning = false;
     return;
@@ -163,8 +233,71 @@ async function autoRebalanceAll() {
 
   for (const wallet of wallets) {
     try {
-      const portfolio = portfolioService.getPortfolio(wallet);
+      let portfolio = await portfolioService.getPortfolio(wallet);
       if (!portfolio || portfolio.positions.length === 0) continue;
+
+      // ── On-chain reconciliation ──────────────────────────────────────────
+      // Read the actual Blend position. If it differs from our tracked value by
+      // more than 10% relative, update MongoDB to match reality. This catches
+      // deposits/withdrawals that happened outside the backend.
+      if (portfolio.vaultAddress) {
+        try {
+          const onChain = await sdkBlendClient.loadUserPosition(portfolio.vaultAddress);
+          const onChainBlend = onChain.estimatedSupplyValue - onChain.estimatedBorrowValue;
+          const trackedBlend = portfolio.positions
+            .filter(p => p.protocolKey === "blend")
+            .reduce((s, p) => s + p.amountUsdc, 0);
+
+          const drift = trackedBlend > 0
+            ? Math.abs(onChainBlend - trackedBlend) / trackedBlend
+            : 0;
+
+          if (drift > 0.10 && onChainBlend !== trackedBlend) {
+            logger.info(
+              `Reconcile ${wallet.slice(0, 8)}…: tracked blend $${trackedBlend.toFixed(2)} ` +
+              `vs on-chain $${onChainBlend.toFixed(2)} (${(drift * 100).toFixed(1)}% drift) — updating`
+            );
+            const updatedPositions = portfolio.positions.map(p => {
+              if (p.protocolKey !== "blend") return p;
+              const newAmount = onChainBlend;
+              const newPct = portfolio!.totalInvested > 0
+                ? (newAmount / portfolio!.totalInvested) * 100
+                : p.allocationPct;
+              return { ...p, amountUsdc: newAmount, allocationPct: newPct };
+            });
+            portfolio = await portfolioService.recordPositions({
+              wallet,
+              vaultAddress: portfolio.vaultAddress,
+              positions: updatedPositions,
+              totalAmount: portfolio.totalInvested,
+              txHashes: [],
+              reason: `on-chain reconciliation (blend drift ${(drift * 100).toFixed(1)}%)`,
+            });
+          }
+        } catch {
+          // loadUserPosition failing (testnet pool down etc) is non-fatal — continue with tracked values
+        }
+      }
+
+      // ── Gate 1: 6-hour minimum position hold ────────────────────────────
+      const oldestPositionTs = Math.min(
+        ...portfolio.positions.map(p => new Date(p.deployedAt).getTime())
+      );
+      const ageHours = (Date.now() - oldestPositionTs) / 3_600_000;
+      if (ageHours < MIN_POSITION_HOLD_HOURS) {
+        logger.debug(
+          `Skipping ${wallet.slice(0, 8)}…: positions only ${ageHours.toFixed(1)}h old ` +
+          `(min ${MIN_POSITION_HOLD_HOURS}h)`
+        );
+        await portfolioService.setLastDecision(wallet, {
+          action: "skipped",
+          reason: `Position age ${ageHours.toFixed(1)}h < ${MIN_POSITION_HOLD_HOURS}h minimum hold`,
+          currentApy: portfolio.positions.reduce(
+            (s, p) => s + ((liveApys[p.protocolKey] ?? p.entryApy) * p.allocationPct / 100), 0,
+          ),
+        });
+        continue;
+      }
 
       const currentApy = portfolio.positions.reduce(
         (sum, p) => sum + ((liveApys[p.protocolKey] ?? p.entryApy) * p.allocationPct / 100), 0,
@@ -194,7 +327,6 @@ async function autoRebalanceAll() {
           );
           paymentTxHash = aiResult.x402?.txHash;
         } else {
-          // AI call failed — fall back to algorithmic
           newPositions = buildAlgorithmicRebalance(portfolio.positions, liveApys, portfolio.totalInvested);
           targetApy = newPositions.reduce((sum, p) => sum + (p.entryApy * p.allocationPct / 100), 0);
         }
@@ -204,27 +336,63 @@ async function autoRebalanceAll() {
         targetApy = newPositions.reduce((sum, p) => sum + (p.entryApy * p.allocationPct / 100), 0);
       }
 
+      // ── Gate 2: 0.25% minimum APY improvement ───────────────────────────
       const improvement = targetApy - currentApy;
-
-      if (improvement < DRIFT_THRESHOLD_PCT) {
-        logger.debug(`Rebalancer: ${wallet.slice(0, 8)}… APY ${currentApy.toFixed(2)}% — no improvement needed (${improvement.toFixed(2)}% < ${DRIFT_THRESHOLD_PCT}%)`);
+      if (improvement < MIN_APY_IMPROVEMENT_PCT) {
+        logger.debug(
+          `No rebalance for ${wallet.slice(0, 8)}…: improvement ${improvement.toFixed(3)}% < ${MIN_APY_IMPROVEMENT_PCT}%`
+        );
+        await portfolioService.setLastDecision(wallet, {
+          action: "skipped",
+          reason: `APY improvement ${improvement.toFixed(3)}% < ${MIN_APY_IMPROVEMENT_PCT}% threshold`,
+          currentApy,
+          targetApy,
+          improvement,
+        });
         continue;
       }
 
-      // Record the auto-rebalance
-      portfolioService.recordPositions({
+      // ── On-chain execution ───────────────────────────────────────────────
+      let txHashes: string[] = paymentTxHash ? [paymentTxHash] : [];
+
+      if (config.AGENT_SIGNER_SECRET_KEY && portfolio.vaultAddress) {
+        try {
+          const onChainHashes = await executeOnChain(
+            portfolio.vaultAddress,
+            config.AGENT_SIGNER_SECRET_KEY,
+            newPositions,
+          );
+          txHashes = [...txHashes, ...onChainHashes];
+        } catch (err) {
+          logger.warn(`On-chain execution failed for ${wallet.slice(0, 8)}…`, { err });
+          // Don't record positions if on-chain execution fails
+          continue;
+        }
+      }
+
+      // ── Record ONLY after confirmed tx hashes ────────────────────────────
+      await portfolioService.recordPositions({
         wallet,
         vaultAddress: portfolio.vaultAddress,
         positions: newPositions,
         totalAmount: portfolio.totalInvested,
-        txHashes: paymentTxHash ? [paymentTxHash] : [],
-        reason: agentMode === "x402+AI"
-          ? `Agent paid 0.01 USDC via x402 for AI strategy (+${improvement.toFixed(2)}% APY)`
-          : `Algorithmic rebalance (+${improvement.toFixed(2)}% APY)`,
+        txHashes,
+        reason: "auto_rebalance",
       });
 
       rebalanceCount++;
-      logger.info(`Rebalancer: auto-rebalanced ${wallet.slice(0, 8)}… ${currentApy.toFixed(2)}% → ${targetApy.toFixed(2)}% [${agentMode}]${paymentTxHash ? ` tx:${paymentTxHash.slice(0, 12)}…` : ""}`);
+      logger.info(
+        `Rebalancer: auto-rebalanced ${wallet.slice(0, 8)}… ` +
+        `${currentApy.toFixed(2)}% → ${targetApy.toFixed(2)}% [${agentMode}]` +
+        (txHashes.length ? ` tx:${txHashes[0]?.slice(0, 12)}…` : " (tracking only)")
+      );
+      await portfolioService.setLastDecision(wallet, {
+        action: "rebalanced",
+        reason: `APY improved ${improvement.toFixed(3)}% (${currentApy.toFixed(2)}% → ${targetApy.toFixed(2)}%)`,
+        currentApy,
+        targetApy,
+        improvement,
+      });
 
     } catch (err) {
       logger.error(`Rebalancer: error for ${wallet.slice(0, 8)}…`, { err });
@@ -239,11 +407,68 @@ async function autoRebalanceAll() {
 export function startRebalancer() {
   const interval = config.REBALANCE_INTERVAL_MINUTES || "5";
   const agentMode = config.AGENT_SIGNER_SECRET_KEY ? "x402+AI (pays per rebalance)" : "algorithmic (no key set)";
-  logger.info(`Autonomous rebalancer started — every ${interval} min, threshold ${DRIFT_THRESHOLD_PCT}%, mode: ${agentMode}`);
+  logger.info(
+    `Autonomous rebalancer started — every ${interval} min, ` +
+    `min hold: ${MIN_POSITION_HOLD_HOURS}h, ` +
+    `min APY improvement: ${MIN_APY_IMPROVEMENT_PCT}%, ` +
+    `mode: ${agentMode}`
+  );
 
   cron.schedule(`*/${interval} * * * *`, () => {
     autoRebalanceAll().catch(err => logger.error("Rebalancer tick failed", { err }));
   });
+
+  // Snapshot cron: every 30 minutes, record a lightweight portfolio snapshot per wallet
+  cron.schedule("*/30 * * * *", () => {
+    takeSnapshots().catch(err => logger.error("Snapshot tick failed", { err }));
+  });
+}
+
+async function takeSnapshots() {
+  const wallets = await portfolioService.getAllWallets();
+  if (wallets.length === 0) return;
+  const liveApys = await getLiveApys();
+
+  for (const wallet of wallets) {
+    try {
+      const portfolio = await portfolioService.getPortfolio(wallet);
+      if (!portfolio) continue;
+
+      const totalDeployed = portfolio.positions.reduce((s, p) => s + p.amountUsdc, 0);
+      const weightedApy = totalDeployed > 0
+        ? portfolio.positions.reduce((s, p) => s + ((liveApys[p.protocolKey] ?? p.entryApy) * p.amountUsdc / totalDeployed), 0)
+        : 0;
+
+      // Fetch real on-chain vault balance when vaultAddress is known; fall back to totalDeployed
+      let vaultBalanceUsdc = totalDeployed;
+      let snapshotSource: "onchain" | "tracked" = "tracked";
+      if (portfolio.vaultAddress) {
+        try {
+          const rawBalance = await vaultService.getBalance(portfolio.vaultAddress);
+          vaultBalanceUsdc = parseInt(rawBalance || "0") / 10_000_000;
+          snapshotSource = "onchain";
+        } catch {
+          // vault RPC down — keep tracked fallback
+        }
+      }
+
+      // Earned estimate on top of deployed principal
+      const earnedEst = portfolio.positions.reduce((s, p) => {
+        const days = (Date.now() - new Date(p.deployedAt).getTime()) / 86_400_000;
+        return s + p.amountUsdc * ((liveApys[p.protocolKey] ?? p.entryApy) / 100) * days / 365;
+      }, 0);
+
+      await portfolioService.recordSnapshot(wallet, {
+        vaultBalanceUsdc,
+        totalDeployedUsdc: totalDeployed,
+        weightedApy: parseFloat(weightedApy.toFixed(2)),
+        totalValueEstimate: parseFloat((vaultBalanceUsdc + earnedEst).toFixed(4)),
+        source: snapshotSource,
+      });
+    } catch (err) {
+      logger.warn(`Snapshot failed for ${wallet.slice(0, 8)}…`, { err });
+    }
+  }
 }
 
 export function getRebalancerStatus() {
@@ -251,11 +476,12 @@ export function getRebalancerStatus() {
     running: true,
     mode: config.AGENT_SIGNER_SECRET_KEY ? "x402+AI" : "algorithmic",
     intervalMinutes: parseInt(config.REBALANCE_INTERVAL_MINUTES || "5"),
-    driftThresholdPct: DRIFT_THRESHOLD_PCT,
+    minPositionHoldHours: MIN_POSITION_HOLD_HOURS,
+    minApyImprovementPct: MIN_APY_IMPROVEMENT_PCT,
     rebalanceCount,
     x402PaymentCount,
     lastRunAt,
-    trackedWallets: portfolioService.getAllWallets().length,
+    trackedWallets: trackedWalletCount,
   };
 }
 

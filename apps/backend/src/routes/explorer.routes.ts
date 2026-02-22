@@ -183,7 +183,7 @@ explorerRoutes.get("/agents/:agentId", async (req, res) => {
       id: agent.id,
       owner: agent.owner,
       name: agent.name,
-      handle: agent.handle || null,
+      handle: (agent as any).handle || null,
       agentUri: agent.agent_uri,
       vaultAddress: agent.vault_address,
       agentSigner: agent.agent_signer,

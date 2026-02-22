@@ -2,6 +2,11 @@
 
 Monitors your portfolio's actual on-chain allocations and executes rebalancing transactions when the drift from your target exceeds a configurable threshold.
 
+## Important limitations (current)
+
+- **Only Blend execution is implemented.** Targets for other protocols (e.g., Soroswap LP) are currently **tracked-only** and will be logged + skipped during execution.
+- **Execution requires a facilitator endpoint.** The rebalancer submits agent-signed auth to `facilitatorUrl` (typically your backend), which fee-bumps + submits the transaction.
+
 ## How it works
 
 1. **Read current portfolio** — queries Blend position (supply - borrow) and Soroswap LP position for the vault
@@ -21,9 +26,6 @@ const config = {
   networkPassphrase: "Test SDF Network ; September 2015",
   blendPoolId: "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF",
   usdcAddress: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
-  agentSignerSecret: process.env.AGENT_SIGNER_SECRET_KEY,
-  vaultContract: "C...YOUR_VAULT...",
-  facilitatorUrl: "http://localhost:3001",
 };
 
 const blend = new BlendClient(config);
@@ -31,26 +33,37 @@ const soroswap = new SoroswapClient(config);
 
 const rebalancer = new Rebalancer(blend, soroswap, {
   driftThresholdPct: 5,  // rebalance if any position drifts more than 5%
+  agentSignerSecret: process.env.AGENT_SIGNER_SECRET_KEY,
+  vaultContract: "C...YOUR_VAULT...",
+  facilitatorUrl: "http://localhost:3001",
 });
 ```
 
 ### Via YieldOptimizer
 
 ```typescript
-import { YieldOptimizer } from "@agenticocean/defi-agent";
+import { YieldOptimizer, BlendClient, SoroswapClient, Rebalancer } from "@agenticocean/defi-agent";
 
-const optimizer = new YieldOptimizer({
-  ...config,
+const blend = new BlendClient(config);
+const soroswap = new SoroswapClient(config);
+const rebalancer = new Rebalancer(blend, soroswap, {
+  driftThresholdPct: 5,
   agentSignerSecret: process.env.AGENT_SIGNER_SECRET_KEY,
   vaultContract: "C...YOUR_VAULT...",
+  facilitatorUrl: "http://localhost:3001",
 });
+
+const optimizer = new YieldOptimizer(config, rebalancer);
 
 // Calling optimize() automatically sets the rebalancer's targets
 await optimizer.optimize("balanced yield", "moderate", 1000);
 
-// The rebalancer targets are now set — call checkAndRebalance() periodically
+// The rebalancer targets are now set — call checkAndRebalance() periodically.
 const rebalancer = optimizer.getRebalancer();
-const result = await rebalancer.checkAndRebalance("C...YOUR_VAULT...");
+if (rebalancer) {
+  const result = await rebalancer.checkAndRebalance();
+  console.log(result.executedActions);
+}
 ```
 
 ---
@@ -105,14 +118,11 @@ rebalancer.setTargetAllocation([
 Reads the current portfolio, checks drift vs targets, and executes rebalancing if needed.
 
 ```typescript
-const result = await rebalancer.checkAndRebalance("C...VAULT...");
+const result = await rebalancer.checkAndRebalance();
 
-if (result.rebalanced) {
-  console.log(`Rebalanced! APY improved by ${result.netApyChange}%`);
-  console.log(`Transactions: ${result.txHashes.join(", ")}`);
-} else {
-  console.log(`No rebalance needed: ${result.reason}`);
-}
+result.executedActions.forEach(a => {
+  console.log(`${a.protocol} ${a.type} tx=${a.txHash}`);
+});
 ```
 
 **Execution order:**
@@ -128,6 +138,9 @@ This prevents "insufficient balance" errors when moving funds from one protocol 
 ```typescript
 interface RebalancerOptions {
   driftThresholdPct: number;  // percentage drift that triggers rebalance (e.g., 5 = 5%)
+  agentSignerSecret?: string; // agent signer secret key
+  vaultContract?: string;     // UserVault contract
+  facilitatorUrl?: string;    // facilitator base URL (expects POST /api/x402/settle)
 }
 ```
 
@@ -142,10 +155,8 @@ import cron from "node-cron";
 
 // Every 5 minutes
 cron.schedule("*/5 * * * *", async () => {
-  const result = await rebalancer.checkAndRebalance(VAULT_ADDRESS);
-  if (result.rebalanced) {
-    console.log("Rebalanced:", result);
-  }
+  const result = await rebalancer.checkAndRebalance();
+  if (result.executedActions.length > 0) console.log("Executed:", result.executedActions);
 });
 ```
 
@@ -160,7 +171,7 @@ Each rebalance action goes through the vault's `agent_pay()`:
 ```
 Rebalancer → builds vault.agent_pay() invocation
            → signs SorobanAuthorizationEntry (agentSignerSecret)
-           → sends to facilitator (facilitatorUrl/x402/settle)
+           → sends to facilitator (POST {facilitatorUrl}/api/x402/settle)
            → facilitator submits fee-bumped tx to Soroban RPC
            → USDC transfers from vault to protocol
 ```

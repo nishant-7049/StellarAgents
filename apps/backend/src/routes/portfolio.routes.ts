@@ -1,12 +1,57 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
+import { randomUUID } from "crypto";
 import { portfolioService, DeployedPosition } from "../services/portfolio.service.js";
 import { vaultService } from "../services/vault.service.js";
 import { blendClient } from "../defi/blend-client.js";
 import { soroswapClient } from "../defi/soroswap-client.js";
+import { x402Middleware } from "../middleware/x402.middleware.js";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
 
 export const portfolioRoutes = Router();
+
+// ── Admin session store ───────────────────────────────────────────────────────
+// Pay once via x402 → receive X-Admin-Session token → reuse for TTL minutes.
+// Avoids paying on every refresh while keeping cryptographic identity proof.
+const adminSessions = new Map<string, number>(); // token → expiresAt (ms)
+const ADMIN_SESSION_TTL_MS = (parseInt(config.ADMIN_SESSION_TTL_MINUTES) || 30) * 60_000;
+
+// Periodic cleanup so the map doesn't grow indefinitely
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, exp] of adminSessions) {
+    if (exp < now) adminSessions.delete(token);
+  }
+}, ADMIN_SESSION_TTL_MS);
+
+/**
+ * Combined admin gate middleware:
+ *   1. If X-Admin-Session header is present and valid → pass through (no payment)
+ *   2. Otherwise → require x402 payment, then issue a fresh session token
+ *      returned in the X-Admin-Session response header.
+ */
+const x402Gate = x402Middleware({
+  price: config.ADMIN_X402_PRICE_STROOPS,
+  description: "AgentNet ops access",
+});
+
+function adminGate(req: Request, res: Response, next: NextFunction) {
+  const token = req.headers["x-admin-session"] as string | undefined;
+  if (token) {
+    const exp = adminSessions.get(token);
+    if (exp && exp > Date.now()) {
+      return next(); // valid session — no payment needed
+    }
+    adminSessions.delete(token); // expired
+  }
+  // No valid session: run x402 gate; on success, issue new session token
+  x402Gate(req, res, () => {
+    const newToken = randomUUID();
+    adminSessions.set(newToken, Date.now() + ADMIN_SESSION_TTL_MS);
+    res.setHeader("X-Admin-Session", newToken);
+    next();
+  });
+}
 
 // Live fallback APYs when SDKs can't be reached
 const FALLBACK_APYS: Record<string, number> = {
@@ -56,7 +101,7 @@ portfolioRoutes.get("/:wallet", async (req, res) => {
     const liveApys = await getLiveApys();
 
     // 3. Tracked positions (with live APYs overlaid)
-    const portfolio = portfolioService.getPortfolio(wallet);
+    const portfolio = await portfolioService.getPortfolio(wallet);
     const positions: (DeployedPosition & { currentApy: number; currentValue: number })[] = (portfolio?.positions || []).map(pos => {
       const currentApy = liveApys[pos.protocolKey] ?? pos.entryApy;
       const days = (Date.now() - new Date(pos.deployedAt).getTime()) / (1000 * 60 * 60 * 24);
@@ -106,13 +151,20 @@ portfolioRoutes.get("/:wallet", async (req, res) => {
       currentRates: liveApys,
       lastRebalance: portfolio?.rebalanceHistory?.slice(-1)[0]?.timestamp ?? null,
       rebalanceCount: portfolio?.rebalanceHistory?.length ?? 0,
-      rebalanceHistory: (portfolio?.rebalanceHistory ?? []).slice(-5).reverse().map(e => ({
+      rebalanceHistory: (portfolio?.rebalanceHistory ?? []).slice(-10).reverse().map(e => ({
         timestamp: e.timestamp,
         type: e.type,
         reason: e.reason,
         netApyChange: e.netApyChange,
+        txHashes: e.txHashes,
         txCount: e.txHashes.length,
       })),
+      // x402 payments (last 20 for activity feed)
+      x402Payments: (portfolio?.x402Payments ?? []).slice(-20).reverse(),
+      // Snapshots (last 48 entries = ~24h at 30-min intervals, for charts)
+      snapshots: (portfolio?.snapshots ?? []).slice(-48),
+      // Last rebalancer decision (why it did or didn't act)
+      lastDecision: portfolio?.lastDecision ?? null,
     });
   } catch (err: any) {
     logger.error("Portfolio fetch failed", { wallet, error: err.message });
@@ -125,14 +177,14 @@ portfolioRoutes.get("/:wallet", async (req, res) => {
  * Called by frontend after user signs + submits strategy transactions.
  * Body: { wallet, vaultAddress?, positions, totalAmount, txHashes }
  */
-portfolioRoutes.post("/record", (req, res) => {
+portfolioRoutes.post("/record", async (req, res) => {
   const { wallet, vaultAddress, positions, totalAmount, txHashes, reason } = req.body;
   if (!wallet || !Array.isArray(positions) || !totalAmount) {
     return res.status(400).json({ error: "wallet, positions[], and totalAmount required" });
   }
 
   try {
-    const entry = portfolioService.recordPositions({
+    const entry = await portfolioService.recordPositions({
       wallet,
       vaultAddress,
       positions,
@@ -159,7 +211,7 @@ portfolioRoutes.post("/agent-rebalance", async (req, res) => {
   if (!wallet) return res.status(400).json({ error: "wallet required" });
 
   try {
-    const portfolio = portfolioService.getPortfolio(wallet);
+    const portfolio = await portfolioService.getPortfolio(wallet);
     const liveApys = await getLiveApys();
 
     if (!portfolio || portfolio.positions.length === 0) {
@@ -207,7 +259,7 @@ portfolioRoutes.post("/agent-rebalance", async (req, res) => {
         : undefined,
     }));
 
-    const updated = portfolioService.recordPositions({
+    const updated = await portfolioService.recordPositions({
       wallet,
       vaultAddress: vaultAddress || portfolio.vaultAddress,
       positions: newPositions,
@@ -237,3 +289,42 @@ portfolioRoutes.post("/agent-rebalance", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+/**
+ * GET /api/portfolio/admin/summaries?limit=50&offset=0
+ * All tracked wallets with headline metrics.
+ * Protected by x402 — caller must pay ADMIN_X402_PRICE_STROOPS from their vault.
+ */
+portfolioRoutes.get(
+  "/admin/summaries",
+  adminGate,
+  async (req, res) => {
+    const limit  = Math.min(parseInt(req.query.limit  as string) || 50, 200);
+    const offset = Math.max(parseInt(req.query.offset as string) || 0,  0);
+    try {
+      const summaries = await portfolioService.listAdminSummaries({ limit, offset });
+      res.json({ summaries, count: summaries.length, limit, offset });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
+/**
+ * GET /api/portfolio/admin/events?limit=50
+ * Flattened rebalance event feed across all wallets, newest first.
+ * Protected by x402 — same price as /admin/summaries.
+ */
+portfolioRoutes.get(
+  "/admin/events",
+  adminGate,
+  async (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    try {
+      const events = await portfolioService.listRecentRebalanceEvents(limit);
+      res.json({ events, count: events.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+);

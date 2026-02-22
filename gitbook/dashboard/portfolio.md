@@ -34,17 +34,21 @@ If no strategy has been set yet, the panel shows a prompt to [ask the AI agent](
 The **Autonomous Agent** card shows your rebalancer's status:
 
 - **Running autonomously every 5 min** — the backend rebalancer checks your portfolio on a schedule
-- **x402 payments** — each rebalance check costs `0.01 USDC` (paid from your vault via the agent)
+- **x402 payments (strategy queries)** — when running in autonomous mode, the agent can pay `0.01 USDC` via x402 to purchase an AI strategy (deducted from your vault)
 - **Force check now** — manually trigger a rebalance check without waiting for the next cron tick
 - **Rebalance count** — total number of rebalancing actions taken
 
 ### What triggers a rebalance?
 
-The rebalancer compares your actual on-chain positions (read from Blend and Soroswap) against your target allocation. If any protocol drifts more than **5%** from its target, the rebalancer:
-1. Withdraws from over-allocated protocols
-2. Supplies to under-allocated protocols
+The rebalancer uses two gates before it will move funds:
+1. **Minimum hold time** — positions must be at least **6 hours old** before rebalancing is allowed
+2. **Minimum improvement** — the new strategy must improve expected APY by at least **0.25 percentage points**
 
-Example: target is 60% Blend / 40% Soroswap. If Blend drifts to 67% (due to Soroswap LP value change), the rebalancer withdraws 7% from Blend and adds it to Soroswap.
+If both gates pass, the backend will attempt on-chain execution for **Blend** positions. Soroswap positions are currently **tracked-only** (shown in the UI and included in the strategy, but not moved on-chain by the autonomous executor yet).
+
+### On-chain reconciliation (safety)
+
+Before making a rebalance decision, the backend may reconcile tracked positions against on-chain Blend reality. If tracked Blend value drifts significantly from on-chain, the system updates the tracked state to match before proceeding. This reduces “phantom positions” caused by manual user actions or partial failures.
 
 ---
 
@@ -72,6 +76,12 @@ The **Live Market Rates** card shows current APYs for all supported protocols:
 - DeFindex vault
 
 These are fetched live from Blend SDK and Soroswap on each page load — not cached.
+
+---
+
+## Emergency Monitoring (TVL drop alerts)
+
+The backend can monitor Blend TVL and record an emergency event if a large drop is detected. In emergencies, the system records state and alerts that **manual on-chain withdrawal is required** (it does not attempt autonomous withdrawals).
 
 ---
 
