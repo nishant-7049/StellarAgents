@@ -1,6 +1,8 @@
 # YieldOptimizer
 
-The main entry point for AI-powered yield strategy generation.
+The main entry point for AI-powered yield strategy generation. Wraps data fetching, LLM calling, JSON parsing, and rebalancer wiring into a single `optimize()` call.
+
+---
 
 ## Basic Usage
 
@@ -24,13 +26,100 @@ const strategy = await optimizer.optimize(
 
 ---
 
-## `optimize(query, riskTolerance, amount?)`
+## Internal Pipeline — what `optimize()` actually does
 
-Generates a yield strategy by:
-1. Fetching live APYs from Blend and Soroswap
-2. Formatting pool data as structured context
-3. Calling your LLM with the query + live data
-4. Parsing + validating the JSON strategy response
+Every call to `optimize()` runs this exact sequence:
+
+```
+Step 1: Fetch data in parallel
+  ├── BlendClient.loadPool()          → live APYs, utilization per reserve
+  └── SoroswapClient.getPools()       → LP pool APYs
+
+Step 2: formatPoolContext()
+  Converts the raw data into a plain-text block, e.g.:
+  ┌──────────────────────────────────────────────────────┐
+  │ === BLEND PROTOCOL (Lending) ===                     │
+  │   USDC: Supply APY 7.2% | Borrow APY 9.8% | Util 67%│
+  │   XLM:  Supply APY 4.1% | Borrow APY 6.5% | Util 40%│
+  │                                                      │
+  │ === SOROSWAP (AMM DEX) ===                           │
+  │   USDC/XLM: LP APY ~12.5%                           │
+  │                                                      │
+  │ === RWA YIELDS ===                                   │
+  │   Ondo USDY: 4.8% (US Treasury-backed)              │
+  │   Centrifuge deJTRSY: 4.5%                          │
+  │                                                      │
+  │ === DEFINDEX VAULTS ===                              │
+  │   Auto-Compound Blend Vault: ~9.1%                  │
+  │   Multi-Strategy Vault: ~11.3%                      │
+  └──────────────────────────────────────────────────────┘
+
+Step 3: Call LLM
+  system: SYSTEM_PROMPT  (the protocol rules + JSON schema)
+  user:   buildUserPrompt(query, poolContext, risk, amount)
+          → 'User query: "safe yield"
+             Risk tolerance: low
+             Amount to allocate: 1000 USDC
+
+             LIVE POOL DATA:
+             [context block from step 2]
+
+             Generate the optimal allocation strategy as JSON.'
+
+Step 4: parseJson()
+  Extracts the first {...} block from the LLM response.
+  Throws if no JSON found → falls back to hardcoded strategy.
+
+Step 5: Wire into rebalancer (if configured)
+  If vaultContract + agentSignerSecret are set:
+    → reads current on-chain positions (readCurrentPortfolio)
+    → sets rebalancer targets with real currentPct values
+    → rebalancer is now ready to drift-check on its next tick
+```
+
+---
+
+## The System Prompt
+
+The LLM receives this system prompt on every call (exported as `SYSTEM_PROMPT`):
+
+```
+You are a DeFi yield optimization AI for Stellar blockchain.
+You analyze live pool data from Blend Protocol, Soroswap DEX, DeFindex vaults, and RWA tokens
+(Ondo USDY, Centrifuge deRWAs) to recommend optimal yield strategies.
+
+RESPOND WITH ONLY A JSON OBJECT (no markdown, no explanation outside JSON):
+{
+  "strategies": [
+    {
+      "protocol": "Protocol Name",
+      "action": "What to do (e.g. 'Supply USDC to Blend Fixed V2')",
+      "allocation_pct": 35.0,
+      "estimated_apy": 7.2,
+      "risk_level": "low|moderate|high",
+      "details": "Brief explanation including risk factors"
+    }
+  ],
+  "total_estimated_apy": 8.1,
+  "summary": "2-3 sentence strategy summary"
+}
+
+RULES:
+- allocation_pct values MUST sum to exactly 100
+- Max 5 strategies
+- low risk: favor USDY, Blend fixed pools, stablecoin LPs
+- moderate: mix lending, auto-compound vaults, small LP allocation
+- high: heavier LP, multi-strategy vaults, leveraged if available
+- Always include at least one low-risk component
+- Consider impermanent loss risk for AMM positions
+- Factor in BLND emission rewards for Blend pools
+```
+
+The live pool data from step 2 is injected into the **user** message, not the system prompt — so the LLM always sees fresh rates, not stale ones from training data.
+
+---
+
+## `optimize(query, riskTolerance, amount?)`
 
 ### Parameters
 
@@ -61,14 +150,14 @@ Generates a yield strategy by:
 
 ### `YieldStrategy`
 
-Each item in the `strategies` array:
+Each item in `strategies`:
 
 ```typescript
 {
   protocol: string;        // "Blend Fixed V2", "Ondo USDY", "Soroswap USDC/XLM", etc.
   action: string;          // "Supply USDC", "Hold USDY", "Provide LP"
   allocation_pct: number;  // 0-100, all items sum to 100
-  estimated_apy: number;   // percentage (e.g., 7.2)
+  estimated_apy: number;   // percentage (e.g., 7.2 means 7.2%)
   risk_level: "low" | "moderate" | "high";
   details: string;         // brief explanation of the position
 }
@@ -79,13 +168,13 @@ Each item in the `strategies` array:
 ## Risk Profiles
 
 ### `"low"` — Capital preservation
-Prioritizes: RWA tokens (Ondo USDY), stable lending pools (Blend fixed), stablecoin LP pairs (USDC/EURC). Target APY: 5–7%.
+Favors: RWA tokens (Ondo USDY), stable lending pools (Blend fixed), stablecoin LP pairs (USDC/EURC). Target APY: 5–7%.
 
 ### `"moderate"` — Balanced
-Prioritizes: DeFindex auto-compound vaults, Blend lending, small LP allocation. Target APY: 7–10%.
+Favors: DeFindex auto-compound vaults, Blend lending, small LP allocation. Target APY: 7–10%.
 
 ### `"high"` — Yield maximization
-Prioritizes: Multi-strategy vaults, Soroswap LP pairs, Blend yield-boost pools. Target APY: 10–13%.
+Favors: Multi-strategy vaults, Soroswap LP pairs, Blend yield-boost pools. Target APY: 10–13%.
 
 ---
 
@@ -101,6 +190,80 @@ The optimizer knows about these Stellar DeFi protocols:
 | DeFindex Auto-Compound | Vault | Moderate | Auto-compounds Blend + BLND rewards |
 | DeFindex Multi-Strategy | Vault | High | Blend + Soroswap + Aquarius |
 | Soroswap USDC/XLM | AMM LP | High | Fee revenue, impermanent loss risk |
+
+---
+
+## Customizing Strategies
+
+### Change LLM rules
+
+`SYSTEM_PROMPT` is exported. Override the rules block to change LLM behavior:
+
+```typescript
+import { YieldOptimizer, buildUserPrompt } from "@agenticocean/defi-agent";
+
+// Subclass to inject a custom system prompt
+class MyOptimizer extends YieldOptimizer {
+  // The optimizer uses SYSTEM_PROMPT internally.
+  // To override: pass a custom prompt via your own LLM wrapper
+  // and call setTargetAllocation() on the rebalancer yourself.
+}
+```
+
+The cleanest approach for a fully custom strategy is to **skip `optimize()`** and use the data layer directly:
+
+```typescript
+import { BlendClient, SoroswapClient, Rebalancer } from "@agenticocean/defi-agent";
+
+const blend = new BlendClient(config);
+const soroswap = new SoroswapClient(config);
+
+// 1. Fetch your own data
+const pool = await blend.loadPool();
+const pools = await soroswap.getPools();
+
+// 2. Apply your own strategy logic (rules-based, ML model, or LLM)
+const myTargets = myStrategy(pool, pools);
+
+// 3. Set targets on the rebalancer directly
+const rebalancer = new Rebalancer(blend, soroswap, {
+  driftThresholdPct: 5,
+  agentSignerSecret: process.env.AGENT_SIGNER_SECRET_KEY,
+  vaultContract: process.env.VAULT_CONTRACT,
+  facilitatorUrl: process.env.FACILITATOR_URL,
+});
+rebalancer.setTargetAllocation(myTargets);
+
+// 4. Execute
+await rebalancer.checkAndRebalance();
+```
+
+### Add a new protocol to the pool context
+
+`formatPoolContext()` is a private method, but you can replicate and extend it:
+
+```typescript
+function myFormatPoolContext(blend, soroswap, aquariusPools) {
+  const lines = [];
+  // existing sources
+  lines.push("=== BLEND PROTOCOL ===");
+  for (const r of blend.reserves) {
+    lines.push(`  ${r.symbol}: Supply APY ${r.supplyApy.toFixed(1)}% | Util ${(r.utilization*100).toFixed(0)}%`);
+  }
+  // Add your new protocol
+  lines.push("\n=== AQUARIUS ===");
+  for (const pool of aquariusPools) {
+    lines.push(`  ${pool.pair}: Bribe APY ~${pool.briberApy}%`);
+  }
+  return lines.join("\n");
+}
+```
+
+Then pass this custom context in your own `buildUserPrompt()` call to whatever LLM you use.
+
+### Change the fallback (no-AI) strategies
+
+The hardcoded fallbacks are inside `fallbackStrategy()` in `yield-optimizer.ts`. If you're extending the SDK, override this method in a subclass. If you're using the backend reference implementation directly, edit `apps/backend/src/defi/rebalancer.ts` — the backend's `queryAIWithX402()` function constructs the same fallback strategies independently.
 
 ---
 
@@ -134,20 +297,29 @@ const strategy = await optimizer.optimize("best yield", "moderate");
 
 ## With Rebalancer Integration
 
-When `vaultContract` and `agentSignerSecret` are set, `optimize()` automatically updates the rebalancer's target allocation after generating the strategy:
+When `vaultContract` and `agentSignerSecret` are set, `optimize()` automatically reads the current on-chain portfolio and wires new targets into the rebalancer:
 
 ```typescript
 const optimizer = new YieldOptimizer({
   stellarRpcUrl: "https://soroban-testnet.stellar.org",
   networkPassphrase: "Test SDF Network ; September 2015",
   aiApiKey: process.env.AI_API_KEY,
-  vaultContract: "C...YOUR_VAULT...",
+  blendPoolId: "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF",
+  usdcAddress: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+  vaultContract: process.env.VAULT_CONTRACT,
   agentSignerSecret: process.env.AGENT_SIGNER_SECRET_KEY,
+  facilitatorUrl: "http://localhost:3001",
 });
 
-// This will:
-// 1. Generate the strategy (as normal)
-// 2. Read current on-chain positions
-// 3. Set drift-based rebalancing targets
+// 1. Generates strategy AND wires rebalancer targets
 const strategy = await optimizer.optimize("maximize yield", "high", 5000);
+
+// 2. The rebalancer is now ready — call it on a schedule
+const rebalancer = optimizer.getRebalancer();
+setInterval(async () => {
+  const result = await rebalancer.checkAndRebalance();
+  if (result.executedActions.length > 0) {
+    console.log("Rebalanced:", result.executedActions);
+  }
+}, 5 * 60 * 1000); // every 5 minutes
 ```
