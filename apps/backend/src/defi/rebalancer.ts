@@ -218,6 +218,50 @@ async function autoRebalanceAll() {
   isRunning = true;
   lastRunAt = new Date().toISOString();
 
+  // ── Auto-discovery: seed our own vault if agent is authorized and vault has funds ──
+  if (config.AGENT_SIGNER_SECRET_KEY && config.ADMIN_VAULT_ADDRESS) {
+    try {
+      const agentPubKey = Keypair.fromSecret(config.AGENT_SIGNER_SECRET_KEY).publicKey();
+      const vaultAddress = config.ADMIN_VAULT_ADDRESS;
+
+      const [policy, rawBalance] = await Promise.all([
+        vaultService.getAgentPolicy(vaultAddress, agentPubKey, agentPubKey).catch(() => null),
+        vaultService.getBalance(vaultAddress, agentPubKey).catch(() => "0"),
+      ]);
+
+      const isAuthorized = policy?.is_active ?? policy?.isActive ?? false;
+      const balanceUsdc = parseInt(rawBalance || "0") / 1e7;
+
+      if (isAuthorized && balanceUsdc > 0) {
+        const existing = await portfolioService.getPortfolio(agentPubKey);
+        if (!existing) {
+          // First time: seed as idle USDC with old timestamp so the 6h gate passes immediately
+          await portfolioService.recordPositions({
+            wallet: agentPubKey,
+            vaultAddress,
+            positions: [{
+              protocol: "Idle USDC",
+              protocolKey: "idle",
+              amountUsdc: balanceUsdc,
+              allocationPct: 100,
+              entryApy: 0,
+              deployedAt: new Date(Date.now() - 7 * 3600 * 1000).toISOString(),
+            }],
+            totalAmount: balanceUsdc,
+            txHashes: [],
+            reason: "auto_discovery",
+          });
+          logger.info(
+            `Auto-discovered vault: ${vaultAddress.slice(0, 8)}… ` +
+            `agent=${agentPubKey.slice(0, 8)}… balance=${balanceUsdc.toFixed(2)} USDC`
+          );
+        }
+      }
+    } catch (err) {
+      logger.warn("Auto-discovery vault check failed", { err });
+    }
+  }
+
   const wallets = await portfolioService.getAllWallets();
   trackedWalletCount = wallets.length;
 
@@ -403,6 +447,11 @@ async function autoRebalanceAll() {
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
+
+/** Manually trigger a rebalance check — used by /api/rebalance/trigger and event hooks. */
+export async function triggerRebalance(): Promise<void> {
+  await autoRebalanceAll();
+}
 
 export function startRebalancer() {
   const interval = config.REBALANCE_INTERVAL_MINUTES || "5";

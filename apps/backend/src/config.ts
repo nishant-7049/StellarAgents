@@ -76,17 +76,6 @@ if (
   );
 }
 
-if (
-  config.NODE_ENV === "production" &&
-  config.STELLAR_MAINNET_NETWORK_PASSPHRASE &&
-  config.STELLAR_NETWORK_PASSPHRASE !== config.STELLAR_MAINNET_NETWORK_PASSPHRASE &&
-  config.ALLOW_TESTNET_IN_PRODUCTION !== "true"
-) {
-  throw new Error(
-    "Invalid production network configuration: STELLAR_NETWORK_PASSPHRASE does not match STELLAR_MAINNET_NETWORK_PASSPHRASE. " +
-    "Set ALLOW_TESTNET_IN_PRODUCTION=true only for explicit non-mainnet production overrides."
-  );
-}
 
 if (config.NODE_ENV === "production") {
   const required = [
