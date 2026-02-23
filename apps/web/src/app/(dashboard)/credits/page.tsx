@@ -29,7 +29,7 @@ const PLAN_BADGE: Record<string, "default" | "success" | "warning"> = {
   pro:   "warning",
 };
 
-type PaymentMethod = "CARD" | "USDC" | "XLM";
+type PaymentMethod = "CARD" | "USDC";
 
 interface PaymentParams {
   facilitatorAddress: string;
@@ -120,13 +120,8 @@ export default function CreditsPage() {
       if (!plan) throw new Error("Plan not found");
 
       // 2. Build payment amount
-      const amount = paymentMethod === "USDC"
-        ? plan.priceUSDC.toFixed(7)
-        : plan.priceXLM.toFixed(7);
-
-      const asset = paymentMethod === "USDC"
-        ? { code: "USDC", issuer: params.usdcIssuer }
-        : "native" as const;
+      const amount = plan.priceUSDC.toFixed(7);
+      const asset = { code: "USDC", issuer: params.usdcIssuer };
 
       // 3. Build classic Stellar payment tx
       const unsignedXdr = await buildPaymentTx({
@@ -144,7 +139,7 @@ export default function CreditsPage() {
       const txHash = await submitPaymentTx(signedXdr);
 
       // 6. Verify on backend → upgrade plan
-      await purchasePlan(planId, txHash, paymentMethod as "USDC" | "XLM");
+      await purchasePlan(planId, txHash);
 
       setSuccessTx(txHash);
       await refresh();
@@ -162,9 +157,7 @@ export default function CreditsPage() {
     if (paymentMethod === "CARD") return "Pay with Card";
     const plan = plans.find(p => p.id === planId);
     if (!plan) return "Upgrade";
-    return paymentMethod === "USDC"
-      ? `Pay $${plan.priceUSDC} USDC`
-      : `Pay ${plan.priceXLM} XLM`;
+    return `Pay $${plan.priceUSDC} USDC`;
   }
 
   // ── Render ─────────────────────────────────────────────────────────
@@ -341,7 +334,6 @@ export default function CreditsPage() {
             {([
               { id: "CARD" as PaymentMethod, icon: <CreditCard className="w-3.5 h-3.5" />, label: "Card" },
               { id: "USDC" as PaymentMethod, icon: <span className="text-xs font-bold">$</span>,  label: "USDC" },
-              { id: "XLM"  as PaymentMethod, icon: <Wallet className="w-3.5 h-3.5" />,             label: "XLM"  },
             ] as const).map(opt => (
               <button
                 key={opt.id}
@@ -363,7 +355,6 @@ export default function CreditsPage() {
         <p className="text-xs text-[var(--text-secondary)] mb-4">
           {paymentMethod === "CARD" && "Pay with any credit/debit card via Stripe."}
           {paymentMethod === "USDC" && "Pay with USDC on Stellar Testnet via Freighter."}
-          {paymentMethod === "XLM"  && "Pay with XLM on Stellar Testnet via Freighter."}
         </p>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -398,10 +389,8 @@ export default function CreditsPage() {
                   <div className="text-3xl font-bold mb-1">
                     {plan.priceUSDC === 0 ? (
                       <span className="text-green-400">Free</span>
-                    ) : paymentMethod === "CARD" || paymentMethod === "USDC" ? (
-                      <>${plan.priceUSDC}<span className="text-base text-[var(--text-secondary)] font-normal">/mo</span></>
                     ) : (
-                      <>{plan.priceXLM} XLM<span className="text-base text-[var(--text-secondary)] font-normal">/mo</span></>
+                      <>${plan.priceUSDC}<span className="text-base text-[var(--text-secondary)] font-normal">/mo</span></>
                     )}
                   </div>
 
@@ -477,11 +466,7 @@ export default function CreditsPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[var(--text-secondary)]">Amount</span>
-                    <span className="font-semibold">
-                      {paymentMethod === "USDC"
-                        ? `${confirmPlan.priceUSDC} USDC`
-                        : `${confirmPlan.priceXLM} XLM`}
-                    </span>
+                    <span className="font-semibold">{confirmPlan.priceUSDC} USDC</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[var(--text-secondary)]">Network</span>

@@ -25,7 +25,6 @@ export interface CreditPlan {
   name: string;
   credits: number;
   priceUSDC: number;
-  priceXLM: number;
   description: string;
   features: string[];
 }
@@ -70,12 +69,12 @@ export function useCredits(wallet: string | null) {
     return () => window.removeEventListener("credits-updated", fetchCredits);
   }, [fetchCredits]);
 
-  const purchasePlan = async (plan: string, txHash: string, paymentToken: "USDC" | "XLM") => {
+  const purchasePlan = async (plan: string, txHash: string) => {
     if (!wallet) throw new Error("No wallet connected");
     const res = await fetch(`${BACKEND_URL}/api/credits/purchase`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ wallet, plan, txHash, paymentToken }),
+      body: JSON.stringify({ wallet, plan, txHash, paymentToken: "USDC" }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Purchase failed");

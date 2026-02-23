@@ -143,20 +143,18 @@ creditsRoutes.post("/purchase", async (req, res) => {
       const opsData = await opsResp.json() as any;
       const ops = opsData._embedded?.records || [];
 
-      const { PLAN_PRICES_USDC, PLAN_PRICES_XLM } = await import("../services/credits.service.js");
+      const { PLAN_PRICES_USDC } = await import("../services/credits.service.js");
       const facilitatorPubKey = config.FACILITATOR_SECRET_KEY
         ? (await import("@stellar/stellar-sdk")).Keypair.fromSecret(config.FACILITATOR_SECRET_KEY).publicKey()
         : null;
 
       const expectedUsdc = PLAN_PRICES_USDC[plan as CreditPlan];
-      const expectedXlm = PLAN_PRICES_XLM[plan as CreditPlan];
 
       for (const op of ops) {
         if (op.type === "payment" && facilitatorPubKey && op.to === facilitatorPubKey) {
           const amount = parseFloat(op.amount);
-          const isUSDC = paymentToken === "USDC" && op.asset_code === "USDC" && amount >= expectedUsdc;
-          const isXLM = paymentToken === "XLM" && op.asset_type === "native" && amount >= expectedXlm;
-          if (isUSDC || isXLM) {
+          const isUSDC = op.asset_code === "USDC" && amount >= expectedUsdc;
+          if (isUSDC) {
             paymentVerified = true;
             break;
           }
