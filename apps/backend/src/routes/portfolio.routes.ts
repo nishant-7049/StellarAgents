@@ -53,9 +53,9 @@ function adminGate(req: Request, res: Response, next: NextFunction) {
   });
 }
 
-// Live fallback APYs when SDKs can't be reached
+// Live fallback APYs — used when external sources are unreachable
 const FALLBACK_APYS: Record<string, number> = {
-  blend: 7.2,
+  blend: 12.6,
   soroswap: 12.5,
   ondo: 4.8,
   defindex: 9.1,
@@ -65,17 +65,43 @@ const FALLBACK_APYS: Record<string, number> = {
   other: 0,
 };
 
+// DeFiLlama pool IDs for live mainnet APY data
+// blend-pools-v2 USDC pool (highest TVL: ~$6.4M)
+const DEFILLAMA_BLEND_USDC_POOL = "ecf788e3-d2ef-4fdd-9ece-8a2d96226ddf";
+
+let cachedApys: Record<string, number> | null = null;
+let cacheExpiry = 0;
+
 async function getLiveApys(): Promise<Record<string, number>> {
+  // Use cached data for 5 minutes to avoid hammering DeFiLlama
+  if (cachedApys && Date.now() < cacheExpiry) return cachedApys;
+
   const apys = { ...FALLBACK_APYS };
+
+  // Fetch Blend USDC APY from DeFiLlama (mainnet, real data)
   try {
-    const blend = await blendClient.loadPool();
-    if (blend.reserves[0]?.supplyApy) apys.blend = blend.reserves[0].supplyApy;
-    if (blend.reserves[1]?.supplyApy) apys.xlm = blend.reserves[1].supplyApy;
-  } catch {}
+    const res = await fetch(`https://yields.llama.fi/chart/${DEFILLAMA_BLEND_USDC_POOL}`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (res.ok) {
+      const json = await res.json() as any;
+      const latest = json?.data?.slice(-1)[0];
+      if (latest?.apy && latest.apy > 0) {
+        apys.blend = parseFloat(latest.apy.toFixed(2));
+      }
+    }
+  } catch {
+    // keep fallback
+  }
+
+  // Soroswap: use our soroswap client (testnet mock or real)
   try {
     const pools = await soroswapClient.getPools();
     if (pools[0]?.apy) apys.soroswap = pools[0].apy;
   } catch {}
+
+  cachedApys = apys;
+  cacheExpiry = Date.now() + 5 * 60_000;
   return apys;
 }
 

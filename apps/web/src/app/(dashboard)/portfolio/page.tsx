@@ -320,10 +320,8 @@ export default function PortfolioPage() {
                   </h3>
                   <div className="space-y-2">
                     {[
-                      { key: "blend", label: "Blend USDC", color: "text-indigo-400" },
+                      { key: "blend",    label: "Blend USDC",  color: "text-indigo-400" },
                       { key: "soroswap", label: "Soroswap LP", color: "text-purple-400" },
-                      { key: "ondo", label: "Ondo USDY", color: "text-green-400" },
-                      { key: "defindex", label: "DeFindex Vault", color: "text-amber-400" },
                     ].map(({ key, label, color }) => (
                       <div key={key} className="flex items-center justify-between text-sm">
                         <span className="text-[var(--text-secondary)]">{label}</span>

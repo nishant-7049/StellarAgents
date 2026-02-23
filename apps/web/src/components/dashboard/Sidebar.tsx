@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { Search, Shield, Bot, Zap, ChevronRight, MessageSquare } from "lucide-react";
+import { Search, Shield, Bot, Zap, ChevronRight, Sparkles } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
 import { useCredits } from "@/hooks/useCredits";
 
@@ -88,19 +88,19 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               hover:shadow-[0_4px_20px_rgba(31,102,255,0.44)]
               text-white text-[13px] font-semibold transition-shadow"
           >
-            <MessageSquare className="w-4 h-4" />
-            Try our Agent
+            <Sparkles className="w-4 h-4" />
+            Live Agent Demo
           </Link>
         )}
         {collapsed && (
           <Link
             href="/chat"
-            title="Try our Agent"
+            title="Live Agent Demo"
             className="mt-3 flex justify-center items-center h-10 w-10 mx-auto rounded-[10px]
               bg-gradient-to-r from-[var(--accent)] to-[var(--accent2)]
               shadow-[0_2px_8px_rgba(31,102,255,0.28)]"
           >
-            <MessageSquare className="w-4 h-4 text-white" />
+            <Sparkles className="w-4 h-4 text-white" />
           </Link>
         )}
       </nav>

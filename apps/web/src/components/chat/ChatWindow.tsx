@@ -12,6 +12,7 @@ import { Sparkles, TrendingUp, Shield, Zap } from "lucide-react";
 interface ChatWindowProps {
   messages: ChatMessage[];
   userAddress?: string | null;
+  onSubmit?: (query: string, risk: string) => void;
 }
 
 const exampleQueries = [
@@ -21,7 +22,7 @@ const exampleQueries = [
   { icon: Sparkles, text: "Diversified DeFi portfolio", risk: "moderate" },
 ];
 
-export function ChatWindow({ messages, userAddress }: ChatWindowProps) {
+export function ChatWindow({ messages, userAddress, onSubmit }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,15 +44,17 @@ export function ChatWindow({ messages, userAddress }: ChatWindowProps) {
           <div className="max-w-md mx-auto space-y-2">
             <p className="text-xs text-[var(--text-secondary)] mb-3">Try these examples:</p>
             {exampleQueries.map((query, i) => (
-              <Card
+              <button
                 key={i}
-                className="p-3 hover:border-indigo-400/50 transition-colors cursor-pointer text-left"
+                onClick={() => onSubmit?.(query.text, query.risk)}
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-3
+                  hover:border-indigo-400/50 transition-colors text-left"
               >
                 <div className="flex items-center gap-3">
                   <query.icon className="w-4 h-4 text-indigo-400 flex-shrink-0" />
                   <span className="text-sm">{query.text}</span>
                 </div>
-              </Card>
+              </button>
             ))}
           </div>
 
