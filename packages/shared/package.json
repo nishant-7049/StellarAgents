@@ -10,7 +10,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@agenticocean/x402-stellar": "workspace:*"
+    "@agenticocean/x402-stellar": "^1.0.1"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

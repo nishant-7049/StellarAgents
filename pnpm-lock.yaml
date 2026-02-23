@@ -27,8 +27,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vault
       '@agenticocean/x402-stellar':
-        specifier: workspace:*
-        version: link:../../packages/x402-stellar
+        specifier: ^1.0.1
+        version: 1.0.1(express@5.2.1)
       '@anthropic-ai/sdk':
         specifier: ^0.40.0
         version: 0.40.1
@@ -100,8 +100,8 @@ importers:
   apps/web:
     dependencies:
       '@agenticocean/x402-stellar':
-        specifier: workspace:*
-        version: link:../../packages/x402-stellar
+        specifier: ^1.0.1
+        version: 1.0.1(express@5.2.1)
       '@stellar/freighter-api':
         specifier: ^2.0.0
         version: 2.0.0
@@ -177,8 +177,8 @@ importers:
   packages/shared:
     dependencies:
       '@agenticocean/x402-stellar':
-        specifier: workspace:*
-        version: link:../x402-stellar
+        specifier: ^1.0.1
+        version: 1.0.1(express@5.2.1)
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -211,6 +211,14 @@ importers:
         version: 5.9.3
 
 packages:
+
+  '@agenticocean/x402-stellar@1.0.1':
+    resolution: {integrity: sha512-nIwnLLaqeno1rY+THE6qE7Iv/dx22YX6we9WYEZe4ScsyTjk6ug9RSrftoka3ZxCpVw+XVkya4Id8Ca9CxTxtA==}
+    peerDependencies:
+      express: '>=4.0.0'
+    peerDependenciesMeta:
+      express:
+        optional: true
 
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -2525,6 +2533,14 @@ packages:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
 snapshots:
+
+  '@agenticocean/x402-stellar@1.0.1(express@5.2.1)':
+    dependencies:
+      '@stellar/stellar-sdk': 14.5.0
+    optionalDependencies:
+      express: 5.2.1
+    transitivePeerDependencies:
+      - debug
 
   '@alloc/quick-lru@5.2.0': {}
 
