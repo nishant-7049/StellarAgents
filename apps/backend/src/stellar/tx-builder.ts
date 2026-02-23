@@ -16,7 +16,7 @@ export async function invokeContract(params: {
 
   const tx = new TransactionBuilder(account, {
     fee: "1000000",
-    networkPassphrase: Networks.TESTNET,
+    networkPassphrase: Networks.PUBLIC,
   })
     .addOperation(contract.call(params.method, ...params.args))
     .setTimeout(60)

@@ -87,7 +87,7 @@ executeRoutes.post("/preview", async (req, res) => {
 
         const feeTx = new TransactionBuilder(account, {
           fee: "1000000",
-          networkPassphrase: Networks.TESTNET,
+          networkPassphrase: Networks.PUBLIC,
         })
           .addOperation(
             usdcContract.call(
@@ -135,7 +135,7 @@ executeRoutes.post("/preview", async (req, res) => {
         description = `Supply ${amountUsdc} USDC to Blend pool`;
         tx = new TransactionBuilder(account, {
           fee: "1000000",
-          networkPassphrase: Networks.TESTNET,
+          networkPassphrase: Networks.PUBLIC,
         })
           .addOperation(
             usdcContract.call(
@@ -152,7 +152,7 @@ executeRoutes.post("/preview", async (req, res) => {
         description = `${strategy.action} on ${strategy.protocol}: ${amountUsdc} USDC`;
         tx = new TransactionBuilder(account, {
           fee: "1000000",
-          networkPassphrase: Networks.TESTNET,
+          networkPassphrase: Networks.PUBLIC,
         })
           .addOperation(
             usdcContract.call(

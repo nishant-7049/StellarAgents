@@ -17,7 +17,7 @@ statsRoutes.get("/", async (_req, res) => {
       totalAgents,
       totalTransactions: 0,
       totalVolumeUsdc: "0",
-      network: "testnet",
+      network: "mainnet",
     });
   } catch (err) {
     logger.error("Failed to get stats", { error: err });
@@ -26,7 +26,7 @@ statsRoutes.get("/", async (_req, res) => {
       totalAgents: 0,
       totalTransactions: 0,
       totalVolumeUsdc: "0",
-      network: "testnet",
+      network: "mainnet",
     });
   }
 });

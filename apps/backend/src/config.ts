@@ -34,9 +34,9 @@ const envSchema = z.object({
   ADMIN_X402_PRICE_STROOPS: z.string().default("10000000"),
   // How long an admin session token stays valid after paying (minutes)
   ADMIN_SESSION_TTL_MINUTES: z.string().default("30"),
-  STELLAR_RPC_URL: z.string().default("https://soroban-testnet.stellar.org"),
-  STELLAR_HORIZON_URL: z.string().default("https://horizon-testnet.stellar.org"),
-  STELLAR_NETWORK_PASSPHRASE: z.string().default("Test SDF Network ; September 2015"),
+  STELLAR_RPC_URL: z.string().default("https://mainnet.stellar.validationcloud.io/v1/4tCDetiqzz6mPyL3frtNzNVHzmBH_SMa5EXTTgVZH8Y"),
+  STELLAR_HORIZON_URL: z.string().default("https://horizon.stellar.org"),
+  STELLAR_NETWORK_PASSPHRASE: z.string().default("Public Global Stellar Network ; September 2015"),
   VAULT_FACTORY_ADDRESS: z.string().default(""),
   AGENT_REGISTRY_ADDRESS: z.string().default(""),
   REPUTATION_REGISTRY_ADDRESS: z.string().default(""),

@@ -182,7 +182,7 @@ export default function CreditsPage() {
               <p className="font-semibold text-green-300">Plan upgraded successfully!</p>
               {successTx !== "stripe" ? (
                 <a
-                  href={`https://stellar.expert/explorer/testnet/tx/${successTx}`}
+                  href={`https://stellar.expert/explorer/public/tx/${successTx}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-green-400/80 hover:underline inline-flex items-center gap-1"

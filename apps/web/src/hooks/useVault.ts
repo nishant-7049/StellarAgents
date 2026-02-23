@@ -142,7 +142,7 @@ export function useVault() {
       setTxState("confirming");
 
       await new Promise(r => setTimeout(r, 2000));
-      await loadVaultData(vaultAddress);
+      await loadVault(address);
 
       setLastTxHash(txHash);
       setTxState("success");
@@ -173,7 +173,7 @@ export function useVault() {
       setTxState("confirming");
 
       await new Promise(r => setTimeout(r, 2000));
-      await loadVaultData(vaultAddress);
+      await loadVault(address);
 
       setLastTxHash(txHash);
       setTxState("success");
@@ -219,7 +219,7 @@ export function useVault() {
       setTxState("confirming");
 
       await new Promise(r => setTimeout(r, 2000));
-      await loadVaultData(vaultAddress);
+      await loadVault(address);
 
       setLastTxHash(txHash);
       setTxState("success");

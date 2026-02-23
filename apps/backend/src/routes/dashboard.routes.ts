@@ -95,7 +95,7 @@ dashboardRoutes.get("/:walletAddress", async (req, res) => {
     let recentPayments: any[] = [];
     if (config.VAULT_FACTORY_ADDRESS) {
       try {
-        const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon-testnet.stellar.org";
+        const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon.stellar.org";
         const resp = await fetch(
           `${horizonUrl}/accounts/${walletAddress}/operations?limit=10&order=desc`
         );

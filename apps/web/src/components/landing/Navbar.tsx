@@ -39,7 +39,7 @@ export function Navbar() {
           <Link href="/explorer" className={`text-[13px] font-medium px-3.5 py-1.5 rounded-lg transition-colors ${textColor} ${textHover} ${!scrolled ? "hover:bg-white/10" : "hover:bg-[var(--surface1)]"}`}>
             Browse Agents
           </Link>
-          <Link href="/vault" className={`text-[13px] font-semibold px-4 py-1.5 rounded-lg transition-all ${scrolled ? "bg-[var(--accent)] text-white hover:bg-[var(--brand-dark)]" : "bg-white text-[#032d5c] hover:bg-white/90"}`}>
+          <Link href="/explorer" className={`text-[13px] font-semibold px-4 py-1.5 rounded-lg transition-all ${scrolled ? "bg-[var(--accent)] text-white hover:bg-[var(--brand-dark)]" : "bg-white text-[#032d5c] hover:bg-white/90"}`}>
             Launch App →
           </Link>
         </div>
@@ -65,7 +65,7 @@ export function Navbar() {
               {l.label}
             </Link>
           ))}
-          <Link href="/vault" onClick={() => setOpen(false)}
+          <Link href="/explorer" onClick={() => setOpen(false)}
             className="block mt-3 text-center text-[14px] font-semibold bg-[var(--accent)] text-white py-2.5 rounded-xl">
             Launch App →
           </Link>

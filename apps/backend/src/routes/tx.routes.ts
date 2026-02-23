@@ -29,7 +29,7 @@ txRoutes.post("/build", async (req, res) => {
 
     const tx = new TransactionBuilder(account, {
       fee: "1000000",
-      networkPassphrase: Networks.TESTNET,
+      networkPassphrase: Networks.PUBLIC,
     })
       .addOperation(contract.call(method, ...scArgs))
       .setTimeout(60)

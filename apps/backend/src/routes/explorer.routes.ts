@@ -15,7 +15,7 @@ explorerRoutes.get("/activity", async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit as string || "50"), 100);
 
   try {
-    const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon-testnet.stellar.org";
+    const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon.stellar.org";
     const decoded: any[] = [];
 
     // Fetch operations for the vault factory and agent registry
@@ -181,7 +181,7 @@ explorerRoutes.get("/agents/:agentId", async (req, res) => {
     }
 
     // Get payment history from Horizon
-    const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon-testnet.stellar.org";
+    const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon.stellar.org";
     let paymentHistory: any[] = [];
     try {
       const resp = await fetch(
@@ -245,7 +245,7 @@ explorerRoutes.get("/agents/:agentId/stats", async (req, res) => {
     const agent = await agentService.getAgent(agentId);
     if (!agent) return res.status(404).json({ error: "Agent not found" });
 
-    const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon-testnet.stellar.org";
+    const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon.stellar.org";
 
     // Fetch up to 200 operations from Horizon for the vault
     let ops: any[] = [];
@@ -404,9 +404,8 @@ explorerRoutes.get("/search", async (req, res) => {
       if (status === "active" && !a.isActive) return false;
       if (status === "inactive" && a.isActive) return false;
 
-      // Network filter: agents registered on testnet have addresses starting with 'G'/'C' (Stellar)
-      // For MVP all agents are on testnet; "mainnet" filter returns nothing yet
-      if (network === "mainnet") return false; // no mainnet agents in MVP
+      // Network filter: all agents are on mainnet; "testnet" filter returns nothing
+      if (network === "testnet") return false;
 
       if (q) {
         const qLower = q.toLowerCase();
@@ -462,7 +461,7 @@ explorerRoutes.get("/search", async (req, res) => {
 explorerRoutes.get("/trending", async (req, res) => {
   try {
     const agents = await agentService.listAgents(1, 50);
-    const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon-testnet.stellar.org";
+    const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon.stellar.org";
     const now = Date.now();
 
     const enriched = await Promise.all(
@@ -555,7 +554,7 @@ explorerRoutes.get("/graph", async (req, res) => {
 
   try {
     const agents = await agentService.listAgents(1, 50);
-    const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon-testnet.stellar.org";
+    const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon.stellar.org";
     const now = new Date();
     const dailyMap = new Map<string, { calls: number; fees: number }>();
 

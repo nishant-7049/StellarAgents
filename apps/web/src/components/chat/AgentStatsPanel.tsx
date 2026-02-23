@@ -9,7 +9,7 @@ import clsx from "clsx";
 // Agent #20 "defi-agent" — our live rebalancing agent on testnet
 const DEMO_WALLET = "GDLCSUDUCBLY5Z727TAZ4ZLUTKYM2CC74FM77M3GJ7IA2BYEQRD6CRZ6";
 const DEMO_AGENT_ID = 20;
-const STELLAR_EXPERT_ADDR = "https://stellar.expert/explorer/testnet/account";
+const STELLAR_EXPERT_ADDR = "https://stellar.expert/explorer/public/account";
 
 const PROTOCOL_COLORS: Record<string, string> = {
   blend:       "bg-indigo-500",

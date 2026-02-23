@@ -87,7 +87,7 @@ export async function fetchTransactionHistory(accountId: string, limit = 20) {
 
   // For regular accounts, use Horizon
   const res = await fetch(
-    `https://horizon-testnet.stellar.org/accounts/${accountId}/operations?limit=${limit}&order=desc`,
+    `https://horizon.stellar.org/accounts/${accountId}/operations?limit=${limit}&order=desc`,
   );
   if (!res.ok) return [];
   const data = await res.json();

@@ -132,7 +132,7 @@ export default function VaultPage() {
               <div className="text-right">
                 <p className="text-xs text-[var(--text-secondary)]">Vault Address</p>
                 <a
-                  href={`https://stellar.expert/explorer/testnet/contract/${vaultAddress}`}
+                  href={`https://stellar.expert/explorer/public/contract/${vaultAddress}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs font-mono text-indigo-400 hover:underline flex items-center gap-1 justify-end"

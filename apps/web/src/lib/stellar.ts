@@ -8,17 +8,17 @@ import {
   STROOPS_PER_USDC,
 } from "@agenticocean/x402-stellar";
 
-export const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK || "testnet";
-export const NETWORK_PASSPHRASE = Networks.TESTNET;
-export const RPC_URL = "https://soroban-testnet.stellar.org";
-export const HORIZON_URL = "https://horizon-testnet.stellar.org";
-export const EXPLORER_URL = "https://stellar.expert/explorer/testnet";
+export const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK || "mainnet";
+export const NETWORK_PASSPHRASE = Networks.PUBLIC;
+export const RPC_URL = process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "https://mainnet.stellar.validationcloud.io/v1/4tCDetiqzz6mPyL3frtNzNVHzmBH_SMa5EXTTgVZH8Y";
+export const HORIZON_URL = "https://horizon.stellar.org";
+export const EXPLORER_URL = "https://stellar.expert/explorer/public";
 
 // Re-export from SDK for backward compatibility
 export { USDC_DECIMALS, STROOPS_PER_USDC };
 
 // Facilitator public key — funded account used as source for read-only simulations
-const READ_SOURCE = "GB4WBZZRI3RWJI7IUBOMO4R7SILFN2IWNXRWTLIGM7E7ZF3YV6N5HNME";
+const READ_SOURCE = "GBMKTEEHXML52JTPM5USX4JONRVL32RVBQ6MWR4ZBTJHK6S63FB7JQTO";
 
 export const rpc = new Server(RPC_URL);
 

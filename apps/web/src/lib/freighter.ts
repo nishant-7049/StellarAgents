@@ -24,6 +24,6 @@ export async function getPublicKey(): Promise<string | null> {
 export async function signTransaction(xdr: string): Promise<string> {
   const { signTransaction: sign } = await import("@stellar/freighter-api");
   return await sign(xdr, {
-    networkPassphrase: "Test SDF Network ; September 2015",
+    networkPassphrase: "Public Global Stellar Network ; September 2015",
   });
 }

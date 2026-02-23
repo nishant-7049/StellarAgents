@@ -4,9 +4,9 @@ import { creditsService, CreditPlan } from "../services/credits.service.js";
 import { logger } from "../logger.js";
 import { config } from "../config.js";
 
-// Testnet USDC classic asset issuer (Circle testnet USDC)
+// Mainnet USDC classic asset issuer (Circle mainnet USDC)
 const USDC_ISSUER =
-  process.env.USDC_ISSUER || "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  process.env.USDC_ISSUER || "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
 
 export const creditsRoutes = Router();
 
@@ -24,7 +24,7 @@ creditsRoutes.get("/payment-params", (req, res) => {
     res.json({
       facilitatorAddress,
       usdcIssuer: USDC_ISSUER,
-      network: "testnet",
+      network: "mainnet",
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -122,7 +122,7 @@ creditsRoutes.post("/purchase", async (req, res) => {
       logger.warn("Demo purchase — skipping Horizon verification", { wallet, plan, txHash });
     } else {
       // Verify the transaction on Horizon
-      const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon-testnet.stellar.org";
+      const horizonUrl = config.STELLAR_HORIZON_URL || "https://horizon.stellar.org";
       const horizonResp = await fetch(`${horizonUrl}/transactions/${txHash}`);
 
       if (!horizonResp.ok) {

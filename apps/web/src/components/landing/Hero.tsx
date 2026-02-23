@@ -96,7 +96,7 @@ export function Hero() {
           className="mt-8 flex items-center gap-3 flex-wrap justify-center"
         >
           <Link
-            href="/vault"
+            href="/explorer"
             className="inline-flex items-center gap-2 bg-white text-[#032d5c] font-semibold px-6 py-3 rounded-xl text-[15px] hover:bg-white/90 transition-colors shadow-lg shadow-black/20"
           >
             Get started free
