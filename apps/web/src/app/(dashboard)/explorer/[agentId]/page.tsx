@@ -604,7 +604,7 @@ export default function AgentProfilePage() {
                 <Row label="Agent ID" value={`#${agent.id}`} />
                 <Row label="Owner" value={shortenAddress(agent.owner, 8)} mono link={`https://stellar.expert/explorer/testnet/account/${agent.owner}`} />
                 <Row label="Vault" value={shortenAddress(agent.vaultAddress, 8)} mono link={`https://stellar.expert/explorer/testnet/contract/${agent.vaultAddress}`} />
-                <Row label="Signer" value={shortenAddress(agent.agentSigner, 8)} mono />
+                <Row label="Signer" value={shortenAddress(agent.agentSigner, 8)} mono link={`https://stellar.expert/explorer/testnet/account/${agent.agentSigner}`} />
                 <Row label="Registered" value={registeredDate} />
                 {agent.model && (
                   <div className="flex justify-between gap-2">
