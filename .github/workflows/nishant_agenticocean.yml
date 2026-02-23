@@ -18,15 +18,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
           node-version: "22.x"
+          cache: "pnpm"
 
-      - name: npm install, build, and test
-        run: |
-          npm install
-          npm run build:backend
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend
+        run: pnpm build:backend
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
