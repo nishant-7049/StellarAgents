@@ -233,11 +233,20 @@ async function autoRebalanceAll() {
       const balanceUsdc = parseInt(rawBalance || "0") / 1e7;
 
       if (isAuthorized && balanceUsdc > 0) {
-        const existing = await portfolioService.getPortfolio(agentPubKey);
+        // Portfolio must be keyed by the vault OWNER address — that's what the portfolio page
+        // queries by (GET /api/portfolio/:wallet where wallet = connected Freighter key).
+        // Fall back to agentPubKey only if the owner lookup fails.
+        const ownerAddress = await vaultService.getOwner(vaultAddress).catch(() => null) ?? agentPubKey;
+
+        // Check for existing portfolio under owner address OR legacy agent key (migration path)
+        const existing =
+          await portfolioService.getPortfolio(ownerAddress) ??
+          await portfolioService.getPortfolioByVault(vaultAddress);
+
         if (!existing) {
           // First time: seed as idle USDC with old timestamp so the 6h gate passes immediately
           await portfolioService.recordPositions({
-            wallet: agentPubKey,
+            wallet: ownerAddress,
             vaultAddress,
             positions: [{
               protocol: "Idle USDC",
@@ -253,14 +262,14 @@ async function autoRebalanceAll() {
           });
           logger.info(
             `Auto-discovered vault: ${vaultAddress.slice(0, 8)}… ` +
-            `agent=${agentPubKey.slice(0, 8)}… balance=${balanceUsdc.toFixed(2)} USDC`
+            `owner=${ownerAddress.slice(0, 8)}… balance=${balanceUsdc.toFixed(2)} USDC`
           );
         } else {
           // Portfolio already exists — if fully idle, sync tracked amount to current vault balance
           const isFullyIdle = existing.positions.every(p => p.protocolKey === "idle");
           if (isFullyIdle && Math.abs(balanceUsdc - existing.totalInvested) > 0.01) {
             await portfolioService.recordPositions({
-              wallet: agentPubKey,
+              wallet: ownerAddress,
               vaultAddress,
               positions: [{
                 protocol: "Idle USDC",

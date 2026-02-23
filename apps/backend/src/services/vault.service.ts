@@ -1,4 +1,4 @@
-import { VaultFactory, UserVault } from "@agenticocean/vault";
+import { VaultFactory, UserVault, ContractReader } from "@agenticocean/vault";
 import { Keypair } from "@stellar/stellar-sdk";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
@@ -41,6 +41,22 @@ export class VaultService {
   async getRemainingLimit(vaultAddress: string, agentAddress: string, owner?: string): Promise<string> {
     const vault = new UserVault(vaultAddress, makeConfig(owner), logger);
     return vault.getRemainingLimit(agentAddress);
+  }
+
+  /** Read the owner address from a vault contract. Returns null on any error. */
+  async getOwner(vaultAddress: string): Promise<string | null> {
+    try {
+      const simSource = config.ADMIN_SECRET_KEY
+        ? Keypair.fromSecret(config.ADMIN_SECRET_KEY).publicKey()
+        : config.FACILITATOR_SECRET_KEY
+        ? Keypair.fromSecret(config.FACILITATOR_SECRET_KEY).publicKey()
+        : undefined;
+      const reader = new ContractReader(makeConfig(simSource), logger);
+      const result = await reader.readContractValue(vaultAddress, "owner", []);
+      return typeof result === "string" ? result : null;
+    } catch {
+      return null;
+    }
   }
 }
 

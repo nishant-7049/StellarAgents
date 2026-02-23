@@ -156,6 +156,18 @@ export const portfolioService = {
     }
   },
 
+  /** Look up a portfolio by its vault address (fallback for legacy agent-key-indexed entries). */
+  async getPortfolioByVault(vaultAddress: string): Promise<PortfolioEntry | null> {
+    try {
+      const doc = await PortfolioModel.findOne({ vaultAddress }).lean();
+      if (!doc) return null;
+      return toPortfolioEntry(doc);
+    } catch (err) {
+      logger.warn("getPortfolioByVault failed", { vaultAddress, err });
+      return null;
+    }
+  },
+
   /**
    * Record positions after user executes a strategy or agent rebalances.
    * Pushes a new RebalanceEvent into history and overwrites current positions.

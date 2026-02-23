@@ -113,10 +113,15 @@ portfolioRoutes.get("/:wallet", async (req, res) => {
   const { wallet } = req.params;
   try {
     // 1. Vault balance from chain
-    let vaultAddress: string | null = null;
+    // If wallet is a Stellar contract address (starts with 'C', 56 chars), treat it as a vault
+    // address directly — supports demo/chat page lookup by vault contract address.
+    const isVaultAddress = /^C[A-Z2-7]{55}$/.test(wallet);
+    let vaultAddress: string | null = isVaultAddress ? wallet : null;
     let vaultBalanceRaw = "0";
     try {
-      vaultAddress = await vaultService.getVaultForOwner(wallet);
+      if (!isVaultAddress) {
+        vaultAddress = await vaultService.getVaultForOwner(wallet);
+      }
       if (vaultAddress) vaultBalanceRaw = await vaultService.getBalance(vaultAddress);
     } catch (err) {
       logger.warn("Could not read vault on-chain", { wallet, err });
@@ -127,7 +132,11 @@ portfolioRoutes.get("/:wallet", async (req, res) => {
     const liveApys = await getLiveApys();
 
     // 3. Tracked positions (with live APYs overlaid)
-    const portfolio = await portfolioService.getPortfolio(wallet);
+    // Fallback: portfolio might be indexed under agent/legacy key — find by vaultAddress
+    let portfolio = await portfolioService.getPortfolio(wallet);
+    if (!portfolio && vaultAddress) {
+      portfolio = await portfolioService.getPortfolioByVault(vaultAddress);
+    }
     const positions: (DeployedPosition & { currentApy: number; currentValue: number })[] = (portfolio?.positions || []).map(pos => {
       const currentApy = liveApys[pos.protocolKey] ?? pos.entryApy;
       const days = (Date.now() - new Date(pos.deployedAt).getTime()) / (1000 * 60 * 60 * 24);

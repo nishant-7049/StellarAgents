@@ -5,9 +5,9 @@ import { usePortfolio } from "@/hooks/usePortfolio";
 import { fetchAPI } from "@/lib/api";
 import { TxLink } from "@/components/ui/TxLink";
 import clsx from "clsx";
+import { DEMO_VAULT_ADDRESS } from "@/lib/contracts";
 
-// Agent #20 "defi-agent" — our live rebalancing agent on testnet
-const DEMO_WALLET = "GDLCSUDUCBLY5Z727TAZ4ZLUTKYM2CC74FM77M3GJ7IA2BYEQRD6CRZ6";
+// Agent #20 "defi-agent" — live rebalancing agent; portfolio is looked up by vault address
 const DEMO_AGENT_ID = 20;
 const STELLAR_EXPERT_ADDR = "https://stellar.expert/explorer/public/account";
 
@@ -62,7 +62,7 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 export function AgentStatsPanel() {
-  const { data: portfolio, loading: portfolioLoading, refresh } = usePortfolio(DEMO_WALLET);
+  const { data: portfolio, loading: portfolioLoading, refresh } = usePortfolio(DEMO_VAULT_ADDRESS || null);
   const [agent, setAgent] = useState<AgentProfile | null>(null);
   const [agentLoading, setAgentLoading] = useState(true);
 
