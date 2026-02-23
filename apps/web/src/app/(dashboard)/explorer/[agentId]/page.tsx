@@ -33,6 +33,8 @@ interface AgentDetail {
   registeredAt: number;
   isActive: boolean;
   capabilities: string[];
+  categories: string[];
+  description: string | null;
   pricing: any;
   model: string | null;
   image?: string | null;
@@ -621,12 +623,31 @@ export default function AgentProfilePage() {
                 )}
               </div>
 
+              {agent.description && (
+                <div className="mt-4 text-sm text-[var(--text-secondary)] leading-relaxed">
+                  {agent.description}
+                </div>
+              )}
+
+              {agent.categories.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs text-[var(--text-secondary)] mb-2">Categories</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {agent.categories.map(cat => (
+                      <span key={cat} className="text-xs bg-[var(--accent)]/15 text-[var(--accent2)] px-2 py-1 rounded-full capitalize">
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {agent.capabilities.length > 0 && (
                 <div className="mt-4">
                   <p className="text-xs text-[var(--text-secondary)] mb-2">Capabilities</p>
                   <div className="flex flex-wrap gap-1.5">
                     {agent.capabilities.map(cap => (
-                      <span key={cap} className="text-xs bg-[var(--accent)]/15 text-[var(--accent2)] px-2 py-1 rounded-full capitalize">
+                      <span key={cap} className="text-xs bg-[var(--surface1)] border border-[var(--border)] text-[var(--text-secondary)] px-2 py-1 rounded-full capitalize">
                         {cap.replace(/_/g, " ")}
                       </span>
                     ))}

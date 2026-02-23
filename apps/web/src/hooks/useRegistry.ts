@@ -16,6 +16,8 @@ export interface AgentData {
   agent_signer: string;
   is_active: boolean;
   capabilities?: string[];
+  categories?: string[];
+  description?: string;
   pricing?: { amount: string };
   image?: string;
   status?: string;
@@ -35,11 +37,15 @@ export function useRegistry() {
 
   function parseAgent(a: any): AgentData {
     let capabilities: string[] = [];
+    let categories: string[] | undefined;
+    let description: string | undefined;
     let pricing: { amount: string } | undefined;
     let image: string | undefined;
     try {
       const uri = JSON.parse(a.agent_uri || "{}");
       capabilities = uri.capabilities || [];
+      categories = uri.categories || undefined;
+      description = uri.description || undefined;
       pricing = uri.pricing;
       image = uri.image || undefined;
     } catch {}
@@ -55,6 +61,8 @@ export function useRegistry() {
       agent_signer: a.agent_signer || "",
       is_active: a.is_active ?? true,
       capabilities,
+      categories,
+      description,
       pricing,
       image,
       status: a.is_active ? "active" : "inactive",

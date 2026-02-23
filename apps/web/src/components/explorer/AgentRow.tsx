@@ -76,16 +76,36 @@ export function AgentRow({ agent }: { agent: Agent }) {
           <p className="text-[14px] font-medium text-[var(--text-primary)] truncate leading-snug">
             {agent.name}
           </p>
-          <p className="text-[12px] text-[var(--text-muted)] font-mono truncate leading-snug mt-0.5">
-            #{agent.id}
-            {agent.handle && <> · <span className="text-[var(--accent)]">@{agent.handle}</span></>}
-            {" · "}{agent.owner.slice(0, 6)}…{agent.owner.slice(-4)}
-          </p>
+          {agent.description ? (
+            <p className="text-[12px] text-[var(--text-secondary)] truncate leading-snug mt-0.5">
+              {agent.description}
+            </p>
+          ) : (
+            <p className="text-[12px] text-[var(--text-muted)] font-mono truncate leading-snug mt-0.5">
+              #{agent.id}
+              {agent.handle && <> · <span className="text-[var(--accent)]">@{agent.handle}</span></>}
+              {" · "}{agent.owner.slice(0, 6)}…{agent.owner.slice(-4)}
+            </p>
+          )}
+          {agent.description && (
+            <p className="text-[11px] text-[var(--text-muted)] font-mono truncate leading-snug">
+              #{agent.id}
+              {agent.handle && <> · <span className="text-[var(--accent)]">@{agent.handle}</span></>}
+            </p>
+          )}
         </div>
 
-        {/* Capabilities */}
-        <div className="hidden md:flex flex-wrap gap-1 max-w-[180px]">
-          {agent.capabilities.slice(0, 3).map(cap => (
+        {/* Capabilities + categories */}
+        <div className="hidden md:flex flex-wrap gap-1 max-w-[200px]">
+          {(agent.categories ?? []).slice(0, 1).map(cat => (
+            <span key={cat}
+              className="text-[11px] px-2 py-0.5 rounded-[5px]
+                bg-[var(--accent)]/10 border border-[var(--accent)]/20
+                text-[var(--accent2)] capitalize">
+              {cat}
+            </span>
+          ))}
+          {agent.capabilities.slice(0, 2).map(cap => (
             <span key={cap}
               className="text-[11px] px-2 py-0.5 rounded-[5px]
                 bg-[var(--surface1)] border border-[var(--border)]
@@ -93,10 +113,10 @@ export function AgentRow({ agent }: { agent: Agent }) {
               {cap}
             </span>
           ))}
-          {agent.capabilities.length > 3 && (
+          {agent.capabilities.length > 2 && (
             <span className="text-[11px] px-2 py-0.5 rounded-[5px]
               bg-[var(--surface1)] border border-[var(--border)] text-[var(--text-muted)]">
-              +{agent.capabilities.length - 3}
+              +{agent.capabilities.length - 2}
             </span>
           )}
         </div>

@@ -77,6 +77,8 @@ explorerRoutes.get("/agents", async (req, res) => {
 
         // Decode agent_uri JSON
         let capabilities: string[] = [];
+        let categories: string[] = [];
+        let description: string | null = null;
         let pricing: any = null;
         let model: string | null = null;
         let image: string | null = null;
@@ -85,6 +87,8 @@ explorerRoutes.get("/agents", async (req, res) => {
             ? JSON.parse(agent.agent_uri)
             : agent.agent_uri;
           capabilities = uri?.capabilities || [];
+          categories = uri?.categories || [];
+          description = uri?.description || null;
           pricing = uri?.pricing || null;
           model = uri?.model || null;
           image = uri?.image || null;
@@ -102,6 +106,8 @@ explorerRoutes.get("/agents", async (req, res) => {
           registeredAt: agent.registered_at,
           isActive: agent.is_active,
           capabilities,
+          categories,
+          description,
           pricing,
           model,
           image,
@@ -142,6 +148,8 @@ explorerRoutes.get("/agents/:agentId", async (req, res) => {
 
     // Decode agent_uri
     let capabilities: string[] = [];
+    let categories: string[] = [];
+    let description: string | null = null;
     let pricing: any = null;
     let model: string | null = null;
     let endpoints: any = null;
@@ -151,6 +159,8 @@ explorerRoutes.get("/agents/:agentId", async (req, res) => {
         ? JSON.parse(agent.agent_uri)
         : agent.agent_uri;
       capabilities = uri?.capabilities || [];
+      categories = uri?.categories || [];
+      description = uri?.description || null;
       pricing = uri?.pricing || null;
       model = uri?.model || null;
       endpoints = uri?.endpoints || null;
@@ -196,6 +206,8 @@ explorerRoutes.get("/agents/:agentId", async (req, res) => {
       registeredAt: agent.registered_at,
       isActive: agent.is_active,
       capabilities,
+      categories,
+      description,
       pricing,
       model,
       image,
@@ -359,12 +371,16 @@ explorerRoutes.get("/search", async (req, res) => {
       agents.map(async (agent: any) => {
         const tokenId = Number(agent.token_id ?? agent.id);
         let capabilities: string[] = [];
+        let categories: string[] = [];
+        let description: string | null = null;
         let pricing_info: any = null;
         let model: string | null = null;
         let image: string | null = null;
         try {
           const uri = typeof agent.agent_uri === "string" ? JSON.parse(agent.agent_uri) : agent.agent_uri;
           capabilities = uri?.capabilities || [];
+          categories = uri?.categories || [];
+          description = uri?.description || null;
           pricing_info = uri?.pricing || null;
           model = uri?.model || null;
           image = uri?.image || null;
@@ -379,7 +395,7 @@ explorerRoutes.get("/search", async (req, res) => {
         return { id: tokenId, owner: agent.owner, name: agent.name, handle: agent.handle || null,
           vaultAddress: agent.vault_address, agentSigner: agent.agent_signer,
           registeredAt: agent.registered_at, isActive: agent.is_active,
-          capabilities, pricing: pricing_info, model, image, reputation };
+          capabilities, categories, description, pricing: pricing_info, model, image, reputation };
       })
     );
 

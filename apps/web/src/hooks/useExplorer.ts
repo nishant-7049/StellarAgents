@@ -11,6 +11,8 @@ export interface Agent {
   handle: string | null;
   isActive: boolean;
   capabilities: string[];
+  categories?: string[];
+  description?: string | null;
   pricing: { amount: string; protocol: string } | null;
   model: string | null;
   image?: string | null;

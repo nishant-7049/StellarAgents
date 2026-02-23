@@ -74,7 +74,12 @@ function MyAgentRow({ agent }: { agent: AgentData }) {
               {agent.is_active ? "Active" : "Inactive"}
             </Badge>
           </div>
-          <p className="text-[12px] text-[var(--text-muted)] font-mono truncate leading-snug mt-0.5">
+          {agent.description ? (
+            <p className="text-[12px] text-[var(--text-secondary)] truncate leading-snug mt-0.5">
+              {agent.description}
+            </p>
+          ) : null}
+          <p className="text-[11px] text-[var(--text-muted)] font-mono truncate leading-snug mt-0.5">
             #{agent.id}
             {agent.handle && (
               <> · <span className="text-[var(--accent)]">@{agent.handle}</span></>
@@ -82,9 +87,18 @@ function MyAgentRow({ agent }: { agent: AgentData }) {
           </p>
         </div>
 
-        {/* Capability pills */}
-        <div className="hidden md:flex flex-wrap gap-1 max-w-[200px]">
-          {(agent.capabilities ?? []).slice(0, 3).map(cap => (
+        {/* Category + capability pills */}
+        <div className="hidden md:flex flex-wrap gap-1 max-w-[220px]">
+          {(agent.categories ?? []).slice(0, 1).map(cat => (
+            <span
+              key={cat}
+              className="text-[11px] px-2 py-0.5 rounded-[5px]
+                bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[var(--accent2)] capitalize"
+            >
+              {cat}
+            </span>
+          ))}
+          {(agent.capabilities ?? []).slice(0, 2).map(cap => (
             <span
               key={cap}
               className="text-[11px] px-2 py-0.5 rounded-[5px]
@@ -93,10 +107,10 @@ function MyAgentRow({ agent }: { agent: AgentData }) {
               {cap}
             </span>
           ))}
-          {(agent.capabilities ?? []).length > 3 && (
+          {(agent.capabilities ?? []).length > 2 && (
             <span className="text-[11px] px-2 py-0.5 rounded-[5px]
               bg-[var(--surface1)] border border-[var(--border)] text-[var(--text-muted)]">
-              +{agent.capabilities!.length - 3}
+              +{(agent.capabilities ?? []).length - 2}
             </span>
           )}
         </div>
