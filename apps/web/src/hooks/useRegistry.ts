@@ -16,7 +16,10 @@ export interface AgentData {
   agent_signer: string;
   is_active: boolean;
   capabilities?: string[];
+  categories?: string[];
+  description?: string;
   pricing?: { amount: string };
+  image?: string;
   status?: string;
 }
 
@@ -32,45 +35,77 @@ export function useRegistry() {
     loadAgents();
   }, []);
 
+  function parseAgent(a: any): AgentData {
+    let capabilities: string[] = [];
+    let categories: string[] | undefined;
+    let description: string | undefined;
+    let pricing: { amount: string } | undefined;
+    let image: string | undefined;
+    try {
+      const uri = JSON.parse(a.agent_uri || "{}");
+      capabilities = uri.capabilities || [];
+      categories = uri.categories || undefined;
+      description = uri.description || undefined;
+      pricing = uri.pricing;
+      image = uri.image || undefined;
+    } catch {}
+    const tokenId = Number(a.token_id ?? a.id);
+    return {
+      id: tokenId,
+      token_id: tokenId,
+      name: a.name || `Agent #${tokenId}`,
+      handle: a.handle || "",
+      owner: a.owner,
+      agent_uri: a.agent_uri || "{}",
+      vault_address: a.vault_address || "",
+      agent_signer: a.agent_signer || "",
+      is_active: a.is_active ?? true,
+      capabilities,
+      categories,
+      description,
+      pricing,
+      image,
+      status: a.is_active ? "active" : "inactive",
+    };
+  }
+
   async function loadAgents() {
     setLoading(true);
     try {
-      const raw = await readContract<any[]>(
-        AGENT_REGISTRY_ADDRESS,
-        "list_agents",
-        [
-          nativeToScVal(BigInt(1), { type: "u64" }),
-          nativeToScVal(20, { type: "u32" }),
-        ],
+      // Try list_agents — panics on this deployed contract, so catch separately
+      let raw: any[] | null = null;
+      try {
+        raw = await readContract<any[]>(
+          AGENT_REGISTRY_ADDRESS,
+          "list_agents",
+          [
+            nativeToScVal(BigInt(1), { type: "u64" }),
+            nativeToScVal(20, { type: "u32" }),
+          ],
+        );
+      } catch {
+        // list_agents panics on chain — fall through to per-ID fallback
+      }
+
+      if (raw !== null) {
+        setAgents(raw.map(parseAgent));
+        return;
+      }
+
+      // Fallback: fetch next_token_id then get each agent individually
+      const nextId = await readContract<any>(AGENT_REGISTRY_ADDRESS, "next_token_id");
+      if (!nextId) { setAgents([]); return; }
+
+      const end = Math.min(Number(nextId) - 1, 20);
+      const fetches = Array.from({ length: end }, (_, i) =>
+        readContract<any>(AGENT_REGISTRY_ADDRESS, "get_agent", [
+          nativeToScVal(BigInt(i + 1), { type: "u64" }),
+        ]).catch(() => null)
       );
-
-      const parsed: AgentData[] = (raw || []).map((a: any) => {
-        // Parse agent_uri JSON for capabilities/pricing
-        let capabilities: string[] = [];
-        let pricing: { amount: string } | undefined;
-        try {
-          const uri = JSON.parse(a.agent_uri || "{}");
-          capabilities = uri.capabilities || [];
-          pricing = uri.pricing;
-        } catch {}
-
-        const tokenId = Number(a.token_id ?? a.id);
-
-        return {
-          id: tokenId,
-          token_id: tokenId,
-          name: a.name || `Agent #${tokenId}`,
-          handle: a.handle || "",
-          owner: a.owner,
-          agent_uri: a.agent_uri || "{}",
-          vault_address: a.vault_address || "",
-          agent_signer: a.agent_signer || "",
-          is_active: a.is_active ?? true,
-          capabilities,
-          pricing,
-          status: a.is_active ? "active" : "inactive",
-        };
-      });
+      const results = await Promise.all(fetches);
+      const parsed = results
+        .filter((a): a is any => a !== null && a.is_active !== false)
+        .map(parseAgent);
       setAgents(parsed);
     } catch (e) {
       console.error("Failed to load agents:", e);
@@ -83,6 +118,9 @@ export function useRegistry() {
   const registerAgent = useCallback(async (params: {
     name: string;
     handle: string;
+    description?: string;
+    image?: string;
+    categories?: string[];
     capabilities: string[];
     pricing: string;
     vaultAddress: string;
@@ -95,6 +133,9 @@ export function useRegistry() {
 
     try {
       const uri = JSON.stringify({
+        description: params.description || undefined,
+        image: params.image || undefined,
+        categories: params.categories,
         capabilities: params.capabilities,
         pricing: { protocol: "x402", amount: params.pricing, asset: "USDC" },
         version: "0.1.0",
@@ -117,6 +158,19 @@ export function useRegistry() {
       setTxState("signing");
       const txHash = await signAndSubmit(xdr);
       setTxState("confirming");
+
+      // Deduct 20 credits for agent registration (best-effort, don't fail tx if this fails)
+      try {
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+        await fetch(`${BACKEND_URL}/api/credits/consume`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet: address, action: "register_agent" }),
+        });
+        window.dispatchEvent(new Event("credits-updated"));
+      } catch {
+        // non-fatal
+      }
 
       // Read minted token IDs for this owner and pick the latest token.
       await new Promise(r => setTimeout(r, 2000));

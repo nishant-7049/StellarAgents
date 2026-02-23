@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useVault } from "@/hooks/useVault";
 import { useWallet } from "@/hooks/useWallet";
+import { useRegistry } from "@/hooks/useRegistry";
 import { Stepper } from "@/components/ui/Stepper";
 import { TxStateIndicator } from "@/components/ui/TxStateIndicator";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
@@ -19,9 +20,10 @@ export default function VaultPage() {
   const { address, isConnected, connect } = useWallet();
   const {
     vaultAddress, balance, agents, loading,
-    txState, lastTxHash,
+    txState, txError, lastTxHash,
     createVault, deposit, withdraw, addAgent, resetTxState,
   } = useVault();
+  const { agents: registeredAgents } = useRegistry();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [depositAmount, setDepositAmount] = useState("");
@@ -206,8 +208,26 @@ export default function VaultPage() {
               <UserPlus className="w-4 h-4 text-indigo-400" /> Authorize Agent
             </h3>
             <div className="space-y-3">
+              {/* Pick from registered agents */}
+              {registeredAgents.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm text-[var(--text-secondary)]">Pick a registered agent</label>
+                  <select
+                    className="rounded-lg border border-[var(--border)] bg-[var(--surface1)] px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--accent)]"
+                    value=""
+                    onChange={e => { if (e.target.value) setAgentAddr(e.target.value); }}
+                  >
+                    <option value="">— Select agent to auto-fill signer —</option>
+                    {registeredAgents.map(a => (
+                      <option key={a.id} value={a.agent_signer}>
+                        #{a.id} {a.name}{a.handle ? ` (@${a.handle})` : ""} — {a.agent_signer.slice(0, 8)}…
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <Input
-                label="Agent Address"
+                label="Agent Signer Address"
                 value={agentAddr}
                 onChange={e => setAgentAddr(e.target.value)}
                 placeholder="G..."
@@ -223,8 +243,11 @@ export default function VaultPage() {
                 onClick={handleAddAgent}
                 disabled={(activeAction === "addAgent" && txState !== "idle" && txState !== "error") || !agentAddr}
               >
-                Authorize Agent
+                {agents.some(a => a.address === agentAddr && a.isActive) ? "Update Limit" : "Authorize Agent"}
               </Button>
+              {activeAction === "addAgent" && txState === "error" && txError && (
+                <p className="text-sm text-[var(--danger)] mt-1">{txError}</p>
+              )}
               <TxStateIndicator state={activeAction === "addAgent" ? txState : "idle"} txHash={lastTxHash} />
             </div>
           </Card>

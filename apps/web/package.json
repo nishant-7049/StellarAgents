@@ -11,7 +11,7 @@
   "dependencies": {
     "@agenticocean/x402-stellar": "workspace:*",
     "@stellar/freighter-api": "^2.0.0",
-    "@stellar/stellar-sdk": "^13.1.0",
+    "@stellar/stellar-sdk": "^14.5.0",
     "clsx": "^2.1.0",
     "framer-motion": "^11.15.0",
     "lucide-react": "^0.468.0",

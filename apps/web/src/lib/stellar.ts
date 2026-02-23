@@ -72,7 +72,8 @@ export async function buildContractTx(params: {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Transaction build failed");
+    const detail = error.detail ? `: ${error.detail}` : "";
+    throw new Error(`${error.error || "Transaction build failed"}${detail}`);
   }
 
   const { xdr: assembledXdr } = await response.json();

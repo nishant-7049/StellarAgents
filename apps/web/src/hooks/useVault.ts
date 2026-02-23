@@ -20,6 +20,7 @@ export function useVault() {
   const [loading, setLoading] = useState(false);
   const [txState, setTxState] = useState<TxState>("idle");
   const [lastTxHash, setLastTxHash] = useState<string | undefined>();
+  const [txError, setTxError] = useState<string | null>(null);
 
   // Load vault on mount / address change
   useEffect(() => {
@@ -35,16 +36,18 @@ export function useVault() {
   async function loadVault(owner: string) {
     try {
       setLoading(true);
-      const vault = await readContract<string | null>(
-        VAULT_FACTORY_ADDRESS,
-        "get_vault",
-        [nativeToScVal(owner, { type: "address" })],
-      );
+      // Use backend API to avoid READ_SOURCE account issues in browser
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+      const resp = await fetch(`${BACKEND_URL}/api/vaults/${owner}`);
+      if (!resp.ok) throw new Error("Failed to fetch vault");
+      const data = await resp.json();
+      const vault: string | null = data.vault ?? null;
       if (!vault) {
         setVaultAddress(null);
         return;
       }
       setVaultAddress(vault);
+      setBalance(data.balance ?? "0");
       await loadVaultData(vault);
     } catch {
       setVaultAddress(null);
@@ -106,9 +109,15 @@ export function useVault() {
 
       setLastTxHash(txHash);
       setTxState("success");
-    } catch (e) {
-      console.error("Create vault failed:", e);
-      setTxState("error");
+    } catch (e: any) {
+      // Contract error #3 = UserAlreadyHasVault — vault exists, just load it
+      if (e?.message?.includes("#3") || e?.message?.includes("UserAlreadyHasVault")) {
+        await loadVault(address);
+        setTxState("success");
+      } else {
+        console.error("Create vault failed:", e);
+        setTxState("error");
+      }
     }
   }, [address]);
 
@@ -178,17 +187,30 @@ export function useVault() {
     if (!address || !vaultAddress) return;
     setTxState("building");
     setLastTxHash(undefined);
+    setTxError(null);
     try {
       const limitStroops = toStroops(dailyLimitUsdc);
+
+      // If already authorized, update limit instead of re-adding
+      const alreadyAuthorized = agents.some(a => a.address === agentAddress && a.isActive);
+      const method = alreadyAuthorized ? "set_agent_limit" : "add_agent";
+      const args = alreadyAuthorized
+        ? [
+            nativeToScVal(address, { type: "address" }),
+            nativeToScVal(agentAddress, { type: "address" }),
+            nativeToScVal(limitStroops, { type: "i128" }),
+          ]
+        : [
+            nativeToScVal(address, { type: "address" }),
+            nativeToScVal(agentAddress, { type: "address" }),
+            nativeToScVal(limitStroops, { type: "i128" }),
+            nativeToScVal([], { type: "vec" }),
+          ];
+
       const xdr = await buildContractTx({
         contractId: vaultAddress,
-        method: "add_agent",
-        args: [
-          nativeToScVal(address, { type: "address" }),
-          nativeToScVal(agentAddress, { type: "address" }),
-          nativeToScVal(limitStroops, { type: "i128" }),
-          nativeToScVal([], { type: "vec" }),
-        ],
+        method,
+        args,
         publicKey: address,
       });
 
@@ -201,15 +223,22 @@ export function useVault() {
 
       setLastTxHash(txHash);
       setTxState("success");
-    } catch (e) {
+    } catch (e: any) {
+      const msg = e?.message || "";
+      if (msg.includes("#3") || msg.includes("NotOwner")) {
+        setTxError("Only the vault owner can authorize agents.");
+      } else {
+        setTxError(null);
+      }
       console.error("Add agent failed:", e);
       setTxState("error");
     }
-  }, [address, vaultAddress]);
+  }, [address, vaultAddress, agents]);
 
   const resetTxState = useCallback(() => {
     setTxState("idle");
     setLastTxHash(undefined);
+    setTxError(null);
   }, []);
 
   return {
@@ -218,6 +247,7 @@ export function useVault() {
     agents,
     loading,
     txState,
+    txError,
     lastTxHash,
     createVault,
     deposit,

@@ -10,8 +10,8 @@
  *
  * Plans:
  *   free  → 100/mo  ($0)
- *   basic → 500/mo  ($5  USDC / 50 XLM)
- *   pro   → 2000/mo ($15 USDC / 150 XLM)
+ *   basic → 500/mo  ($5  USDC)
+ *   pro   → 2000/mo ($15 USDC)
  */
 
 import { logger } from "../logger.js";
@@ -63,12 +63,6 @@ export const PLAN_PRICES_USDC: Record<CreditPlan, number> = {
   free:  0,
   basic: 5,
   pro:   15,
-};
-
-export const PLAN_PRICES_XLM: Record<CreditPlan, number> = {
-  free:  0,
-  basic: 50,
-  pro:   150,
 };
 
 function nextResetDate(): string {
@@ -272,7 +266,6 @@ export const creditsService = {
         name:        "Free",
         credits:     PLAN_QUOTAS.free,
         priceUSDC:   PLAN_PRICES_USDC.free,
-        priceXLM:    PLAN_PRICES_XLM.free,
         description: "100 credits/month — perfect for exploring",
         features:    ["100 credits/month", "5 yield queries", "Basic access"],
       },
@@ -281,7 +274,6 @@ export const creditsService = {
         name:        "Basic",
         credits:     PLAN_QUOTAS.basic,
         priceUSDC:   PLAN_PRICES_USDC.basic,
-        priceXLM:    PLAN_PRICES_XLM.basic,
         description: "500 credits/month — for active users",
         features:    ["500 credits/month", "100 yield queries", "Priority support"],
       },
@@ -290,7 +282,6 @@ export const creditsService = {
         name:        "Pro",
         credits:     PLAN_QUOTAS.pro,
         priceUSDC:   PLAN_PRICES_USDC.pro,
-        priceXLM:    PLAN_PRICES_XLM.pro,
         description: "2000 credits/month — for power users & builders",
         features:    ["2000 credits/month", "400 yield queries", "API access", "Priority support"],
       },
