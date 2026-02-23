@@ -24,13 +24,13 @@ import {
 } from "@agenticocean/vault";
 
 const config = {
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
 };
 
 const CONTRACTS = {
-  vaultFactory: "CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW",
-  agentRegistry: "CC7CSOZE2KA2WVSFIQPJKGNHCETOKK4UCEHT66CGXLNA5ECA4HHPHH7V",
+  vaultFactory: "CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM",
+  agentRegistry: "CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU",
 };
 
 const vaultFactory = new VaultFactory(CONTRACTS.vaultFactory, config);
@@ -42,16 +42,16 @@ const userVault = new UserVault("C...YOUR_VAULT_ADDRESS...", config);
 
 ## Contract Addresses
 
-You'll need the deployed contract addresses.
-
-For **testnet**, you can use the hackathon deployment addresses:
+Mainnet deployments (Stellar Public Network):
 
 ```typescript
 const CONTRACTS = {
-  vaultFactory: "CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW",
-  agentRegistry: "CC7CSOZE2KA2WVSFIQPJKGNHCETOKK4UCEHT66CGXLNA5ECA4HHPHH7V",
-  usdcSac: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+  vaultFactory:         "CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM",
+  agentRegistry:        "CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU",
+  reputationRegistry:   "CB6B4EBQ3JXLGUWF5WGMQV63PL3K2WQP5LMEL2BZDIDTEPCIC5BDH6ZB",
+  validationRegistry:   "CDX65CKW2NZQZK5U7DQRK6KVOBI4PTLQVGHYAEQ7OPPY2KRCDUAS2AL5",
+  usdcSac:              "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
 };
 ```
 
-For **mainnet**, you will deploy your own contracts (or use your production deployment) and set those addresses accordingly. See: [Mainnet guide](../../getting-started/mainnet.md)
+See: [Mainnet guide](../../getting-started/mainnet.md)

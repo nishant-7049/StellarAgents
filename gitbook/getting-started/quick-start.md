@@ -8,7 +8,7 @@ Get up and running with AgenticOcean in 5 minutes.
 
 - Node.js 20+
 - pnpm (or npm / yarn)
-- A Stellar testnet wallet (use [Stellar Laboratory](https://laboratory.stellar.org/) or `stellar keys generate`)
+- A Stellar wallet (use [Freighter](https://freighter.app) or `stellar keys generate`)
 - A free AI API key (Groq is recommended — free tier, no credit card)
 
 ---
@@ -51,8 +51,8 @@ The SDK auto-detects the provider from the key prefix — no extra configuration
 import { YieldOptimizer } from "@agenticocean/defi-agent";
 
 const optimizer = new YieldOptimizer({
-  stellarRpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  stellarRpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
   aiApiKey: process.env.AI_API_KEY,  // your Groq / Claude / Gemini key
   blendPoolId: "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF",
 });
@@ -87,8 +87,8 @@ Summary: Conservative allocation across T-bill-backed tokens and a fixed lending
 import { BlendClient } from "@agenticocean/defi-agent";
 
 const blend = new BlendClient({
-  stellarRpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  stellarRpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
   blendPoolId: "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF",
 });
 
@@ -109,8 +109,8 @@ If you have a deployed vault and want to check your position:
 import { UserVault } from "@agenticocean/vault";
 
 const vault = new UserVault("C...YOUR_VAULT_ADDRESS...", {
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
 });
 
 const balance = await vault.getBalance();
@@ -129,8 +129,16 @@ console.log(`Vault balance: $${balanceUsdc.toFixed(2)} USDC`);
 
 ---
 
-## Mainnet
+## Deployed Contracts
 
-This quick start uses **testnet** by default. For **mainnet** setup (real funds, audited contracts, and mainnet USDC), follow:
+All contracts are deployed on **Stellar Mainnet**:
 
-- [Mainnet guide](mainnet.md)
+| Contract | Address |
+|----------|---------|
+| VaultFactory | `CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM` |
+| AgentRegistry | `CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU` |
+| ReputationRegistry | `CB6B4EBQ3JXLGUWF5WGMQV63PL3K2WQP5LMEL2BZDIDTEPCIC5BDH6ZB` |
+| ValidationRegistry | `CDX65CKW2NZQZK5U7DQRK6KVOBI4PTLQVGHYAEQ7OPPY2KRCDUAS2AL5` |
+| USDC SAC | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+
+See [Mainnet guide](mainnet.md) for full configuration details.

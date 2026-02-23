@@ -10,8 +10,8 @@ import { UserVault } from "@agenticocean/vault";
 const VAULT_ADDRESS = "C...YOUR_VAULT_ADDRESS...";
 
 const vault = new UserVault(VAULT_ADDRESS, {
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
 });
 ```
 
@@ -104,7 +104,7 @@ From code (with Freighter):
 
 ```typescript
 // Grant an agent 1 USDC/day with no destination restrictions
-const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: Networks.TESTNET })
+const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: Networks.PUBLIC })
   .addOperation(
     vaultContract.call(
       "add_agent",

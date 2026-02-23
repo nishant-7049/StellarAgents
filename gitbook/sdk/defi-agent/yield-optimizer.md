@@ -10,8 +10,8 @@ The main entry point for AI-powered yield strategy generation. Wraps data fetchi
 import { YieldOptimizer } from "@agenticocean/defi-agent";
 
 const optimizer = new YieldOptimizer({
-  stellarRpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  stellarRpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
   aiApiKey: process.env.AI_API_KEY,
   blendPoolId: "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF",
   usdcAddress: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
@@ -286,8 +286,8 @@ If no `aiApiKey` is set (or if the API call fails), `optimize()` returns a hardc
 ```typescript
 // Works without any API key
 const optimizer = new YieldOptimizer({
-  stellarRpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  stellarRpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
 });
 // Returns hardcoded moderate strategy
 const strategy = await optimizer.optimize("best yield", "moderate");
@@ -301,8 +301,8 @@ When `vaultContract` and `agentSignerSecret` are set, `optimize()` automatically
 
 ```typescript
 const optimizer = new YieldOptimizer({
-  stellarRpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  stellarRpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
   aiApiKey: process.env.AI_API_KEY,
   blendPoolId: "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF",
   usdcAddress: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",

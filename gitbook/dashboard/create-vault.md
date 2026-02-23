@@ -16,7 +16,7 @@ Click **Create Vault**. Freighter will prompt you to sign a transaction that cal
 
 - The transaction costs ~0.001 XLM in fees
 - Each wallet address can have exactly one vault (the factory enforces this)
-- Takes about 5–10 seconds on testnet
+- Takes about 5–10 seconds to confirm
 
 Once created, the vault address appears at the top of the Vault page. You can also look it up any time from the SDK:
 
@@ -24,11 +24,11 @@ Once created, the vault address appears at the top of the Vault page. You can al
 import { VaultFactory } from "@agenticocean/vault";
 
 const config = {
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
 };
 
-const VAULT_FACTORY = "CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW";
+const VAULT_FACTORY = "CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM";
 const factory = new VaultFactory(VAULT_FACTORY, config);
 const vaultAddress = await factory.getVault(yourPublicKey);
 ```

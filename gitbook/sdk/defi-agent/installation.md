@@ -26,8 +26,8 @@ Create a `.env` file:
 
 ```bash
 # Required for live Blend data
-STELLAR_RPC_URL=https://soroban-testnet.stellar.org
-STELLAR_NETWORK_PASSPHRASE="Test SDF Network ; September 2015"
+STELLAR_RPC_URL=https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY
+STELLAR_NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
 
 # AI provider (pick one — auto-detected from prefix)
 AI_API_KEY=gsk_...                # Groq (free)
@@ -35,23 +35,12 @@ AI_API_KEY=gsk_...                # Groq (free)
 # AI_API_KEY=AIza...              # Google Gemini
 # AI_API_KEY=xai-...              # xAI Grok
 
-# Blend pool address (testnet)
+# Blend pool address (mainnet)
 BLEND_POOL_ID=CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF
 
-# USDC SAC address (testnet)
+# USDC SAC address (mainnet)
 USDC_ADDRESS=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 ```
-
-### Mainnet
-
-For mainnet, use:
-
-```bash
-STELLAR_RPC_URL=https://soroban.stellar.org
-STELLAR_NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
-```
-
-Then set `USDC_ADDRESS` and `BLEND_POOL_ID` to your mainnet values.
 
 ## TypeScript
 

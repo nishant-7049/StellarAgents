@@ -7,11 +7,11 @@ Read and write access to the on-chain `AgentRegistry` contract — an ERC-8004-i
 ```typescript
 import { AgentRegistry } from "@agenticocean/vault";
 
-const AGENT_REGISTRY = "CC7CSOZE2KA2WVSFIQPJKGNHCETOKK4UCEHT66CGXLNA5ECA4HHPHH7V";
+const AGENT_REGISTRY = "CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU";
 
 const registry = new AgentRegistry(AGENT_REGISTRY, {
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
 });
 ```
 
@@ -218,7 +218,7 @@ const agentMetadata = JSON.stringify({
 });
 
 // Build the register transaction — note: handle is the 3rd argument
-const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: Networks.TESTNET })
+const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: Networks.PUBLIC })
   .addOperation(
     registryContract.call(
       "register",
@@ -235,7 +235,7 @@ const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: N
 
 const sim = await rpc.simulateTransaction(tx);
 const assembled = assembleTransaction(tx, sim).build();
-const signed = await signTransaction(assembled.toXDR(), { networkPassphrase: Networks.TESTNET });
+const signed = await signTransaction(assembled.toXDR(), { networkPassphrase: Networks.PUBLIC });
 ```
 
 ---
@@ -246,7 +246,7 @@ The `transfer_agent()` function moves ownership to a new address. The handle sta
 
 ```typescript
 // transfer_agent(currentOwner, agentId, newOwner)
-const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: Networks.TESTNET })
+const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: Networks.PUBLIC })
   .addOperation(
     registryContract.call(
       "transfer_agent",

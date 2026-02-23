@@ -8,8 +8,8 @@ Client for [Soroswap](https://soroswap.finance) — the primary AMM DEX on Stell
 import { SoroswapClient } from "@agenticocean/defi-agent";
 
 const soroswap = new SoroswapClient({
-  stellarRpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  stellarRpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
   usdcAddress: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
   soroswapApiKey: process.env.SOROSWAP_API_KEY, // optional
 });
@@ -104,7 +104,7 @@ Returns `{ valueUSDC: 0 }` gracefully if vault has no LP position.
 ## Without an API Key
 
 `SoroswapClient` works without a `soroswapApiKey`. When no key is provided:
-- `getQuote()` returns a mock quote (1 USDC ≈ 4 XLM on testnet)
+- `getQuote()` returns a mock quote (1 USDC ≈ 4 XLM)
 - `getPools()` returns a hardcoded USDC/XLM pool at 12.5% APY
 
 This is fine for demos and strategy generation, where exact swap amounts don't matter.

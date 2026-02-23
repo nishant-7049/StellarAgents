@@ -70,7 +70,7 @@ A base64-encoded JSON payload that the agent sends with every paid request:
 {
   "x402Version": 1,
   "scheme": "stellar-vault",
-  "network": "stellar:testnet",
+  "network": "stellar:mainnet",
   "payload": {
     "vaultContract": "C...VAULT_ADDRESS...",
     "agentSigner": "G...AGENT_PUBLIC_KEY...",
@@ -112,11 +112,11 @@ import { createX402Middleware } from "@agenticocean/x402-stellar";
 const app = express();
 
 const x402 = createX402Middleware({
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  horizonUrl: "https://horizon-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  horizonUrl: "https://horizon.stellar.org",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
   facilitatorSecret: process.env.FACILITATOR_SECRET_KEY!,
-  usdcAddress: "C...USDC_SAC_ADDRESS...",
+  usdcAddress: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
 });
 
 app.get("/api/yield/query", x402({
@@ -141,8 +141,8 @@ const header = await buildX402Header({
   memo: "yield_query",
   agentId: 1,
   usdcAddress: "C...USDC_SAC_ADDRESS...",
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
 });
 
 const response = await fetch(url, {
@@ -152,14 +152,15 @@ const response = await fetch(url, {
 
 ---
 
-## Mainnet
+## Network
 
-For mainnet, switch network config values:
+This SDK is configured for **Stellar Mainnet** (Public Network):
 
-- Soroban RPC: `https://soroban.stellar.org`
-- Horizon: `https://mainnet.stellar.validationcloud.io/v1/9yVi48mHuKmpZ93vHAN53l7esd_r4ftsnlFS_LCz6-8`
+- Soroban RPC: `https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY`
+- Horizon: `https://horizon.stellar.org`
 - Passphrase: `Public Global Stellar Network ; September 2015`
+- USDC SAC: `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`
 
-Then use the **mainnet USDC SAC** (derive it from the USDC issuer) and deploy your contracts. See:
+See:
 
 - [Mainnet guide](../../getting-started/mainnet.md)

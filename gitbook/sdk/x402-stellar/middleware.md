@@ -18,8 +18,8 @@ app.use(
     description: "AI yield optimization query",
     facilitatorSecret: process.env.FACILITATOR_SECRET_KEY,
     usdcAddress: process.env.USDC_SAC_ADDRESS,
-    rpcUrl: "https://soroban-testnet.stellar.org",
-    networkPassphrase: "Test SDF Network ; September 2015",
+    rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+    networkPassphrase: "Public Global Stellar Network ; September 2015",
   })
 );
 
@@ -71,7 +71,7 @@ Content-Type: application/json
   "accepts": [
     {
       "scheme": "stellar-vault",
-      "network": "stellar:testnet",
+      "network": "stellar:mainnet",
       "asset": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
       "amount": "100000",
       "payTo": "G...FACILITATOR_PUBLIC_KEY...",

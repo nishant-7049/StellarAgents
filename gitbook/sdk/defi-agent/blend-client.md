@@ -8,8 +8,8 @@ TypeScript client for the [Blend Protocol](https://blend.capital) lending pool o
 import { BlendClient } from "@agenticocean/defi-agent";
 
 const blend = new BlendClient({
-  stellarRpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  stellarRpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
   blendPoolId: "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF",
 });
 ```
@@ -112,9 +112,9 @@ As a supplier, you earn `supplyApy`. The rate updates every time someone supplie
 
 ---
 
-## Testnet Pool Address
+## Mainnet Pool Address
 
-The primary testnet pool used in production:
+The primary mainnet pool:
 
 ```
 CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF

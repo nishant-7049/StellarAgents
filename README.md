@@ -41,7 +41,7 @@ AgenticOcean is a full-stack infrastructure platform that enables AI agents to a
 │  VaultFactory · UserVault · AgentRegistry                        │
 │  ReputationRegistry · ValidationRegistry                         │
 └─────────────────────────────────────────────────────────────────┘
-                         Stellar Testnet / Mainnet
+                              Stellar Mainnet
 ```
 
 ---
@@ -76,15 +76,15 @@ StellarRiseInHackathon/
 
 ## Smart Contracts
 
-Five Soroban contracts deployed to Stellar Testnet (soroban-sdk `=25.0.2`):
+Five Soroban contracts deployed to **Stellar Mainnet** (soroban-sdk `=25.0.2`):
 
 | Contract | Address | Purpose |
 |----------|---------|---------|
-| VaultFactory | `CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW` | Deploys per-user vaults |
-| UserVault WASM | hash `27b91b68...` | Smart USDC account with `agent_pay()` |
-| AgentRegistry | `CC7CSOZE2KA2WVSFIQPJKGNHCETOKK4UCEHT66CGXLNA5ECA4HHPHH7V` | SRC-8004 agent identity + handles |
-| ReputationRegistry | `CDC4EGENNTNK5LVBSIHCGMZMPQQQ27FPT4CESNN5G7WZCZBUVRC6HJIZ` | On-chain feedback system |
-| ValidationRegistry | `CC66BNPZXYYZQFPQHEEHHYLCWA7CWAKSNVJ5UDLTX32URXCOCVUADY3P` | Third-party validation |
+| VaultFactory | `CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM` | Deploys per-user vaults |
+| UserVault WASM | hash `27b91b68f5c58464a69efd4ffb4e0a0761ba22da65a774e41fba3fdc7bdaf361` | Smart USDC account with `agent_pay()` |
+| AgentRegistry | `CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU` | SRC-8004 agent identity + handles |
+| ReputationRegistry | `CB6B4EBQ3JXLGUWF5WGMQV63PL3K2WQP5LMEL2BZDIDTEPCIC5BDH6ZB` | On-chain feedback system |
+| ValidationRegistry | `CDX65CKW2NZQZK5U7DQRK6KVOBI4PTLQVGHYAEQ7OPPY2KRCDUAS2AL5` | Third-party validation |
 
 ### Key contract feature — Agent handles
 
@@ -116,8 +116,8 @@ AI-powered yield optimizer supporting **multiple LLM providers** — provider is
 import { YieldOptimizer } from "@agenticocean/defi-agent";
 
 const optimizer = new YieldOptimizer({
-  stellarRpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  stellarRpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
   aiApiKey: process.env.AI_API_KEY,   // Claude, Gemini, Groq, or xAI key
   blendPoolId: "CCB...",
 });
@@ -229,7 +229,7 @@ The `/explorer/:id` agent profile page includes:
 | Frontend | Next.js 15, Tailwind CSS v4, Freighter API |
 | Charts | Recharts |
 | AI | Claude / Gemini / Groq / xAI (auto-detected) |
-| Network | Stellar Testnet (Mainnet-ready) |
+| Network | Stellar Mainnet |
 | Docs | Docsify → Vercel ([agenticoceandocs.vercel.app](https://agenticoceandocs.vercel.app)) |
 | Package manager | pnpm 10 + Turborepo |
 
@@ -280,10 +280,14 @@ pnpm build:sdk
 Copy `.env.example` in `apps/backend/` and fill in:
 
 ```bash
-STELLAR_RPC_URL=https://soroban-testnet.stellar.org
-AGENT_REGISTRY_ADDRESS=CC7CSOZE2KA2WVSFIQPJKGNHCETOKK4UCEHT66CGXLNA5ECA4HHPHH7V
-VAULT_FACTORY_ADDRESS=CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW
-USDC_SAC_ADDRESS=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
+STELLAR_RPC_URL=https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY
+STELLAR_HORIZON_URL=https://horizon.stellar.org
+STELLAR_NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
+VAULT_FACTORY_ADDRESS=CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM
+AGENT_REGISTRY_ADDRESS=CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU
+REPUTATION_REGISTRY_ADDRESS=CB6B4EBQ3JXLGUWF5WGMQV63PL3K2WQP5LMEL2BZDIDTEPCIC5BDH6ZB
+VALIDATION_REGISTRY_ADDRESS=CDX65CKW2NZQZK5U7DQRK6KVOBI4PTLQVGHYAEQ7OPPY2KRCDUAS2AL5
+USDC_SAC_ADDRESS=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 FACILITATOR_SECRET_KEY=S...
 AI_API_KEY=...   # sk-ant-, AIza, gsk_, or xai- prefix — provider auto-detected
 ```

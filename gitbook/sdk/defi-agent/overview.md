@@ -112,8 +112,8 @@ All classes accept the same config object:
 ```typescript
 interface AgentAIConfig {
   // Required
-  stellarRpcUrl: string;          // "https://soroban-testnet.stellar.org"
-  networkPassphrase: string;      // "Test SDF Network ; September 2015"
+  stellarRpcUrl: string;          // "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY"
+  networkPassphrase: string;      // "Public Global Stellar Network ; September 2015"
 
   // AI provider (auto-detected from prefix)
   aiApiKey?: string;              // gsk_..., sk-ant-..., AIza..., xai-...
@@ -137,14 +137,16 @@ interface AgentAIConfig {
 
 ---
 
-## Testnet Contract Addresses
+## Contract Addresses
 
 | Contract | Address |
 |----------|---------|
 | Blend Pool (YieldBox V2) | `CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF` |
 | USDC SAC | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+| VaultFactory | `CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM` |
+| AgentRegistry | `CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU` |
 
-These are Stellar testnet addresses. Mainnet addresses differ.
+All addresses are on Stellar Mainnet (Public Network).
 
 ---
 
@@ -165,11 +167,11 @@ See [Building Custom Agents](../../../getting-started/custom-agents.md) for a fu
 
 ## Mainnet
 
-Switch to mainnet by changing endpoints + passphrase:
+The SDK is configured for Stellar Mainnet by default in this project:
 
-- RPC: `https://soroban.stellar.org`
+- RPC: `https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY`
 - Passphrase: `Public Global Stellar Network ; September 2015`
-
-You'll also need the **mainnet USDC SAC address** (derive it from the USDC issuer) and a **mainnet Blend pool ID**.
+- USDC SAC: `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`
+- Blend Pool: `CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF`
 
 See: [Mainnet guide](../../../getting-started/mainnet.md)

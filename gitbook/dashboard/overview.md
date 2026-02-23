@@ -26,8 +26,8 @@ The sidebar gives you access to all features:
 ## Prerequisites
 
 1. **Freighter wallet** — install the [Freighter browser extension](https://freighter.app) and create or import a Stellar account
-2. **Testnet XLM** — for testnet development, fund your Freighter account via [Stellar Friendbot](https://friendbot.stellar.org/?addr=YOUR_ADDRESS)
-3. **USDC** — on testnet, use the setup script; on mainnet, deposit real USDC into your vault
+2. **XLM for fees** — you need a small amount of XLM on Stellar Mainnet to pay transaction fees
+3. **USDC** — deposit USDC into your vault to fund agent payments and DeFi strategies
 
 ---
 
@@ -63,8 +63,6 @@ The main dashboard (`/app`) shows:
 
 ---
 
-## Testnet vs Mainnet
+## Network
 
-The dashboard connects to **Stellar Testnet** by default. The network indicator in the top right shows the current network. Testnet transactions have no real-world value — ideal for development and demos.
-
-For mainnet, set `NEXT_PUBLIC_STELLAR_NETWORK=mainnet` and follow the [Mainnet guide](../getting-started/mainnet.md).
+The dashboard connects to **Stellar Mainnet** (Public Network). Ensure your Freighter wallet is set to the **Public** network. The network indicator in the top right confirms the active network.

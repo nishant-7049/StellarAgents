@@ -41,30 +41,28 @@ interface StellarClientConfig {
 
 ## Contract Addresses
 
-You’ll need contract addresses for the network you’re targeting.
-
-The docs below include **testnet** addresses (from the hackathon deployment). For **mainnet**, you’ll deploy your own contracts (or use your production deployment) and set those addresses in env vars.
+Mainnet deployments (Stellar Public Network):
 
 | Contract | Address |
 |----------|---------|
-| VaultFactory | `CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW` |
-| AgentRegistry | `CC7CSOZE2KA2WVSFIQPJKGNHCETOKK4UCEHT66CGXLNA5ECA4HHPHH7V` |
-| ReputationRegistry | `CDC4EGENNTNK5LVBSIHCGMZMPQQQ27FPT4CESNN5G7WZCZBUVRC6HJIZ` |
-| ValidationRegistry | `CC66BNPZXYYZQFPQHEEHHYLCWA7CWAKSNVJ5UDLTX32URXCOCVUADY3P` |
+| VaultFactory | `CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM` |
+| AgentRegistry | `CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU` |
+| ReputationRegistry | `CB6B4EBQ3JXLGUWF5WGMQV63PL3K2WQP5LMEL2BZDIDTEPCIC5BDH6ZB` |
+| ValidationRegistry | `CDX65CKW2NZQZK5U7DQRK6KVOBI4PTLQVGHYAEQ7OPPY2KRCDUAS2AL5` |
 | USDC SAC | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
 
 ---
 
 ## Typical usage
 
-### 1) Look up a user’s vault
+### 1) Look up a user's vault
 
 ```ts
 import { VaultFactory } from "@agenticocean/vault";
 
-const factory = new VaultFactory("C...VAULT_FACTORY_ADDRESS...", {
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+const factory = new VaultFactory("CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM", {
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
 });
 
 const vault = await factory.getVault("G...OWNER_ADDRESS...");
@@ -76,8 +74,8 @@ const vault = await factory.getVault("G...OWNER_ADDRESS...");
 import { UserVault } from "@agenticocean/vault";
 
 const userVault = new UserVault("C...VAULT_CONTRACT...", {
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
 });
 
 const balance = await userVault.getBalance();

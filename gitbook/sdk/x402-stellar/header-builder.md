@@ -18,8 +18,8 @@ const paymentHeader = await buildX402Header({
   vaultContract: "C...YOUR_VAULT...",
   agentSignerSecret: process.env.AGENT_SIGNER_SECRET_KEY,
   paymentRequirements: requirements,
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
   memo: "yield_query",  // optional — shows up in transaction history
 });
 
@@ -71,7 +71,7 @@ The header is a base64-encoded JSON object:
 {
   "x402Version": 1,
   "scheme": "stellar-vault",
-  "network": "stellar:testnet",
+  "network": "stellar:mainnet",
   "payload": {
     "vaultContract": "C...VAULT...",
     "agentSigner": "G...AGENT_PUBLIC_KEY...",
@@ -85,7 +85,7 @@ The header is a base64-encoded JSON object:
 }
 ```
 
-The `signedAuthEntry` is a `SorobanAuthorizationEntry` XDR — it authorizes exactly one `vault.agent_pay()` invocation with the specified amount and payTo address. It expires after a few ledgers (roughly 1-2 minutes on Stellar testnet).
+The `signedAuthEntry` is a `SorobanAuthorizationEntry` XDR — it authorizes exactly one `vault.agent_pay()` invocation with the specified amount and payTo address. It expires after a few ledgers (roughly 1-2 minutes on Stellar).
 
 ---
 

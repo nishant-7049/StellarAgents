@@ -7,11 +7,11 @@ Interacts with the on-chain `VaultFactory` contract, which deploys and tracks in
 ```typescript
 import { VaultFactory } from "@agenticocean/vault";
 
-const VAULT_FACTORY = "CASU6R7UN2ZOO46WQA6T7TNKIUJK75MNJB2KJFRVMI6FAZHQKUN6CDTW";
+const VAULT_FACTORY = "CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM";
 
 const factory = new VaultFactory(VAULT_FACTORY, {
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
 });
 ```
 
@@ -72,14 +72,14 @@ import { signTransaction, getPublicKey } from "@stellar/freighter-api";
 import { TransactionBuilder, Networks, Contract, nativeToScVal, BASE_FEE } from "@stellar/stellar-sdk";
 import { Server, assembleTransaction } from "@stellar/stellar-sdk/rpc";
 
-const rpc = new Server("https://soroban-testnet.stellar.org");
+const rpc = new Server("https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY");
 const owner = await getPublicKey();
 const account = await rpc.getAccount(owner);
 
 const vaultFactoryContract = new Contract(VAULT_FACTORY);
 const tx = new TransactionBuilder(account, {
   fee: BASE_FEE,
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: Networks.PUBLIC,
 })
   .addOperation(
     vaultFactoryContract.call(
@@ -93,7 +93,7 @@ const tx = new TransactionBuilder(account, {
 const sim = await rpc.simulateTransaction(tx);
 const assembled = assembleTransaction(tx, sim).build();
 const signed = await signTransaction(assembled.toXDR(), {
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: Networks.PUBLIC,
 });
 
 // Submit

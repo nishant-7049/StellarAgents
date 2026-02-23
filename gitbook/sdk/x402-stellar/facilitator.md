@@ -11,8 +11,8 @@ import { settlePayment } from "@agenticocean/x402-stellar";
 
 const result = await settlePayment(payload, {
   facilitatorSecret: process.env.FACILITATOR_SECRET_KEY,
-  rpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
+  networkPassphrase: "Public Global Stellar Network ; September 2015",
 });
 
 if (result.success) {
@@ -76,7 +76,7 @@ If the 30-second RPC poll ends without confirmation:
 { "success": false, "txHash": "abc123...", "error": "timeout: tx not confirmed after 30s" }
 ```
 
-The transaction may still land on-chain after this point. Callers should treat this as **unknown** state and check the `txHash` on [Stellar Expert](https://stellar.expert/explorer/testnet) or Horizon before retrying — never resubmit the same auth entry without verifying.
+The transaction may still land on-chain after this point. Callers should treat this as **unknown** state and check the `txHash` on [Stellar Expert](https://stellar.expert/explorer/public) or Horizon before retrying — never resubmit the same auth entry without verifying.
 
 ---
 
@@ -120,9 +120,6 @@ The facilitator account needs:
 1. **XLM balance** — to pay Soroban transaction fees (~0.001 XLM per settlement)
 2. **No USDC needed** — the vault sends USDC directly
 
-On testnet, fund the facilitator via Friendbot:
-```
-https://friendbot.stellar.org/?addr=G...FACILITATOR_PUBLIC_KEY...
-```
+The facilitator account needs real XLM on Stellar Mainnet to pay transaction fees. Ensure the account is funded before running.
 
 The facilitator keypair should be a dedicated server-side key, not user-facing. Keep the secret key in your environment variables — never commit it.
