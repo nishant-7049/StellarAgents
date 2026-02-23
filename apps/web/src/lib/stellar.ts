@@ -1,4 +1,4 @@
-import { Networks, Contract, nativeToScVal, TransactionBuilder, xdr, scValToNative, BASE_FEE, Account, Asset, Operation, Memo } from "@stellar/stellar-sdk";
+import { Contract, nativeToScVal, TransactionBuilder, xdr, scValToNative, BASE_FEE, Account, Asset, Operation, Memo } from "@stellar/stellar-sdk";
 import { Server, assembleTransaction } from "@stellar/stellar-sdk/rpc";
 import { signTransaction } from "./freighter";
 import {
@@ -8,11 +8,18 @@ import {
   STROOPS_PER_USDC,
 } from "@agenticocean/x402-stellar";
 
-export const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK || "mainnet";
-export const NETWORK_PASSPHRASE = Networks.PUBLIC;
+export const NETWORK = "mainnet";
+export const NETWORK_PASSPHRASE = process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE || "Public Global Stellar Network ; September 2015";
 export const RPC_URL = process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "https://mainnet.stellar.validationcloud.io/v1/4tCDetiqzz6mPyL3frtNzNVHzmBH_SMa5EXTTgVZH8Y";
 export const HORIZON_URL = "https://horizon.stellar.org";
 export const EXPLORER_URL = "https://stellar.expert/explorer/public";
+
+function requireNetworkPassphrase(): string {
+  if (!NETWORK_PASSPHRASE) {
+    throw new Error("Missing NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE");
+  }
+  return NETWORK_PASSPHRASE;
+}
 
 // Re-export from SDK for backward compatibility
 export { USDC_DECIMALS, STROOPS_PER_USDC };
@@ -82,7 +89,7 @@ export async function signAndSubmit(assembledXdr: string): Promise<string> {
   const signedXdr = await signTransaction(assembledXdr);
 
   // Reconstruct the signed transaction
-  const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
+  const signedTx = TransactionBuilder.fromXDR(signedXdr, requireNetworkPassphrase());
 
   const result = await rpc.sendTransaction(signedTx);
   if (result.status !== "PENDING") {
@@ -130,7 +137,7 @@ export async function readContract<T = any>(
 
   const tx = new TransactionBuilder(account, {
     fee: "100",
-    networkPassphrase: NETWORK_PASSPHRASE,
+    networkPassphrase: requireNetworkPassphrase(),
   })
     .addOperation(contract.call(method, ...args))
     .setTimeout(30)
@@ -180,7 +187,7 @@ export async function buildPaymentTx(params: {
 
   const builder = new TransactionBuilder(account, {
     fee: BASE_FEE,
-    networkPassphrase: NETWORK_PASSPHRASE,
+    networkPassphrase: requireNetworkPassphrase(),
   }).addOperation(
     Operation.payment({
       destination: params.to,

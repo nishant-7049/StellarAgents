@@ -1,7 +1,7 @@
 # AgenticOcean — Pre-Mainnet Security Audit Checklist
 
 > Complete all items before mainnet deployment.
-> Use `pnpm deploy:contracts --network mainnet` only after audit sign-off.
+> Use `pnpm deploy:contracts:mainnet` only after audit sign-off.
 
 ---
 
@@ -109,7 +109,7 @@
 3. Get third-party audit report sign-off
 4. Deploy USDC SAC using mainnet USDC issuer (`GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN`)
 5. Fund admin/facilitator wallets with XLM for fees
-6. Deploy all 5 contracts: `pnpm deploy:contracts --network mainnet`
+6. Deploy all 5 contracts: `pnpm deploy:contracts:mainnet`
 7. Initialize factory with audited UserVault WASM hash
 8. Initialize AgentRegistry, ReputationRegistry, ValidationRegistry
 9. Verify via Stellar Expert: all contracts initialized correctly

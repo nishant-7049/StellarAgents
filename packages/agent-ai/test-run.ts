@@ -13,9 +13,14 @@ dotenvConfig({ path: resolve(__dirname, "../../.env") });
 import { YieldOptimizer, BlendClient, SoroswapClient, Rebalancer } from "./src/index.js";
 import type { AgentAIConfig } from "./src/index.js";
 
+const networkPassphrase = process.env.STELLAR_NETWORK_PASSPHRASE;
+if (!networkPassphrase) {
+  throw new Error("Missing STELLAR_NETWORK_PASSPHRASE in environment");
+}
+
 const config: AgentAIConfig = {
   stellarRpcUrl: "https://soroban-testnet.stellar.org",
-  networkPassphrase: "Test SDF Network ; September 2015",
+  networkPassphrase,
   aiApiKey: process.env.AI_API_KEY,
   // Testnet USDC SAC (from blend-utils testnet.contracts.json)
   usdcAddress: "CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU",

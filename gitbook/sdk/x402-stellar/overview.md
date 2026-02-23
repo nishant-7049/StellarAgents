@@ -157,7 +157,7 @@ const response = await fetch(url, {
 For mainnet, switch network config values:
 
 - Soroban RPC: `https://soroban.stellar.org`
-- Horizon: `https://horizon.stellar.org`
+- Horizon: `https://mainnet.stellar.validationcloud.io/v1/9yVi48mHuKmpZ93vHAN53l7esd_r4ftsnlFS_LCz6-8`
 - Passphrase: `Public Global Stellar Network ; September 2015`
 
 Then use the **mainnet USDC SAC** (derive it from the USDC issuer) and deploy your contracts. See:

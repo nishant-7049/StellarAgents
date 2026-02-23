@@ -39,7 +39,7 @@ On mainnet, use:
 
 ```bash
 STELLAR_RPC_URL=https://soroban.stellar.org
-STELLAR_HORIZON_URL=https://horizon.stellar.org
+STELLAR_HORIZON_URL=https://mainnet.stellar.validationcloud.io/v1/9yVi48mHuKmpZ93vHAN53l7esd_r4ftsnlFS_LCz6-8
 STELLAR_NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
 ```
 
