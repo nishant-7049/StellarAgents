@@ -36,7 +36,8 @@ const envSchema = z.object({
   ADMIN_SESSION_TTL_MINUTES: z.string().default("30"),
   STELLAR_RPC_URL: z.string().default("https://soroban-testnet.stellar.org"),
   STELLAR_HORIZON_URL: z.string().default("https://horizon-testnet.stellar.org"),
-  STELLAR_NETWORK_PASSPHRASE: z.string().default("Test SDF Network ; September 2015"),
+  STELLAR_NETWORK_PASSPHRASE: z.string().default(""),
+  STELLAR_MAINNET_NETWORK_PASSPHRASE: z.string().default(""),
   VAULT_FACTORY_ADDRESS: z.string().default(""),
   AGENT_REGISTRY_ADDRESS: z.string().default(""),
   REPUTATION_REGISTRY_ADDRESS: z.string().default(""),
@@ -61,7 +62,45 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   FRONTEND_URL: z.string().default("http://localhost:3000"),
   DEMO_FAUCET_ENABLED: z.string().default("false"),  // set "true" to enable demo USDC faucet
+  ALLOW_TESTNET_IN_PRODUCTION: z.string().default("false"),
 });
 
 export const config = envSchema.parse(process.env);
+
+if (
+  config.NODE_ENV === "production" &&
+  !config.STELLAR_NETWORK_PASSPHRASE
+) {
+  throw new Error(
+    "Missing STELLAR_NETWORK_PASSPHRASE in production."
+  );
+}
+
+if (
+  config.NODE_ENV === "production" &&
+  config.STELLAR_MAINNET_NETWORK_PASSPHRASE &&
+  config.STELLAR_NETWORK_PASSPHRASE !== config.STELLAR_MAINNET_NETWORK_PASSPHRASE &&
+  config.ALLOW_TESTNET_IN_PRODUCTION !== "true"
+) {
+  throw new Error(
+    "Invalid production network configuration: STELLAR_NETWORK_PASSPHRASE does not match STELLAR_MAINNET_NETWORK_PASSPHRASE. " +
+    "Set ALLOW_TESTNET_IN_PRODUCTION=true only for explicit non-mainnet production overrides."
+  );
+}
+
+if (config.NODE_ENV === "production") {
+  const required = [
+    "VAULT_FACTORY_ADDRESS",
+    "AGENT_REGISTRY_ADDRESS",
+    "REPUTATION_REGISTRY_ADDRESS",
+    "VALIDATION_REGISTRY_ADDRESS",
+    "USDC_SAC_ADDRESS",
+  ] as const;
+
+  const missing = required.filter((k) => !config[k] || config[k].trim().length === 0);
+  if (missing.length > 0) {
+    throw new Error(`Missing required production contract addresses: ${missing.join(", ")}`);
+  }
+}
+
 export type Config = z.infer<typeof envSchema>;

@@ -19,7 +19,7 @@ export interface X402MiddlewareOptions {
  * const x402 = createX402Middleware({
  *   rpcUrl: "https://soroban-testnet.stellar.org",
  *   horizonUrl: "https://horizon-testnet.stellar.org",
- *   networkPassphrase: "Test SDF Network ; September 2015",
+ *   networkPassphrase: process.env.STELLAR_NETWORK_PASSPHRASE!,
  *   facilitatorSecret: "S...",
  *   usdcAddress: "C...",
  * });

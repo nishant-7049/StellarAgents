@@ -8,3 +8,4 @@ target/
 *.wasm
 .turbo/
 CLAUDE.md
+.stellar/

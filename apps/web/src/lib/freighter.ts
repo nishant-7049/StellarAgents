@@ -23,7 +23,11 @@ export async function getPublicKey(): Promise<string | null> {
 
 export async function signTransaction(xdr: string): Promise<string> {
   const { signTransaction: sign } = await import("@stellar/freighter-api");
+  const networkPassphrase = process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE || "";
+  if (!networkPassphrase) {
+    throw new Error("Missing NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE");
+  }
   return await sign(xdr, {
-    networkPassphrase: "Test SDF Network ; September 2015",
+    networkPassphrase,
   });
 }

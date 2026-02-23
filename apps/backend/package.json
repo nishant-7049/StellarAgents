@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "deploy:contracts": "tsx src/scripts/deploy-contracts.ts",
+    "deploy:contracts:mainnet": "tsx src/scripts/deploy-contracts.ts --network mainnet",
     "setup:testnet": "tsx src/scripts/setup-testnet.ts",
     "seed": "tsx src/scripts/seed-agents.ts",
     "test:registry": "tsx src/scripts/test-agent-registry.ts",
