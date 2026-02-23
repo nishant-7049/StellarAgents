@@ -3,6 +3,7 @@ import { getEvents } from "../stellar/event-indexer.js";
 import { Server } from "@stellar/stellar-sdk/rpc";
 import { scValToNative } from "@stellar/stellar-sdk";
 import { config } from "../config.js";
+import { logger } from "../logger.js";
 
 export const eventsRoutes = Router();
 
@@ -73,7 +74,14 @@ eventsRoutes.get("/", async (req, res) => {
 
       return res.json({ events, count: events.length });
     } catch (err: any) {
-      console.error("Failed to fetch contract events:", err.message);
+      const errorContext = err instanceof Error
+        ? { message: err.message, stack: err.stack }
+        : {
+            message: err?.message || "RPC error",
+            code: err?.code,
+            data: err?.data,
+          };
+      logger.warn("Failed to fetch contract events", { contractId, error: errorContext });
       return res.json({ events: [], count: 0 });
     }
   }

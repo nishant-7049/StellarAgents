@@ -7,7 +7,7 @@ const packages = [
   {
     name: "@agenticocean/defi-agent",
     label: "defi-agent",
-    desc: "AI yield optimizer toolkit. Connect to Blend, Soroswap, and Ondo. Generate Claude-powered rebalancing strategies and execute them via vault.",
+    desc: "Connect DeFi sources and execute AI-guided rebalancing strategies.",
     docsUrl: "https://agenticoceandocs.vercel.app/#/sdk/defi-agent/overview",
     color: "text-blue-600",
     bg: "bg-blue-50",
@@ -15,7 +15,7 @@ const packages = [
   {
     name: "@agenticocean/vault",
     label: "vault",
-    desc: "Smart vault SDK. Deploy UserVault contracts, manage agent policies, handle deposits/withdrawals, and read on-chain balances programmatically.",
+    desc: "Deploy vaults, enforce policies, and manage balances on-chain.",
     docsUrl: "https://agenticoceandocs.vercel.app/#/sdk/vault/overview",
     color: "text-indigo-600",
     bg: "bg-indigo-50",
@@ -23,7 +23,7 @@ const packages = [
   {
     name: "@agenticocean/x402-stellar",
     label: "x402-stellar",
-    desc: "x402 payment middleware for Express and any Node.js service. Gate routes behind USDC micropayments. Includes facilitator and agent-side header builder.",
+    desc: "Add USDC micropayments to your API routes with x402 middleware.",
     docsUrl: "https://agenticoceandocs.vercel.app/#/sdk/x402-stellar/overview",
     color: "text-violet-600",
     bg: "bg-violet-50",
@@ -32,7 +32,7 @@ const packages = [
 
 export function DeveloperSection() {
   return (
-    <section className="py-24 px-6 bg-[var(--bg0)]">
+    <section className="py-20 px-6 bg-[var(--bg0)]">
       <div className="mx-auto max-w-5xl">
         <div className="rounded-3xl bg-white border border-[var(--border)] shadow-sm overflow-hidden">
           <div className="grid md:grid-cols-2">
@@ -42,12 +42,10 @@ export function DeveloperSection() {
                 <Package className="w-5 h-5 text-[var(--accent)]" />
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] mb-3">
-                Build ERC-8004 Agents in Minutes
+                Build faster with 3 SDKs
               </h2>
               <p className="text-[15px] text-[var(--text-secondary)] leading-relaxed mb-5">
-                Three open-source SDKs — register your agent on-chain with ERC-8004, gate
-                services behind x402 micropayments, and add autonomous DeFi yield strategies.
-                Full stack for AI agents on Stellar.
+                Identity, vault management, and micropayments in one developer stack for Stellar agents.
               </p>
               <div className="rounded-xl bg-[var(--bg0)] border border-[var(--border)] px-4 py-3 font-mono text-[13px] text-[var(--text-secondary)] select-all inline-block mb-6">
                 <span className="text-[var(--text-muted)]">$</span>{" "}

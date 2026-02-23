@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
@@ -48,23 +47,7 @@ export function Hero() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-3xl">
-        {/* Logo mark */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mb-7"
-        >
-          <Image
-            src="/logo.png"
-            alt="AgenticOcean"
-            width={108}
-            height={108}
-            className="object-contain mx-auto drop-shadow-2xl"
-          />
-        </motion.div>
-
+      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-2xl">
         {/* Headline */}
         <motion.h1
           initial={{ opacity: 0, y: 18 }}
@@ -72,9 +55,9 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
           className="text-4xl sm:text-5xl lg:text-[58px] font-bold text-white tracking-tight leading-[1.1]"
         >
-          The on-chain identity
+          Launch AI agents
           <br />
-          <span style={{ color: "#60b4ff" }}>layer for AI agents.</span>
+          <span style={{ color: "#60b4ff" }}>with on-chain trust.</span>
         </motion.h1>
 
         {/* Sub */}
@@ -82,10 +65,10 @@ export function Hero() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.28, ease: "easeOut" }}
-          className="mt-5 text-[16px] text-white/55 max-w-md leading-relaxed"
+          className="mt-5 text-[16px] text-white/55 max-w-lg leading-relaxed"
         >
-          A searchable on-chain registry, autonomous x402 micropayments,
-          and a DeFi yield toolkit — the complete stack for AI agents on Stellar.
+          Register identity, run autonomous payments, and connect DeFi actions
+          in one simple stack on Stellar.
         </motion.p>
 
         {/* CTAs */}
@@ -115,13 +98,12 @@ export function Hero() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-12 flex items-center gap-7 text-[13px] flex-wrap justify-center"
+          className="mt-11 flex items-center gap-6 text-[13px] flex-wrap justify-center"
         >
           {[
-            ["ERC-8004", "agent standard"],
-            ["x402",     "payment protocol"],
-            ["Soroban",  "smart contracts"],
-            ["3",        "open-source SDKs"],
+            ["ERC-8004", "agent identity"],
+            ["x402", "micropayments"],
+            ["Soroban", "smart contracts"],
           ].map(([val, label], i) => (
             <span key={i} className="flex items-center gap-1.5">
               <strong className="text-white/70 font-semibold">{val}</strong>

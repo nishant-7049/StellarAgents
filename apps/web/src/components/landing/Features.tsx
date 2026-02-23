@@ -12,9 +12,9 @@ const features = [
     badgeBg: "bg-blue-50 text-blue-600",
     title: "ERC-8004 Agent Explorer",
     description:
-      "A searchable on-chain registry of AI agents built on the ERC-8004 identity standard, adapted for Stellar/Soroban. Every registered agent is a Soroban NFT with a sequential ID, immutable owner address, mutable capabilities list, USDC pricing, model version, and vault address — all readable by any protocol or frontend without permission.",
+      "List and discover agents with verifiable on-chain identity, ownership, and pricing.",
     detail:
-      "Capabilities are published as strings (e.g. 'yield-optimizer', 'rebalancer', 'data-fetcher'). The Explorer UI lets you filter by capability, sort by rating or fees, and view per-agent stats. Ownership is immutable; metadata is mutable — preventing impersonation while allowing capability upgrades.",
+      "Readable by any app: ID, owner, capabilities, vault, and status.",
   },
   {
     icon: Zap,
@@ -24,9 +24,9 @@ const features = [
     badgeBg: "bg-violet-50 text-violet-600",
     title: "x402 Payments + Smart Vault",
     description:
-      "Gate any API behind USDC micropayments with a single HTTP header using x402-stellar. Agents pay autonomously — no wallet popups, no approvals. Pair with the vault SDK to deploy Soroban smart vaults with per-agent daily spending caps, destination whitelists, and instant revocation enforced on-chain.",
+      "Accept autonomous USDC micropayments and enforce spend policies directly on-chain.",
     detail:
-      "The x402 protocol sends a signed Soroban auth entry inside an HTTP header. The facilitator verifies and submits vault.agent_pay() on-chain. Vault policies are enforced entirely by Rust smart contracts — no off-chain override possible.",
+      "Daily limits, destination controls, and instant revocation are built in.",
   },
   {
     icon: TrendingUp,
@@ -36,15 +36,15 @@ const features = [
     badgeBg: "bg-emerald-50 text-emerald-600",
     title: "defi-agent SDK",
     description:
-      "Connect to Blend Protocol lending pools, Soroswap AMM, and Ondo USDY in minutes. The SDK fetches live APY data from DeFiLlama, sends it to Claude for risk-adjusted allocation, and executes the rebalance — paying for its own AI compute via x402 automatically.",
+      "Connect Blend, Soroswap, and Ondo to automate yield strategies with AI-driven rebalancing.",
     detail:
-      "Rebalances trigger only when APY improvement ≥0.5%, preventing unnecessary gas costs. Every action returns a txHash verifiable on Stellar Explorer. Strategies are parameterized by risk tolerance: low / moderate / high.",
+      "Every rebalance is verifiable on-chain with a transaction hash.",
   },
 ];
 
 export function Features() {
   return (
-    <section id="features" className="py-24 px-6 bg-[var(--bg0)]">
+    <section id="features" className="py-20 px-6 bg-[var(--bg0)]">
       <div className="mx-auto max-w-5xl">
         {/* Section header */}
         <motion.div
@@ -57,11 +57,10 @@ export function Features() {
             Three Core Products
           </span>
           <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">
-            Built for agents that act, pay, and earn on-chain.
+            Simple stack for on-chain agents.
           </h2>
           <p className="mt-4 text-[16px] text-[var(--text-secondary)] max-w-xl mx-auto leading-relaxed">
-            An identity standard, a payment protocol, and a DeFi toolkit — the complete stack
-            for autonomous AI agents on Stellar.
+            Identity, payments, and DeFi automation built for Stellar.
           </p>
         </motion.div>
 
@@ -95,7 +94,7 @@ export function Features() {
                     </span>
                   </div>
                   {/* Description */}
-                  <p className="text-[14px] text-[var(--text-secondary)] leading-relaxed mb-3">
+                  <p className="text-[14px] text-[var(--text-secondary)] leading-relaxed mb-2.5">
                     {f.description}
                   </p>
                   {/* Technical detail */}

@@ -1,12 +1,6 @@
 import { Contract, nativeToScVal, TransactionBuilder, xdr, scValToNative, BASE_FEE, Account, Asset, Operation, Memo } from "@stellar/stellar-sdk";
 import { Server, assembleTransaction } from "@stellar/stellar-sdk/rpc";
 import { signTransaction } from "./freighter";
-import {
-  formatUsdc as sdkFormatUsdc,
-  toStroops as sdkToStroops,
-  USDC_DECIMALS,
-  STROOPS_PER_USDC,
-} from "@agenticocean/x402-stellar";
 
 export const NETWORK = "mainnet";
 export const NETWORK_PASSPHRASE = process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE || "Public Global Stellar Network ; September 2015";
@@ -21,8 +15,9 @@ function requireNetworkPassphrase(): string {
   return NETWORK_PASSPHRASE;
 }
 
-// Re-export from SDK for backward compatibility
-export { USDC_DECIMALS, STROOPS_PER_USDC };
+export const USDC_DECIMALS = 7;
+export const STROOPS_PER_USDC = BigInt(10) ** BigInt(USDC_DECIMALS);
+const STROOPS_PER_USDC_NUM = Number(STROOPS_PER_USDC);
 
 // Facilitator public key — funded account used as source for read-only simulations
 const READ_SOURCE = "GBMKTEEHXML52JTPM5USX4JONRVL32RVBQ6MWR4ZBTJHK6S63FB7JQTO";
@@ -38,11 +33,25 @@ export function getAccountUrl(address: string): string {
 }
 
 export function formatUsdc(stroops: string | number | bigint): string {
-  return sdkFormatUsdc(stroops);
+  const value = typeof stroops === "bigint"
+    ? stroops
+    : BigInt(String(stroops));
+
+  const negative = value < BigInt(0);
+  const abs = negative ? -value : value;
+  const whole = abs / STROOPS_PER_USDC;
+  const fraction = abs % STROOPS_PER_USDC;
+  const frac = fraction.toString().padStart(USDC_DECIMALS, "0").replace(/0+$/, "");
+
+  const formatted = frac.length > 0 ? `${whole.toString()}.${frac}` : whole.toString();
+  return negative ? `-${formatted}` : formatted;
 }
 
 export function toStroops(usdc: number): bigint {
-  return sdkToStroops(usdc);
+  if (!Number.isFinite(usdc) || usdc < 0) {
+    throw new Error("Invalid USDC amount");
+  }
+  return BigInt(Math.round(usdc * STROOPS_PER_USDC_NUM));
 }
 
 export type TxState = "idle" | "building" | "signing" | "submitting" | "confirming" | "success" | "error";

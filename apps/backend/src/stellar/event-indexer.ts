@@ -14,8 +14,78 @@ interface IndexedEvent {
 }
 
 const events: IndexedEvent[] = [];
-let latestLedger: string | undefined;
+let latestCursor: string | undefined;
 const MAX_EVENTS = 1000;
+
+type RpcLikeError = {
+  message?: string;
+  code?: number | string;
+  data?: unknown;
+};
+
+function toErrorContext(err: unknown): Record<string, unknown> {
+  if (err instanceof Error) {
+    return { message: err.message, stack: err.stack };
+  }
+
+  if (err && typeof err === "object") {
+    const e = err as RpcLikeError & Record<string, unknown>;
+    const context: Record<string, unknown> = {
+      message: typeof e.message === "string" ? e.message : "RPC error",
+    };
+
+    if (e.code !== undefined) context.code = e.code;
+    if (e.data !== undefined) context.data = e.data;
+
+    // Preserve extra enumerable fields for debugging (Axios / RPC errors).
+    for (const [k, v] of Object.entries(e)) {
+      if (!(k in context)) context[k] = v;
+    }
+    return context;
+  }
+
+  return { message: String(err) };
+}
+
+function isCursorError(err: unknown): boolean {
+  const ctx = toErrorContext(err);
+  const text = `${ctx.message ?? ""} ${JSON.stringify(ctx.data ?? "")}`.toLowerCase();
+  return text.includes("cursor");
+}
+
+async function fetchEventsWithRetry(
+  contractId: string,
+  startLedger: number | undefined,
+): Promise<any> {
+  const filters = [{
+    type: "contract" as const,
+    contractIds: [contractId],
+  }];
+
+  const firstParams: any = { filters, limit: 50 };
+  if (latestCursor) {
+    firstParams.cursor = latestCursor;
+  } else if (startLedger) {
+    firstParams.startLedger = startLedger;
+  }
+
+  try {
+    return await rpc.getEvents(firstParams);
+  } catch (err) {
+    if (latestCursor && isCursorError(err)) {
+      const resetTo = startLedger ?? 1;
+      logger.warn("Event cursor invalid, resetting cursor and retrying contract poll", {
+        contractId,
+        cursor: latestCursor,
+        resetStartLedger: resetTo,
+        error: toErrorContext(err),
+      });
+      latestCursor = undefined;
+      return await rpc.getEvents({ filters, limit: 50, startLedger: resetTo });
+    }
+    throw err;
+  }
+}
 
 function getContractIds(): string[] {
   return [
@@ -34,30 +104,22 @@ async function pollEvents() {
   try {
     const latest = await rpc.getLatestLedger();
     // Only look back 100 ledgers (~8 min) to avoid RPC range errors
-    const startLedger = latestLedger
+    const startLedger = latestCursor
       ? undefined
       : Math.max(1, latest.sequence - 100);
 
     for (const contractId of contractIds) {
       try {
-        const filters = [{
-          type: "contract" as const,
-          contractIds: [contractId],
-        }];
+        const result = await fetchEventsWithRetry(contractId, startLedger);
 
-        const params: any = { filters, limit: 50 };
-        if (latestLedger) {
-          // cursor must be "ledger-txIndex-eventIndex" format
-          params.cursor = latestLedger;
-        } else if (startLedger) {
-          params.startLedger = startLedger;
+        // Use server-provided cursor for robust pagination, even when no events returned.
+        if (result.cursor) {
+          latestCursor = result.cursor;
         }
-
-        const result = await rpc.getEvents(params);
 
         if (result.events) {
           for (const evt of result.events) {
-            const topics = evt.topic?.map((t: any) => t.toString()) || [];
+            const topics: string[] = evt.topic?.map((t: any) => t.toString()) || [];
             events.push({
               contractId: (evt.contractId || contractId) as string,
               topic: topics,
@@ -65,14 +127,10 @@ async function pollEvents() {
               ledger: evt.ledger || 0,
               timestamp: Date.now(),
             });
-            // Use the event's own paging token as the cursor for next poll
-            if ((evt as any).pagingToken) {
-              latestLedger = (evt as any).pagingToken;
-            }
             // If our vault just got a new agent authorized → trigger rebalancer immediately
             if (
               contractId === config.ADMIN_VAULT_ADDRESS &&
-              topics.some(t => t.includes("agent_added"))
+              topics.some((t: string) => t.includes("agent_added"))
             ) {
               logger.info("agent_added event on vault — triggering rebalancer immediately");
               triggerRebalance().catch(() => {});
@@ -80,13 +138,13 @@ async function pollEvents() {
           }
         }
 
-        if (!latestLedger && result.latestLedger) {
-          // Build a cursor from latest ledger so next poll starts from here
-          latestLedger = `${result.latestLedger}-0-0`;
-        }
       } catch (err) {
-        // Silently skip — contracts may have no events yet
-        logger.debug("Event poll failed for contract", { contractId, error: err instanceof Error ? err.message : String(err) });
+        logger.debug("Event poll failed for contract", {
+          contractId,
+          error: toErrorContext(err),
+          cursor: latestCursor,
+          rpcUrl: config.STELLAR_RPC_URL,
+        });
       }
     }
 
@@ -95,7 +153,11 @@ async function pollEvents() {
       events.shift();
     }
   } catch (err) {
-    logger.debug("Event polling error", { error: String(err) });
+    logger.debug("Event polling error", {
+      error: toErrorContext(err),
+      cursor: latestCursor,
+      rpcUrl: config.STELLAR_RPC_URL,
+    });
   }
 }
 

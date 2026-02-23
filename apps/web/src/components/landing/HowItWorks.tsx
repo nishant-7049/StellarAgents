@@ -9,7 +9,7 @@ const steps = [
     iconColor: "text-blue-600",
     num: "01",
     title: "Discover the Explorer",
-    desc: "Browse the ERC-8004 Agent Explorer — a searchable on-chain registry of AI agents on Stellar. Filter by capability (yield-optimizer, rebalancer, data-fetcher), see pricing in USDC, owner address, and model version. Every entry is a Soroban NFT with a verifiable on-chain identity.",
+    desc: "Find agents by capability, pricing, and status in a verifiable on-chain registry.",
     note: "ERC-8004 on Stellar",
     noteColor: "text-blue-600 bg-blue-50",
   },
@@ -19,7 +19,7 @@ const steps = [
     iconColor: "text-indigo-600",
     num: "02",
     title: "Register Your Agent",
-    desc: "Register your AI agent with one transaction. It gets a sequential NFT ID, an immutable owner address, published capabilities list, USDC pricing, model version, and vault address — all stored in the AgentRegistry Soroban contract and readable by any protocol without permission.",
+    desc: "Create an on-chain identity with an immutable owner and updatable metadata.",
     note: "Sequential NFT ID · immutable owner",
     noteColor: "text-indigo-600 bg-indigo-50",
   },
@@ -29,7 +29,7 @@ const steps = [
     iconColor: "text-violet-600",
     num: "03",
     title: "Connect a Vault + Set Policies",
-    desc: "Deploy a Soroban smart vault and authorize your agent with granular spending policies: daily USDC cap, destination whitelist, and instant revocation. The vault SDK handles contract deployment and policy management programmatically. All rules are enforced on-chain — no off-chain override is possible.",
+    desc: "Attach a smart vault and enforce spending rules like limits and destination controls.",
     note: "x402 + vault SDK",
     noteColor: "text-violet-600 bg-violet-50",
   },
@@ -39,7 +39,7 @@ const steps = [
     iconColor: "text-emerald-600",
     num: "04",
     title: "Agent Pays & Acts Autonomously",
-    desc: "Your agent pays for AI compute (Claude queries), DeFi data, and protocol services with a single HTTP header using x402-stellar. Use the defi-agent SDK to fetch live APY data from Blend/Soroswap/Ondo, generate risk-adjusted strategies, and execute rebalances — every action logged with a Stellar Explorer txHash.",
+    desc: "Run autonomous calls, payments, and rebalances with every action visible on-chain.",
     note: "0.01 USDC per query · fully on-chain",
     noteColor: "text-emerald-600 bg-emerald-50",
   },
@@ -47,7 +47,7 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-24 px-6 bg-white">
+    <section id="how-it-works" className="py-20 px-6 bg-white">
       <div className="mx-auto max-w-5xl">
         {/* Header */}
         <motion.div
@@ -60,11 +60,10 @@ export function HowItWorks() {
             How It Works
           </span>
           <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">
-            From Registry to Autonomous Agent in 4 Steps
+            From setup to autonomous execution in 4 steps.
           </h2>
           <p className="mt-4 text-[16px] text-[var(--text-secondary)] max-w-xl mx-auto leading-relaxed">
-            Discover registered agents, deploy your own, attach a smart vault, and let
-            it pay for its own compute on-chain.
+            Register, secure, and run your agent with minimal setup.
           </p>
         </motion.div>
 
