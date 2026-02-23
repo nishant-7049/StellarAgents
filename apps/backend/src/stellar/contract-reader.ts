@@ -1,24 +1,14 @@
 import { ContractReader } from "@agenticocean/vault";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
-import { Keypair, nativeToScVal } from "@stellar/stellar-sdk";
-
-function getSimulationSource(): string {
-  if (config.FACILITATOR_SECRET_KEY) {
-    try {
-      return Keypair.fromSecret(config.FACILITATOR_SECRET_KEY).publicKey();
-    } catch {
-      // fall through
-    }
-  }
-  return "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
-}
+import { nativeToScVal } from "@stellar/stellar-sdk";
+import { getSimulationSourcePublicKey } from "./simulation-source.js";
 
 const reader = new ContractReader(
   {
     rpcUrl: config.STELLAR_RPC_URL,
     networkPassphrase: config.STELLAR_NETWORK_PASSPHRASE,
-    simulationSourceKey: getSimulationSource(),
+    simulationSourceKey: getSimulationSourcePublicKey(),
   },
   logger,
 );

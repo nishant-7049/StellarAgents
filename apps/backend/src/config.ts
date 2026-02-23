@@ -22,9 +22,13 @@ function findRoot(): string {
 
 const rootDir = findRoot();
 
-// Load root .env first, then .env.contracts (override=true to merge)
+// Load root .env first, then .env.contracts, then backend .env (override so backend vars win)
 dotenv.config({ path: path.join(rootDir, ".env") });
 dotenv.config({ path: path.join(rootDir, ".env.contracts"), override: true });
+const backendEnv = path.join(rootDir, "apps", "backend", ".env");
+if (existsSync(backendEnv)) {
+  dotenv.config({ path: backendEnv, override: true });
+}
 
 const envSchema = z.object({
   PORT: z.string().default("3001"),
@@ -37,6 +41,8 @@ const envSchema = z.object({
   STELLAR_RPC_URL: z.string().default("https://mainnet.stellar.validationcloud.io/v1/4tCDetiqzz6mPyL3frtNzNVHzmBH_SMa5EXTTgVZH8Y"),
   STELLAR_HORIZON_URL: z.string().default("https://horizon.stellar.org"),
   STELLAR_NETWORK_PASSPHRASE: z.string().default("Public Global Stellar Network ; September 2015"),
+  STELLAR_SIMULATION_SOURCE: z.string().default(""),
+  STELLAR_MAINNET_NETWORK_PASSPHRASE: z.string().default(""),
   VAULT_FACTORY_ADDRESS: z.string().default(""),
   AGENT_REGISTRY_ADDRESS: z.string().default(""),
   REPUTATION_REGISTRY_ADDRESS: z.string().default(""),

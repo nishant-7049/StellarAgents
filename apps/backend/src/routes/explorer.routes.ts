@@ -62,7 +62,7 @@ explorerRoutes.get("/agents", async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit as string || "20"), 50);
 
   try {
-    const agents = await agentService.listAgents(startId, limit);
+    const agents = await agentService.listAllAgents(startId, limit);
 
     // Enrich with reputation data
     const enriched = await Promise.all(
@@ -121,7 +121,7 @@ explorerRoutes.get("/agents", async (req, res) => {
       })
     );
 
-    const total = await agentService.getAgentCount();
+    const total = await agentService.getTotalAgentCount();
 
     res.json({
       agents: enriched,
@@ -261,14 +261,14 @@ explorerRoutes.get("/agents/:agentId/stats", async (req, res) => {
       // Horizon unavailable — return zeros
     }
 
-    // Decode ops and filter to x402 payments (invoke_host_function)
+    // Decode ops and filter to contract invocations related to payments.
     const payments = ops
       .filter(op => op.type === "invoke_host_function")
       .map(op => {
         const ts = new Date(op.created_at);
-        // Try to extract memo / action from function params
+        // Try to extract memo/action from function params when available.
         const params = op.parameters || [];
-        let memo = "query";
+        let memo = "unknown";
         for (const p of params) {
           const v = p?.value || "";
           if (typeof v === "string" && v.length > 2 && v.length < 30 && /^[a-z_]+$/.test(v)) {
@@ -276,8 +276,9 @@ explorerRoutes.get("/agents/:agentId/stats", async (req, res) => {
             break;
           }
         }
-        // Extract amount from params (4th param = amount in stroops)
-        let amount = 100_000; // default 0.01 USDC
+        // Extract amount from params in stroops when available.
+        // If not available from Horizon payload, keep amount as 0 instead of using fabricated values.
+        let amount = 0;
         for (const p of params) {
           const v = parseInt(p?.value);
           if (!isNaN(v) && v > 0 && v < 100_000_000_000) {
@@ -288,10 +289,7 @@ explorerRoutes.get("/agents/:agentId/stats", async (req, res) => {
         return { ts, memo, amount, txHash: op.transaction_hash };
       });
 
-    // If no real data from Horizon, generate realistic mock stats seeded by agentId
-    const usesMock = payments.length === 0;
-    const mockPayments = usesMock ? generateMockStats(agentId, agent.registered_at) : payments;
-    const allPayments = usesMock ? mockPayments : payments;
+    const allPayments = payments;
 
     // Daily aggregation — last 30 days
     const dailyMap = new Map<string, { queries: number; usdcSpent: number }>();
@@ -333,7 +331,7 @@ explorerRoutes.get("/agents/:agentId/stats", async (req, res) => {
 
     res.json({
       agentId,
-      isMock: usesMock,
+      isMock: false,
       totals: {
         queries: totalQueries,
         usdcSpent: parseFloat(totalUsdcSpent.toFixed(4)),
@@ -364,10 +362,31 @@ explorerRoutes.get("/search", async (req, res) => {
   const startId = parseInt(req.query.startId as string || "1");
 
   try {
-    const agents = await agentService.listAgents(startId, 100);
+    const agents = await agentService.listAllAgents(startId, 100);
+    const currentNetwork = config.STELLAR_NETWORK_PASSPHRASE.includes("Test SDF Network")
+      ? "testnet"
+      : "mainnet";
 
     // Enrich agents
-    const enriched = await Promise.all(
+    type SearchAgent = {
+      id: number;
+      owner: string;
+      name: string;
+      handle: string | null;
+      vaultAddress: string;
+      agentSigner: string;
+      registeredAt: number;
+      isActive: boolean;
+      capabilities: string[];
+      categories: string[];
+      description: string | null;
+      pricing: any;
+      model: string | null;
+      image: string | null;
+      reputation: { totalReviews: number; avgScore: number } | null;
+    };
+
+    const enriched: SearchAgent[] = await Promise.all(
       agents.map(async (agent: any) => {
         const tokenId = Number(agent.token_id ?? agent.id);
         let capabilities: string[] = [];
@@ -404,23 +423,26 @@ explorerRoutes.get("/search", async (req, res) => {
       if (status === "active" && !a.isActive) return false;
       if (status === "inactive" && a.isActive) return false;
 
-      // Network filter: all agents are on mainnet; "testnet" filter returns nothing
-      if (network === "testnet") return false;
+      if (network !== "all" && network !== currentNetwork) return false;
 
       if (q) {
         const qLower = q.toLowerCase();
         const nameMatch = a.name.toLowerCase().includes(qLower);
         const capMatch = a.capabilities.some((c: string) => c.toLowerCase().includes(qLower));
+        const categoryMatch = (a.categories || []).some((c: string) => c.toLowerCase().includes(qLower));
         const handleMatch = a.handle && a.handle.toLowerCase().includes(qLower);
+        const descriptionMatch = (a.description || "").toLowerCase().includes(qLower);
         const ownerMatch = a.owner.toLowerCase().includes(qLower);
         const vaultMatch = (a as any).vaultAddress && (a as any).vaultAddress.toLowerCase().includes(qLower);
-        if (!nameMatch && !capMatch && !handleMatch && !ownerMatch && !vaultMatch) return false;
+        if (!nameMatch && !capMatch && !categoryMatch && !handleMatch && !descriptionMatch && !ownerMatch && !vaultMatch) return false;
       }
 
       if (tags.length > 0) {
-        const agentCaps = a.capabilities.map((c: string) => c.toLowerCase());
-        // ANY of the requested tags must appear in ANY capability string
-        const hasTag = tags.some(t => agentCaps.some((c: string) => c.includes(t)));
+        const searchable = [
+          ...a.capabilities.map((c: string) => c.toLowerCase()),
+          ...(a.categories || []).map((c: string) => c.toLowerCase()),
+        ];
+        const hasTag = tags.some(t => searchable.some((v: string) => v.includes(t)));
         if (!hasTag) return false;
       }
 
@@ -622,31 +644,3 @@ explorerRoutes.get("/graph", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-/**
- * Generate realistic mock stats when Horizon data isn't available.
- * Seeded by agentId so each agent gets different-looking data.
- */
-function generateMockStats(agentId: number, registeredAt: number) {
-  const seed = agentId * 7;
-  const memos = ["yield_query", "rebalance", "portfolio_check", "yield_query", "yield_query", "strategy_update"];
-  const result: { ts: Date; memo: string; amount: number }[] = [];
-  const now = Date.now();
-  const regMs = Number(registeredAt) * 1000;
-  const daysActive = Math.max(1, Math.floor((now - regMs) / 86400000));
-  const activeDays = Math.min(daysActive, 30);
-
-  for (let d = 0; d < activeDays; d++) {
-    const dayTs = new Date(now - d * 86400000);
-    const queriesThisDay = ((seed + d) % 5) + 1;
-    for (let q = 0; q < queriesThisDay; q++) {
-      const hourOffset = ((seed + d + q) % 20) * 3600000;
-      result.push({
-        ts: new Date(dayTs.getTime() - hourOffset),
-        memo: memos[(seed + d + q) % memos.length],
-        amount: 100_000, // 0.01 USDC
-      });
-    }
-  }
-  return result;
-}

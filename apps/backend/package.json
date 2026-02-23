@@ -12,7 +12,8 @@
     "setup:testnet": "tsx src/scripts/setup-testnet.ts",
     "seed": "tsx src/scripts/seed-agents.ts",
     "test:registry": "tsx src/scripts/test-agent-registry.ts",
-    "test:flow": "tsx src/scripts/test-complete-flow.ts"
+    "test:flow": "tsx src/scripts/test-complete-flow.ts",
+    "test:mainnet:full": "tsx src/scripts/test-mainnet-full-flow.ts"
   },
   "dependencies": {
     "@agenticocean/defi-agent": "workspace:*",
