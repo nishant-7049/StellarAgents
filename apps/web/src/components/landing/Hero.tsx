@@ -1,67 +1,154 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
-import { staggerContainer, fadeInUp } from "@/lib/motion";
+import { ArrowRight } from "lucide-react";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden pt-20 pb-32">
-      <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/20 to-transparent" />
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-        className="relative mx-auto max-w-5xl px-6 text-center"
-      >
-        <motion.div variants={fadeInUp}>
-          <Badge variant="info">Built for SDF Issue #633</Badge>
-        </motion.div>
-        <motion.h1 variants={fadeInUp} className="mt-6 text-5xl font-bold tracking-tight sm:text-7xl">
-          Give Your AI Agents{" "}
-          <span className="gradient-text">a Wallet</span>
-          {" "}on Stellar
-        </motion.h1>
-        <motion.p variants={fadeInUp} className="mx-auto mt-6 max-w-2xl text-lg text-[var(--text-secondary)]">
-          Smart vaults with delegated spending controls. Agents pay for services autonomously
-          using the x402 protocol while you stay in control of your funds.
-        </motion.p>
-        <motion.div variants={fadeInUp} className="mt-10 flex items-center justify-center gap-4">
-          <Link href="/app">
-            <Button size="lg">Launch App</Button>
-          </Link>
-          <Link href="#how-it-works">
-            <Button variant="outline" size="lg">How It Works</Button>
-          </Link>
-        </motion.div>
+    <section
+      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
+      style={{
+        background:
+          "radial-gradient(ellipse at 50% 0%, rgba(6,100,160,0.55) 0%, transparent 60%)," +
+          "linear-gradient(180deg, #010c1e 0%, #021b3a 35%, #032d5c 65%, #043d73 100%)",
+      }}
+    >
+      {/* Light rays from surface */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 40% at 50% -5%, rgba(30,140,255,0.18) 0%, transparent 70%)",
+        }}
+      />
+
+      {/* Floating bubbles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[
+          { left: "12%", top: "70%", size: 3, delay: "0s",   dur: "8s"  },
+          { left: "25%", top: "80%", size: 2, delay: "2s",   dur: "10s" },
+          { left: "45%", top: "90%", size: 4, delay: "1s",   dur: "7s"  },
+          { left: "60%", top: "75%", size: 2, delay: "3s",   dur: "9s"  },
+          { left: "78%", top: "85%", size: 3, delay: "0.5s", dur: "11s" },
+          { left: "88%", top: "65%", size: 2, delay: "4s",   dur: "8s"  },
+        ].map((b, i) => (
+          <span
+            key={i}
+            className="absolute rounded-full bg-white/20"
+            style={{
+              left: b.left,
+              top: b.top,
+              width: b.size,
+              height: b.size,
+              animation: `bubbleRise ${b.dur} ${b.delay} infinite linear`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-3xl">
+        {/* Logo mark */}
         <motion.div
-          variants={fadeInUp}
-          className="mt-16 rounded-xl border border-[var(--border)] bg-[var(--bg-card)]/50 p-8 backdrop-blur"
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="mb-7"
         >
-          <div className="grid grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="text-3xl font-bold text-indigo-400">
-                <AnimatedCounter value={0.01} prefix="$" decimals={2} />
-              </div>
-              <div className="mt-1 text-sm text-[var(--text-secondary)]">Per AI Query (USDC)</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-indigo-400">
-                <AnimatedCounter value={24} suffix="h" />
-              </div>
-              <div className="mt-1 text-sm text-[var(--text-secondary)]">Rolling Spend Limits</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-indigo-400">
-                <AnimatedCounter value={100} suffix="%" />
-              </div>
-              <div className="mt-1 text-sm text-[var(--text-secondary)]">On-Chain Enforcement</div>
-            </div>
-          </div>
+          <Image
+            src="/logo.png"
+            alt="AgenticOcean"
+            width={108}
+            height={108}
+            className="object-contain mx-auto drop-shadow-2xl"
+          />
         </motion.div>
+
+        {/* Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
+          className="text-4xl sm:text-5xl lg:text-[58px] font-bold text-white tracking-tight leading-[1.1]"
+        >
+          The on-chain identity
+          <br />
+          <span style={{ color: "#60b4ff" }}>layer for AI agents.</span>
+        </motion.h1>
+
+        {/* Sub */}
+        <motion.p
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.28, ease: "easeOut" }}
+          className="mt-5 text-[16px] text-white/55 max-w-md leading-relaxed"
+        >
+          A searchable on-chain registry, autonomous x402 micropayments,
+          and a DeFi yield toolkit — the complete stack for AI agents on Stellar.
+        </motion.p>
+
+        {/* CTAs */}
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+          className="mt-8 flex items-center gap-3 flex-wrap justify-center"
+        >
+          <Link
+            href="/vault"
+            className="inline-flex items-center gap-2 bg-white text-[#032d5c] font-semibold px-6 py-3 rounded-xl text-[15px] hover:bg-white/90 transition-colors shadow-lg shadow-black/20"
+          >
+            Get started free
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold px-6 py-3 rounded-xl text-[15px] transition-colors"
+          >
+            See live demo
+          </Link>
+        </motion.div>
+
+        {/* Stats strip */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+          className="mt-12 flex items-center gap-7 text-[13px] flex-wrap justify-center"
+        >
+          {[
+            ["ERC-8004", "agent standard"],
+            ["x402",     "payment protocol"],
+            ["Soroban",  "smart contracts"],
+            ["3",        "open-source SDKs"],
+          ].map(([val, label], i) => (
+            <span key={i} className="flex items-center gap-1.5">
+              <strong className="text-white/70 font-semibold">{val}</strong>
+              <span className="text-white/35">{label}</span>
+            </span>
+          ))}
+        </motion.div>
+      </div>
+
+      {/* Scroll cue */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5"
+      >
+        <span className="text-[10px] text-white/25 tracking-widest uppercase">scroll</span>
+        <div className="w-px h-7 bg-gradient-to-b from-white/25 to-transparent" />
       </motion.div>
+
+      <style jsx>{`
+        @keyframes bubbleRise {
+          0%   { transform: translateY(0);    opacity: 0.3; }
+          60%  { opacity: 0.15; }
+          100% { transform: translateY(-80vh); opacity: 0; }
+        }
+      `}</style>
     </section>
   );
 }

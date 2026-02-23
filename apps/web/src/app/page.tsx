@@ -1,18 +1,18 @@
-import { Hero } from "@/components/landing/Hero";
-import { Features } from "@/components/landing/Features";
-import { HowItWorks } from "@/components/landing/HowItWorks";
-import { Architecture } from "@/components/landing/Architecture";
-import { Pricing } from "@/components/landing/Pricing";
-import { Footer } from "@/components/landing/Footer";
+import { Navbar }           from "@/components/landing/Navbar";
+import { Hero }             from "@/components/landing/Hero";
+import { HowItWorks }       from "@/components/landing/HowItWorks";
+import { Features }         from "@/components/landing/Features";
+import { DeveloperSection } from "@/components/landing/DeveloperSection";
+import { Footer }           from "@/components/landing/Footer";
 
 export default function LandingPage() {
   return (
     <main>
+      <Navbar />
       <Hero />
-      <Features />
       <HowItWorks />
-      <Architecture />
-      <Pricing />
+      <Features />
+      <DeveloperSection />
       <Footer />
     </main>
   );
