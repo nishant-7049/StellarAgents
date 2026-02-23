@@ -10,8 +10,8 @@
  *
  * Plans:
  *   free  → 100/mo  ($0)
- *   basic → 500/mo  ($5  USDC / 5 XLM)
- *   pro   → 2000/mo ($15 USDC / 15 XLM)
+ *   basic → 500/mo  ($5  USDC / 32 XLM)
+ *   pro   → 2000/mo ($15 USDC / 97 XLM)
  */
 
 import { logger } from "../logger.js";
@@ -65,10 +65,11 @@ export const PLAN_PRICES_USDC: Record<CreditPlan, number> = {
   pro:   15,
 };
 
+// XLM prices calculated at $0.1554/XLM to match USD value of USDC prices
 export const PLAN_PRICES_XLM: Record<CreditPlan, number> = {
   free:  0,
-  basic: 5,
-  pro:   15,
+  basic: 32,
+  pro:   97,
 };
 
 function nextResetDate(): string {
