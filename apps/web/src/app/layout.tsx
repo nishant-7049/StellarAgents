@@ -13,8 +13,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark">
       <body className="min-h-screen antialiased">
         <WalletProvider>
-
-          
           <ToastProvider>
             {children}
           </ToastProvider>
