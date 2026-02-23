@@ -79,6 +79,7 @@ explorerRoutes.get("/agents", async (req, res) => {
         let capabilities: string[] = [];
         let pricing: any = null;
         let model: string | null = null;
+        let image: string | null = null;
         try {
           const uri = typeof agent.agent_uri === "string"
             ? JSON.parse(agent.agent_uri)
@@ -86,6 +87,7 @@ explorerRoutes.get("/agents", async (req, res) => {
           capabilities = uri?.capabilities || [];
           pricing = uri?.pricing || null;
           model = uri?.model || null;
+          image = uri?.image || null;
         } catch {
           // malformed URI
         }
@@ -102,6 +104,7 @@ explorerRoutes.get("/agents", async (req, res) => {
           capabilities,
           pricing,
           model,
+          image,
           reputation: reputation
             ? {
                 totalReviews: reputation.total_reviews,
@@ -142,6 +145,7 @@ explorerRoutes.get("/agents/:agentId", async (req, res) => {
     let pricing: any = null;
     let model: string | null = null;
     let endpoints: any = null;
+    let image: string | null = null;
     try {
       const uri = typeof agent.agent_uri === "string"
         ? JSON.parse(agent.agent_uri)
@@ -150,6 +154,7 @@ explorerRoutes.get("/agents/:agentId", async (req, res) => {
       pricing = uri?.pricing || null;
       model = uri?.model || null;
       endpoints = uri?.endpoints || null;
+      image = uri?.image || null;
     } catch {
       // malformed URI
     }
@@ -193,6 +198,7 @@ explorerRoutes.get("/agents/:agentId", async (req, res) => {
       capabilities,
       pricing,
       model,
+      image,
       endpoints,
       reputation: reputation
         ? {
@@ -355,11 +361,13 @@ explorerRoutes.get("/search", async (req, res) => {
         let capabilities: string[] = [];
         let pricing_info: any = null;
         let model: string | null = null;
+        let image: string | null = null;
         try {
           const uri = typeof agent.agent_uri === "string" ? JSON.parse(agent.agent_uri) : agent.agent_uri;
           capabilities = uri?.capabilities || [];
           pricing_info = uri?.pricing || null;
           model = uri?.model || null;
+          image = uri?.image || null;
         } catch { /* malformed */ }
 
         let reputation = null;
@@ -371,7 +379,7 @@ explorerRoutes.get("/search", async (req, res) => {
         return { id: tokenId, owner: agent.owner, name: agent.name, handle: agent.handle || null,
           vaultAddress: agent.vault_address, agentSigner: agent.agent_signer,
           registeredAt: agent.registered_at, isActive: agent.is_active,
-          capabilities, pricing: pricing_info, model, reputation };
+          capabilities, pricing: pricing_info, model, image, reputation };
       })
     );
 

@@ -35,10 +35,16 @@ interface AgentDetail {
   capabilities: string[];
   pricing: any;
   model: string | null;
+  image?: string | null;
   endpoints: any;
   reputation: { totalReviews: number; totalScore: number; avgScore: number } | null;
   feedback: any[];
   paymentHistory: any[];
+}
+
+function ipfsToHttp(url: string): string {
+  if (url.startsWith("ipfs://")) return `https://ipfs.io/ipfs/${url.slice(7)}`;
+  return url;
 }
 
 interface AgentStats {
@@ -438,6 +444,20 @@ export default function AgentProfilePage() {
         <Link href="/explorer" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] mt-1">
           <ArrowLeft className="w-5 h-5" />
         </Link>
+        {/* Agent image / avatar */}
+        {agent.image ? (
+          <img
+            src={ipfsToHttp(agent.image)}
+            alt={agent.name}
+            className="w-12 h-12 rounded-[10px] object-cover flex-shrink-0"
+            onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-[10px] flex-shrink-0 flex items-center justify-center
+            bg-[var(--accent)]/15 text-[var(--accent2)] text-xl font-bold select-none">
+            {agent.name.charAt(0).toUpperCase()}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold text-[var(--text-primary)]">{agent.name}</h1>

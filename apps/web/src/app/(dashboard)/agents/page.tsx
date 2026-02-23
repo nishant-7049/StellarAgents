@@ -14,13 +14,31 @@ const AVATAR_BG = [
 ];
 const AVATAR_FG = "#0B1220";
 
-function AgentAvatar({ id, name, isActive }: { id: number; name: string; isActive: boolean }) {
+function ipfsToHttp(url: string): string {
+  if (url.startsWith("ipfs://")) return `https://ipfs.io/ipfs/${url.slice(7)}`;
+  return url;
+}
+
+function AgentAvatar({ id, name, isActive, image }: { id: number; name: string; isActive: boolean; image?: string }) {
   const bg = AVATAR_BG[id % AVATAR_BG.length];
+  const imgSrc = image ? ipfsToHttp(image) : null;
   return (
     <div className="relative flex-shrink-0">
+      {imgSrc ? (
+        <img
+          src={imgSrc}
+          alt={name}
+          className="w-10 h-10 rounded-[10px] object-cover"
+          onError={e => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+            const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+            if (fallback) fallback.style.display = "flex";
+          }}
+        />
+      ) : null}
       <div
-        className="w-10 h-10 rounded-[10px] flex items-center justify-center text-[14px] font-semibold select-none"
-        style={{ background: bg, color: AVATAR_FG }}
+        className="w-10 h-10 rounded-[10px] items-center justify-center text-[14px] font-semibold select-none"
+        style={{ background: bg, color: AVATAR_FG, display: imgSrc ? "none" : "flex" }}
       >
         {name.charAt(0).toUpperCase()}
       </div>
@@ -45,7 +63,7 @@ function MyAgentRow({ agent }: { agent: AgentData }) {
         hover:bg-[var(--surface1)] hover:border-[var(--accent)]/25
         transition-all duration-150 cursor-pointer group">
 
-        <AgentAvatar id={agent.id} name={agent.name} isActive={agent.is_active} />
+        <AgentAvatar id={agent.id} name={agent.name} isActive={agent.is_active} image={agent.image} />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">

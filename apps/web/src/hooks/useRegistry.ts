@@ -17,6 +17,7 @@ export interface AgentData {
   is_active: boolean;
   capabilities?: string[];
   pricing?: { amount: string };
+  image?: string;
   status?: string;
 }
 
@@ -35,10 +36,12 @@ export function useRegistry() {
   function parseAgent(a: any): AgentData {
     let capabilities: string[] = [];
     let pricing: { amount: string } | undefined;
+    let image: string | undefined;
     try {
       const uri = JSON.parse(a.agent_uri || "{}");
       capabilities = uri.capabilities || [];
       pricing = uri.pricing;
+      image = uri.image || undefined;
     } catch {}
     const tokenId = Number(a.token_id ?? a.id);
     return {
@@ -53,6 +56,7 @@ export function useRegistry() {
       is_active: a.is_active ?? true,
       capabilities,
       pricing,
+      image,
       status: a.is_active ? "active" : "inactive",
     };
   }

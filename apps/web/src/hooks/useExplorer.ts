@@ -13,6 +13,7 @@ export interface Agent {
   capabilities: string[];
   pricing: { amount: string; protocol: string } | null;
   model: string | null;
+  image?: string | null;
   reputation?: { totalReviews: number; avgScore: number } | null;
   registeredAt: number;
 }
