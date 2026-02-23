@@ -354,7 +354,7 @@ export default function CreditsPage() {
         {/* Payment method hint */}
         <p className="text-xs text-[var(--text-secondary)] mb-4">
           {paymentMethod === "CARD" && "Pay with any credit/debit card via Stripe."}
-          {paymentMethod === "USDC" && "Pay with USDC on Stellar Testnet via Freighter."}
+          {paymentMethod === "USDC" && "Pay with USDC on Stellar Mainnet via Freighter."}
         </p>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -470,7 +470,7 @@ export default function CreditsPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[var(--text-secondary)]">Network</span>
-                    <span>Stellar Testnet</span>
+                    <span>Stellar Mainnet</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[var(--text-secondary)]">Valid for</span>

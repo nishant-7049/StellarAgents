@@ -1,6 +1,7 @@
 import { Server } from "@stellar/stellar-sdk/rpc";
 import { config } from "../config.js";
 import { logger } from "../logger.js";
+import { triggerRebalance } from "../defi/rebalancer.js";
 
 const rpc = new Server(config.STELLAR_RPC_URL);
 
@@ -22,6 +23,7 @@ function getContractIds(): string[] {
     config.AGENT_REGISTRY_ADDRESS,
     config.REPUTATION_REGISTRY_ADDRESS,
     config.VALIDATION_REGISTRY_ADDRESS,
+    config.ADMIN_VAULT_ADDRESS,   // watch our vault for agent_added events
   ].filter(Boolean);
 }
 
@@ -55,9 +57,10 @@ async function pollEvents() {
 
         if (result.events) {
           for (const evt of result.events) {
+            const topics = evt.topic?.map((t: any) => t.toString()) || [];
             events.push({
               contractId: (evt.contractId || contractId) as string,
-              topic: evt.topic?.map((t: any) => t.toString()) || [],
+              topic: topics,
               value: evt.value,
               ledger: evt.ledger || 0,
               timestamp: Date.now(),
@@ -65,6 +68,14 @@ async function pollEvents() {
             // Use the event's own paging token as the cursor for next poll
             if ((evt as any).pagingToken) {
               latestLedger = (evt as any).pagingToken;
+            }
+            // If our vault just got a new agent authorized → trigger rebalancer immediately
+            if (
+              contractId === config.ADMIN_VAULT_ADDRESS &&
+              topics.some(t => t.includes("agent_added"))
+            ) {
+              logger.info("agent_added event on vault — triggering rebalancer immediately");
+              triggerRebalance().catch(() => {});
             }
           }
         }

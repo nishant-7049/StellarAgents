@@ -1,4 +1,4 @@
-# AgenticOcean — AI Agent Wallets + x402 on Stellar
+# AgenticOcean - AI Agent Wallets + x402 on Stellar
 
 **Give your AI agents a wallet, an identity, and the ability to pay — on Stellar.**
 

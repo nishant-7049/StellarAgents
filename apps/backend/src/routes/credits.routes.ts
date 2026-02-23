@@ -8,6 +8,10 @@ import { config } from "../config.js";
 const USDC_ISSUER =
   process.env.USDC_ISSUER || "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
 
+// Address that receives credit purchase payments
+const CREDITS_PAYMENT_ADDRESS =
+  process.env.CREDITS_PAYMENT_ADDRESS || "GDBTV5IRAZ55D7AZ2KC26PNT63TRS4SDAZTNYQW5ECKX3UITKBRAQOSX";
+
 export const creditsRoutes = Router();
 
 /**
@@ -17,12 +21,8 @@ export const creditsRoutes = Router();
  */
 creditsRoutes.get("/payment-params", (req, res) => {
   try {
-    const facilitatorAddress = config.FACILITATOR_SECRET_KEY
-      ? Keypair.fromSecret(config.FACILITATOR_SECRET_KEY).publicKey()
-      : "";
-
     res.json({
-      facilitatorAddress,
+      facilitatorAddress: CREDITS_PAYMENT_ADDRESS,
       usdcIssuer: USDC_ISSUER,
       network: "mainnet",
     });
@@ -144,14 +144,10 @@ creditsRoutes.post("/purchase", async (req, res) => {
       const ops = opsData._embedded?.records || [];
 
       const { PLAN_PRICES_USDC } = await import("../services/credits.service.js");
-      const facilitatorPubKey = config.FACILITATOR_SECRET_KEY
-        ? (await import("@stellar/stellar-sdk")).Keypair.fromSecret(config.FACILITATOR_SECRET_KEY).publicKey()
-        : null;
-
       const expectedUsdc = PLAN_PRICES_USDC[plan as CreditPlan];
 
       for (const op of ops) {
-        if (op.type === "payment" && facilitatorPubKey && op.to === facilitatorPubKey) {
+        if (op.type === "payment" && op.to === CREDITS_PAYMENT_ADDRESS) {
           const amount = parseFloat(op.amount);
           const isUSDC = op.asset_code === "USDC" && amount >= expectedUsdc;
           if (isUSDC) {
