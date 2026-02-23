@@ -255,6 +255,30 @@ async function autoRebalanceAll() {
             `Auto-discovered vault: ${vaultAddress.slice(0, 8)}… ` +
             `agent=${agentPubKey.slice(0, 8)}… balance=${balanceUsdc.toFixed(2)} USDC`
           );
+        } else {
+          // Portfolio already exists — if fully idle, sync tracked amount to current vault balance
+          const isFullyIdle = existing.positions.every(p => p.protocolKey === "idle");
+          if (isFullyIdle && Math.abs(balanceUsdc - existing.totalInvested) > 0.01) {
+            await portfolioService.recordPositions({
+              wallet: agentPubKey,
+              vaultAddress,
+              positions: [{
+                protocol: "Idle USDC",
+                protocolKey: "idle",
+                amountUsdc: balanceUsdc,
+                allocationPct: 100,
+                entryApy: 0,
+                deployedAt: existing.positions[0]?.deployedAt ?? new Date(Date.now() - 7 * 3600 * 1000).toISOString(),
+              }],
+              totalAmount: balanceUsdc,
+              txHashes: [],
+              reason: "balance_sync",
+            });
+            logger.info(
+              `Balance sync: ${vaultAddress.slice(0, 8)}… ` +
+              `${existing.totalInvested.toFixed(2)} → ${balanceUsdc.toFixed(2)} USDC`
+            );
+          }
         }
       }
     } catch (err) {
