@@ -6,6 +6,8 @@
     "dev:web": "turbo dev --filter=@agentnet/web",
     "dev:backend": "turbo dev --filter=@agentnet/backend",
     "build": "turbo build",
+    "build:backend": "turbo build --filter=@agentnet/backend",
+    "build:web": "turbo build --filter=@agentnet/web",
     "build:sdk": "turbo build --filter=@agenticocean/*",
     "build:contracts": "cd contracts && cargo build --release --target wasm32v1-none",
     "test": "turbo test",
