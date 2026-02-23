@@ -14,14 +14,30 @@ export class AgentRegistry {
     this.reader = new ContractReader(config, logger);
   }
 
-  /** List active agents starting from token ID, up to limit. */
+  /** List active agents starting from token ID, up to limit.
+   *  Falls back to per-ID fetching if the contract's list_agents panics. */
   async listAgents(startTokenId: number = 1, limit: number = 10): Promise<AgentInfo[]> {
     const result = await this.reader.readContractValue(
       this.registryAddress,
       "list_agents",
       [nativeToScVal(BigInt(startTokenId), { type: "u64" }), nativeToScVal(limit, { type: "u32" })],
     );
-    return result || [];
+    if (result !== null) return result;
+
+    // Fallback: fetch agents individually using next_token_id + get_agent
+    const nextId: bigint | null = await this.reader.readContractValue(
+      this.registryAddress,
+      "next_token_id",
+    );
+    if (!nextId) return [];
+
+    const end = Math.min(Number(nextId) - 1, startTokenId - 1 + limit);
+    const fetches = [];
+    for (let id = startTokenId; id <= end; id++) {
+      fetches.push(this.getAgent(id));
+    }
+    const agents = await Promise.all(fetches);
+    return agents.filter((a): a is AgentInfo => a !== null && (a as any).is_active !== false);
   }
 
   /** Get a specific agent by token ID. */

@@ -38,7 +38,9 @@ txRoutes.post("/build", async (req, res) => {
     // Simulate
     const sim = await rpc.simulateTransaction(tx);
     if (!("result" in sim)) {
-      return res.status(400).json({ error: "Simulation failed" });
+      const simError = (sim as any).error ?? "Unknown simulation error";
+      console.error("Simulation failed:", simError);
+      return res.status(400).json({ error: "Simulation failed", detail: simError });
     }
 
     // Assemble with simulation results

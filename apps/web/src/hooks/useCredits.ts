@@ -64,6 +64,12 @@ export function useCredits(wallet: string | null) {
     fetchPlans();
   }, [fetchCredits, fetchPlans]);
 
+  // Re-fetch whenever any part of the app consumes credits
+  useEffect(() => {
+    window.addEventListener("credits-updated", fetchCredits);
+    return () => window.removeEventListener("credits-updated", fetchCredits);
+  }, [fetchCredits]);
+
   const purchasePlan = async (plan: string, txHash: string, paymentToken: "USDC" | "XLM") => {
     if (!wallet) throw new Error("No wallet connected");
     const res = await fetch(`${BACKEND_URL}/api/credits/purchase`, {
@@ -74,6 +80,7 @@ export function useCredits(wallet: string | null) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Purchase failed");
     await fetchCredits();
+    window.dispatchEvent(new Event("credits-updated"));
     return data;
   };
 

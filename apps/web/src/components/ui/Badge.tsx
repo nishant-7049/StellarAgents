@@ -11,11 +11,11 @@ export function Badge({ children, variant = "default", className = "" }: BadgePr
     <span className={clsx(
       "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", className,
       {
-        "bg-indigo-500/20 text-indigo-300": variant === "default",
-        "bg-green-500/20 text-green-300": variant === "success",
-        "bg-yellow-500/20 text-yellow-300": variant === "warning",
-        "bg-red-500/20 text-red-300": variant === "error",
-        "bg-blue-500/20 text-blue-300": variant === "info",
+        "bg-[var(--accent)]/10 text-[var(--accent)]":  variant === "default",
+        "bg-green-100 text-green-700":                  variant === "success",
+        "bg-amber-100 text-amber-700":                  variant === "warning",
+        "bg-red-100 text-red-700":                      variant === "error",
+        "bg-blue-100 text-blue-700":                    variant === "info",
       }
     )}>
       {children}
