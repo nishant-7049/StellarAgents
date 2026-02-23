@@ -23,7 +23,7 @@ export class AgentService {
   async listAllAgents(startTokenId: number = 1, limit: number = 10) {
     if (!config.AGENT_REGISTRY_ADDRESS) return [];
     const registry = new AgentRegistry(config.AGENT_REGISTRY_ADDRESS, stellarConfig, logger);
-    return registry.listAllAgents(startTokenId, limit);
+    return registry.listAgents(startTokenId, limit);
   }
 
   async getAgent(tokenId: number) {

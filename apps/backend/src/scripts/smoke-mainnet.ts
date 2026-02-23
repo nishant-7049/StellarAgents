@@ -37,7 +37,7 @@ function loadEnv(): Record<string, string> {
   const fromRoot = parseEnvFile(path.join(ROOT, ".env"));
   const fromContracts = parseEnvFile(ENV_CONTRACTS_PATH);
   const fromBackend = parseEnvFile(BACKEND_ENV_PATH);
-  return { ...fromRoot, ...fromContracts, ...fromBackend, ...process.env };
+  return { ...fromRoot, ...fromContracts, ...fromBackend, ...(process.env as Record<string, string>) };
 }
 
 function run(cmd: string): string {
@@ -169,7 +169,9 @@ function main() {
   console.log("\n=== Mainnet smoke test complete ===\n");
 }
 
-main().catch((err) => {
+try {
+  main();
+} catch (err: any) {
   console.error("\nSmoke test failed:", err.message);
   process.exit(1);
-});
+}
