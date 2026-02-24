@@ -6,7 +6,7 @@ name: Build and deploy Node.js app to Azure Web App - agenticocean
 on:
   push:
     branches:
-      - nishant
+      - nishant-frontend
   workflow_dispatch:
 
 jobs:
@@ -28,16 +28,16 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --force
 
-      - name: Build backend
-        run: pnpm build:backend
+      - name: Build frontend
+        run: pnpm run build
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: ./apps/backend
+          path: .
 
   deploy:
     runs-on: ubuntu-latest

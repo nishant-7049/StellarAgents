@@ -1,34 +1,32 @@
 {
-  "name": "agentnet-stellar",
+  "name": "@agentnet/web",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "turbo dev",
-    "dev:web": "turbo dev --filter=@agentnet/web",
-    "dev:backend": "turbo dev --filter=@agentnet/backend",
-    "build": "turbo build",
-    "build:backend": "turbo build --filter=@agentnet/backend",
-    "build:web": "turbo build --filter=@agentnet/web",
-    "build:sdk": "turbo build --filter=@agenticocean/*",
-    "build:contracts": "cd contracts && cargo build --release --target wasm32v1-none",
-    "test": "turbo test",
-    "test:contracts": "cd contracts && cargo test --workspace",
-    "test:unit": "vitest run --config tests/vitest.config.ts",
-    "test:integration": "vitest run --config tests/vitest.integration.config.ts",
-    "deploy:contracts": "pnpm --filter @agentnet/backend exec tsx src/scripts/deploy-contracts.ts",
-    "deploy:contracts:mainnet": "pnpm --filter @agentnet/backend exec tsx src/scripts/deploy-contracts.ts --network mainnet",
-    "setup:testnet": "pnpm --filter @agentnet/backend exec tsx src/scripts/setup-testnet.ts",
-    "test:registry:testnet": "pnpm --filter @agentnet/backend exec tsx src/scripts/test-agent-registry.ts",
-    "test:flow:testnet": "pnpm --filter @agentnet/backend exec tsx src/scripts/test-complete-flow.ts",
-    "lint": "turbo lint",
-    "clean": "turbo clean && rm -rf node_modules"
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@agenticocean/vault": "^0.1.1",
+    "@agenticocean/x402-stellar": "^1.0.1",
+    "@stellar/freighter-api": "^2.0.0",
+    "@stellar/stellar-sdk": "^14.5.0",
+    "clsx": "^2.1.0",
+    "framer-motion": "^11.15.0",
+    "lucide-react": "^0.468.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^3.7.0"
   },
   "devDependencies": {
-    "turbo": "^2.3.0",
-    "vitest": "^2.1.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0"
-  },
-  "packageManager": "pnpm@10.29.2",
-  "engines": {
-    "node": ">=20.0.0"
   }
 }
