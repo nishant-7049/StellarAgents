@@ -4,7 +4,7 @@ import { WalletProvider } from "@/providers/WalletProvider";
 import { ToastProvider } from "@/providers/ToastProvider";
 
 export const metadata: Metadata = {
-  title: "AgentNet - AI Agent Wallets on Stellar",
+  title: "AgenticOcean - AI Agent Wallets on Stellar",
   description: "Give your AI agents a wallet on Stellar. Smart vaults with delegated spending powered by x402.",
 };
 
