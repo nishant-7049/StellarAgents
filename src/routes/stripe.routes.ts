@@ -64,6 +64,47 @@ stripeRoutes.post("/checkout", async (req, res) => {
 });
 
 /**
+ * POST /api/credits/stripe/verify-session
+ * Called by the frontend after Stripe redirects back with ?session_id=...
+ * Retrieves the session from Stripe, checks payment_status, and awards credits.
+ * Safe to call multiple times — setPlan is idempotent for the same plan.
+ * Body: { wallet, sessionId }
+ */
+stripeRoutes.post("/verify-session", async (req, res) => {
+  const stripe = getStripe();
+  if (!stripe) return res.status(503).json({ error: "Stripe not configured on this server" });
+
+  const { wallet, sessionId } = req.body;
+  if (!wallet || !sessionId) return res.status(400).json({ error: "wallet and sessionId required" });
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== "paid") {
+      return res.status(402).json({ error: "Payment not completed", status: session.payment_status });
+    }
+
+    const { wallet: metaWallet, plan } = session.metadata || {};
+
+    // Ensure the session belongs to this wallet
+    if (metaWallet !== wallet) {
+      return res.status(403).json({ error: "Session does not belong to this wallet" });
+    }
+
+    if (!plan || !["basic", "pro"].includes(plan)) {
+      return res.status(400).json({ error: "Invalid plan in session metadata" });
+    }
+
+    const credits = await creditsService.setPlan(wallet, plan as CreditPlan);
+    logger.info("Plan upgraded via verify-session", { wallet, plan, sessionId });
+    res.json({ success: true, credits });
+  } catch (err: any) {
+    logger.error("verify-session failed", { error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * POST /api/credits/stripe/webhook
  * Called by Stripe when payment completes.
  * Uses req.rawBody (set by express.json verify in index.ts) for signature verification.
