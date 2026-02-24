@@ -74,7 +74,7 @@ export default function AgentDemoPage() {
         <div>
           <h1 className="text-2xl font-bold">Live Agent Demo</h1>
           <p className="text-[var(--text-secondary)]">
-            Live performance of our autonomous AI yield optimizer on Stellar testnet
+            Live performance of our autonomous AI yield optimizer on Stellar mainnet
           </p>
         </div>
         <button
