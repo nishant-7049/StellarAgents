@@ -21,20 +21,20 @@ importers:
   apps/backend:
     dependencies:
       '@agenticocean/defi-agent':
-        specifier: workspace:*
-        version: link:../../packages/agent-ai
+        specifier: ^0.3.1
+        version: 0.3.1(@blend-capital/blend-sdk@3.2.2)(zod@3.25.76)
       '@agenticocean/vault':
-        specifier: workspace:*
-        version: link:../../packages/vault
+        specifier: ^0.1.1
+        version: 0.1.1
       '@agenticocean/x402-stellar':
-        specifier: workspace:*
-        version: link:../../packages/x402-stellar
+        specifier: ^1.0.1
+        version: 1.0.1(express@5.2.1)
       '@anthropic-ai/sdk':
         specifier: ^0.40.0
         version: 0.40.1
       '@blend-capital/blend-sdk':
-        specifier: ^2.2.0
-        version: 2.2.0
+        specifier: ^3.2.2
+        version: 3.2.2
       '@stellar/stellar-sdk':
         specifier: ^14.5.0
         version: 14.5.0
@@ -99,6 +99,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@agenticocean/vault':
+        specifier: ^0.1.1
+        version: 0.1.1
+      '@agenticocean/x402-stellar':
+        specifier: ^1.0.1
+        version: 1.0.1(express@5.2.1)
       '@stellar/freighter-api':
         specifier: ^2.0.0
         version: 2.0.0
@@ -209,15 +215,31 @@ importers:
 
 packages:
 
+  '@agenticocean/defi-agent@0.3.1':
+    resolution: {integrity: sha512-JQ+5chz/+4eOviYZvcKX8ShWCW1yjsBwO6itgoK1XZeiAoZWvmIXBMzLpzJT5t4R76KL1td3Uq4ph/CubyrPMQ==}
+    peerDependencies:
+      '@blend-capital/blend-sdk': '>=3.0.0'
+    peerDependenciesMeta:
+      '@blend-capital/blend-sdk':
+        optional: true
+
+  '@agenticocean/vault@0.1.1':
+    resolution: {integrity: sha512-/qlAnluFo0sRxg30yfioKxrt5cVkpR/eWCVtcdhD6OaYwuh/Wt+J5WB5eAQtKk6g/o7ePw4X+bxXBS0ktYq+Ew==}
+
+  '@agenticocean/x402-stellar@1.0.1':
+    resolution: {integrity: sha512-nIwnLLaqeno1rY+THE6qE7Iv/dx22YX6we9WYEZe4ScsyTjk6ug9RSrftoka3ZxCpVw+XVkya4Id8Ca9CxTxtA==}
+    peerDependencies:
+      express: '>=4.0.0'
+    peerDependenciesMeta:
+      express:
+        optional: true
+
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
 
   '@anthropic-ai/sdk@0.40.1':
     resolution: {integrity: sha512-DJMWm8lTEM9Lk/MSFL+V+ugF7jKOn0M2Ujvb5fN8r2nY14aHbGPZ1k6sgjL+tpJ3VuOGJNG+4R83jEpOuYPv8w==}
-
-  '@blend-capital/blend-sdk@2.2.0':
-    resolution: {integrity: sha512-S2P7D1Y45IKBk381gvPWt7rv587B2FUY9Vd8KyXpxkpcB8/IgFeCItoVBidqIW5vbsAG3T1fwHJbcI3bUfFlpw==}
 
   '@blend-capital/blend-sdk@3.2.2':
     resolution: {integrity: sha512-z37m86YaUvlogYNcTtwnxraRK3+w3bPPj3lxMe0Ei4LO5MaGN+maB6yTcea8rvizshnZ1bjD5wbvAEnQ8L7rhA==}
@@ -929,16 +951,9 @@ packages:
   '@stellar/js-xdr@3.1.2':
     resolution: {integrity: sha512-VVolPL5goVEIsvuGqDc5uiKxV03lzfWdvYg1KikvwheDmTBO68CKDji3bAZ/kppZrx5iTA8z3Ld5yuytcvhvOQ==}
 
-  '@stellar/stellar-base@13.1.0':
-    resolution: {integrity: sha512-90EArG+eCCEzDGj3OJNoCtwpWDwxjv+rs/RNPhvg4bulpjN/CSRj+Ys/SalRcfM4/WRC5/qAfjzmJBAuquWhkA==}
-    engines: {node: '>=18.0.0'}
-
   '@stellar/stellar-base@14.0.4':
     resolution: {integrity: sha512-UbNW6zbdOBXJwLAV2mMak0bIC9nw3IZVlQXkv2w2dk1jgCbJjy3oRVC943zeGE5JAm0Z9PHxrIjmkpGhayY7kw==}
     engines: {node: '>=20.0.0'}
-
-  '@stellar/stellar-sdk@13.0.0':
-    resolution: {integrity: sha512-+wvmKi+XWwu27nLYTM17EgBdpbKohEkOfCIK4XKfsI4WpMXAqvnqSm98i9h5dAblNB+w8BJqzGs1JY0PtTGm4A==}
 
   '@stellar/stellar-sdk@14.4.3':
     resolution: {integrity: sha512-QfaScSNd4Ku0GGfaZjR8679+M5gLHG+09OLLqV3Bv1VaDKXjHmhf8ikalz2jlx3oFnmlEpEgnqXIdf4kdD2x/w==}
@@ -1204,25 +1219,6 @@ packages:
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
-
-  bare-addon-resolve@1.10.0:
-    resolution: {integrity: sha512-sSd0jieRJlDaODOzj0oe0RjFVC1QI0ZIjGIdPkbrTXsdVVtENg14c+lHHAhHwmWCZ2nQlMhy8jA3Y5LYPc/isA==}
-    peerDependencies:
-      bare-url: '*'
-    peerDependenciesMeta:
-      bare-url:
-        optional: true
-
-  bare-module-resolve@1.12.1:
-    resolution: {integrity: sha512-hbmAPyFpEq8FoZMd5sFO3u6MC5feluWoGE8YKlA8fCrl6mNtx68Wjg4DTiDJcqRJaovTvOYKfYngoBUnbaT7eg==}
-    peerDependencies:
-      bare-url: '*'
-    peerDependenciesMeta:
-      bare-url:
-        optional: true
-
-  bare-semver@1.0.2:
-    resolution: {integrity: sha512-ESVaN2nzWhcI5tf3Zzcq9aqCZ676VWzqw07eEZ0qxAcEOAFYBa0pWq8sK34OQeHLY3JsfKXZS9mDyzyxGjeLzA==}
 
   base32.js@0.1.0:
     resolution: {integrity: sha512-n3TkB02ixgBOhTvANakDb4xaMXnYUVkNoRFJjQflcqMQhyEKxEHdj3E6N8t8sUQ0mjH/3/JxzlXuz3ul/J90pQ==}
@@ -1525,9 +1521,6 @@ packages:
   express@5.2.1:
     resolution: {integrity: sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw==}
     engines: {node: '>= 18'}
-
-  feaxios@0.0.20:
-    resolution: {integrity: sha512-g3hm2YDNffNxA3Re3Hd8ahbpmDee9Fv1Pb1C/NoWsjY7mtD8nyNeJytUzn+DK0Hyl9o6HppeWOrtnqgmhOYfWA==}
 
   feaxios@0.0.23:
     resolution: {integrity: sha512-eghR0A21fvbkcQBgZuMfQhrXxJzC0GNUGC9fXhBge33D+mFDTwl0aJ35zoQQn575BhyjQitRc5N4f+L4cP708g==}
@@ -2116,10 +2109,6 @@ packages:
   redux@5.0.1:
     resolution: {integrity: sha512-M9/ELqF6fy8FwmkpnF0S3YKOqMyoWJ4+CS5Efg2ct3oY9daQvd/Pc71FpGZsVsbl3Cpb+IIcjBDUnnyBdQbq4w==}
 
-  require-addon@1.2.0:
-    resolution: {integrity: sha512-VNPDZlYgIYQwWp9jMTzljx+k0ZtatKlcvOhktZ/anNPI3dQ9NXk7cq2U4iJ1wd9IrytRnYhyEocFWbkdPb+MYA==}
-    engines: {bare: '>=1.10.0'}
-
   reselect@5.1.1:
     resolution: {integrity: sha512-K/BG6eIky/SBpzfHZv/dd+9JBFiS4SWV7FIujVyJRux6e45+73RaUHXLmIR1f7WOMaQ0U1km6qwklRQxpJJY0w==}
 
@@ -2209,9 +2198,6 @@ packages:
   simple-update-notifier@2.0.0:
     resolution: {integrity: sha512-a2B9Y0KlNXl9u/vsW6sTIu9vGEpfKu2wRV6l1H3XEas/0gUIzGzBoP/IouTcUQbm9JWZLH3COxyn03TYlFax6w==}
     engines: {node: '>=10'}
-
-  sodium-native@4.3.3:
-    resolution: {integrity: sha512-OnxSlN3uyY8D0EsLHpmm2HOFmKddQVvEMmsakCrXUzSd8kjjbzL413t4ZNF3n0UxSwNgwTyUvkmZHTfuCeiYSw==}
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -2523,6 +2509,34 @@ packages:
 
 snapshots:
 
+  '@agenticocean/defi-agent@0.3.1(@blend-capital/blend-sdk@3.2.2)(zod@3.25.76)':
+    dependencies:
+      '@anthropic-ai/sdk': 0.40.1
+      '@google/generative-ai': 0.21.0
+      '@stellar/stellar-sdk': 14.5.0
+      openai: 4.104.0(zod@3.25.76)
+    optionalDependencies:
+      '@blend-capital/blend-sdk': 3.2.2
+    transitivePeerDependencies:
+      - debug
+      - encoding
+      - ws
+      - zod
+
+  '@agenticocean/vault@0.1.1':
+    dependencies:
+      '@stellar/stellar-sdk': 14.5.0
+    transitivePeerDependencies:
+      - debug
+
+  '@agenticocean/x402-stellar@1.0.1(express@5.2.1)':
+    dependencies:
+      '@stellar/stellar-sdk': 14.5.0
+    optionalDependencies:
+      express: 5.2.1
+    transitivePeerDependencies:
+      - debug
+
   '@alloc/quick-lru@5.2.0': {}
 
   '@anthropic-ai/sdk@0.40.1':
@@ -2536,15 +2550,6 @@ snapshots:
       node-fetch: 2.7.0
     transitivePeerDependencies:
       - encoding
-
-  '@blend-capital/blend-sdk@2.2.0':
-    dependencies:
-      '@stellar/stellar-sdk': 13.0.0
-      buffer: 6.0.3
-      follow-redirects: 1.15.11
-    transitivePeerDependencies:
-      - bare-url
-      - debug
 
   '@blend-capital/blend-sdk@3.2.2':
     dependencies:
@@ -2968,19 +2973,6 @@ snapshots:
 
   '@stellar/js-xdr@3.1.2': {}
 
-  '@stellar/stellar-base@13.1.0':
-    dependencies:
-      '@stellar/js-xdr': 3.1.2
-      base32.js: 0.1.0
-      bignumber.js: 9.3.1
-      buffer: 6.0.3
-      sha.js: 2.4.12
-      tweetnacl: 1.0.3
-    optionalDependencies:
-      sodium-native: 4.3.3
-    transitivePeerDependencies:
-      - bare-url
-
   '@stellar/stellar-base@14.0.4':
     dependencies:
       '@noble/curves': 1.9.7
@@ -2989,20 +2981,6 @@ snapshots:
       bignumber.js: 9.3.1
       buffer: 6.0.3
       sha.js: 2.4.12
-
-  '@stellar/stellar-sdk@13.0.0':
-    dependencies:
-      '@stellar/stellar-base': 13.1.0
-      axios: 1.13.5
-      bignumber.js: 9.3.1
-      eventsource: 2.0.2
-      feaxios: 0.0.20
-      randombytes: 2.1.0
-      toml: 3.0.0
-      urijs: 1.19.11
-    transitivePeerDependencies:
-      - bare-url
-      - debug
 
   '@stellar/stellar-sdk@14.4.3':
     dependencies:
@@ -3293,20 +3271,6 @@ snapshots:
       - debug
 
   balanced-match@1.0.2: {}
-
-  bare-addon-resolve@1.10.0:
-    dependencies:
-      bare-module-resolve: 1.12.1
-      bare-semver: 1.0.2
-    optional: true
-
-  bare-module-resolve@1.12.1:
-    dependencies:
-      bare-semver: 1.0.2
-    optional: true
-
-  bare-semver@1.0.2:
-    optional: true
 
   base32.js@0.1.0: {}
 
@@ -3668,10 +3632,6 @@ snapshots:
       vary: 1.1.2
     transitivePeerDependencies:
       - supports-color
-
-  feaxios@0.0.20:
-    dependencies:
-      is-retry-allowed: 3.0.0
 
   feaxios@0.0.23:
     dependencies:
@@ -4194,13 +4154,6 @@ snapshots:
 
   redux@5.0.1: {}
 
-  require-addon@1.2.0:
-    dependencies:
-      bare-addon-resolve: 1.10.0
-    transitivePeerDependencies:
-      - bare-url
-    optional: true
-
   reselect@5.1.1: {}
 
   resolve-pkg-maps@1.0.0: {}
@@ -4372,13 +4325,6 @@ snapshots:
   simple-update-notifier@2.0.0:
     dependencies:
       semver: 7.7.4
-
-  sodium-native@4.3.3:
-    dependencies:
-      require-addon: 1.2.0
-    transitivePeerDependencies:
-      - bare-url
-    optional: true
 
   source-map-js@1.2.1: {}
 

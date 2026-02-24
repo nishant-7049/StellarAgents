@@ -16,11 +16,11 @@
     "test:mainnet:full": "tsx src/scripts/test-mainnet-full-flow.ts"
   },
   "dependencies": {
-    "@agenticocean/defi-agent": "workspace:*",
-    "@agenticocean/vault": "workspace:*",
-    "@agenticocean/x402-stellar": "workspace:*",
+    "@agenticocean/defi-agent": "^0.3.1",
+    "@agenticocean/vault": "^0.1.1",
+    "@agenticocean/x402-stellar": "^1.0.1",
     "@anthropic-ai/sdk": "^0.40.0",
-    "@blend-capital/blend-sdk": "^2.2.0",
+    "@blend-capital/blend-sdk": "^3.2.2",
     "@stellar/stellar-sdk": "^14.5.0",
     "bip39": "^3.1.0",
     "cors": "^2.8.5",
