@@ -31,13 +31,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build backend
-        run: pnpm build:backend
+        run: pnpm build
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: ./apps/backend
+          path: .
 
   deploy:
     runs-on: ubuntu-latest
