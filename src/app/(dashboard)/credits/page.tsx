@@ -47,19 +47,30 @@ export default function CreditsPage() {
   const [successTx, setSuccessTx] = useState<string | null>(null);      // txHash or "stripe"
   const [payError, setPayError] = useState<string | null>(null);
 
-  // Handle Stripe redirect back (?success=true or ?canceled=true)
+  // Handle Stripe redirect back (?success=true&session_id=... or ?canceled=true)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("success") === "true") {
-      setSuccessTx("stripe");
-      refresh();
+      const sessionId = params.get("session_id");
       window.history.replaceState({}, "", "/credits");
+      if (sessionId && publicKey) {
+        fetch(`${BACKEND_URL}/api/credits/stripe/verify-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet: publicKey, sessionId }),
+        })
+          .catch(() => {})
+          .finally(() => { setSuccessTx("stripe"); refresh(); });
+      } else {
+        setSuccessTx("stripe");
+        refresh();
+      }
     }
     if (params.get("canceled") === "true") {
       setPayError("Payment canceled.");
       window.history.replaceState({}, "", "/credits");
     }
-  }, [refresh]);
+  }, [refresh, publicKey]);
 
   // ── Usage calculations ─────────────────────────────────────────────
   const usagePct = credits && credits.monthlyQuota > 0
