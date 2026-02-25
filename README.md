@@ -1,237 +1,106 @@
-# AgenticOcean - AI Agent Wallets + x402 on Stellar
+<div align="center">
+  <img src="public/favicon.png" alt="AgenticOcean" width="80" />
+  <h1>AgenticOcean</h1>
+  <p><strong>AI Agent Wallets, Identity & Autonomous DeFi on Stellar</strong></p>
 
-**Give your AI agents a wallet, an identity, and the ability to pay — on Stellar.**
-
-AgenticOcean is a full-stack infrastructure platform that enables AI agents to autonomously manage DeFi positions, pay for services via HTTP micropayments, and maintain a verifiable on-chain identity — all on the Stellar blockchain.
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![Network: Mainnet](https://img.shields.io/badge/Stellar-Mainnet-brightgreen)](https://stellar.org)
+  [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org)
+  [![pnpm](https://img.shields.io/badge/pnpm-10-orange)](https://pnpm.io)
+</div>
 
 ---
 
-## What It Does
+## Overview
 
-| Layer | What it enables |
-|-------|----------------|
-| **Smart Vaults** | Per-user Soroban contracts holding USDC with fine-grained, per-agent daily spending limits |
-| **Agent Registry** | SRC-8004 on-chain identity — each agent gets a sequential NFT-like ID and a unique ENS-style `@handle` |
-| **x402 Protocol** | HTTP 402-based micropayments: agent sends a signed payment header, service settles on-chain atomically |
-| **AI Yield Optimizer** | LLM-powered DeFi strategy engine reading live rates from Blend Protocol + Soroswap DEX |
-| **Rebalancer** | Autonomous cron-based portfolio rebalancer that executes Blend supply/withdraw operations |
-| **Reputation + Validation** | On-chain feedback and third-party validation registries for agent accountability |
-| **ERC-8004 Explorer** | Real-time explorer with agent stats charts, decoded transaction history, and reputation |
+AgenticOcean is a full-stack infrastructure platform that gives AI agents a **wallet**, an **on-chain identity**, and the ability to **pay autonomously** on the Stellar blockchain.
+
+Built on Soroban smart contracts, it enables AI agents to manage DeFi positions, settle HTTP micropayments via the x402 protocol, and maintain a verifiable identity — all on **Stellar Mainnet**.
+
+---
+
+## Key Features
+
+- **Smart Vaults** — Per-user Soroban contracts holding USDC with fine-grained, per-agent daily spending limits
+- **Agent Registry** — On-chain identity (SRC-8004): each agent gets a sequential NFT-like ID and a unique `@handle`
+- **x402 Protocol** — HTTP 402-based micropayments: agent sends a signed payment header, service settles on-chain atomically
+- **AI Yield Optimizer** — LLM-powered strategy engine reading live rates from Blend Protocol and Soroswap DEX
+- **Autonomous Rebalancer** — Cron-based portfolio rebalancer that executes Blend supply/withdraw operations
+- **Reputation & Validation** — On-chain feedback and third-party validation registries for agent accountability
+- **Agent Explorer** — Real-time explorer with stats charts, decoded transaction history, and reputation scores
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      AgenticOcean Platform                       │
-├──────────────────────┬──────────────────────┬───────────────────┤
-│  @agenticocean/      │  @agenticocean/      │  @agenticocean/   │
-│  defi-agent v0.3.0   │  vault v0.1.0        │  x402-stellar     │
-│                      │                      │    v1.0.0         │
-│  • AI yield engine   │  • VaultFactory      │  • Header builder │
-│  • Blend SDK client  │  • UserVault client  │  • Facilitator    │
-│  • Soroswap client   │  • AgentRegistry     │  • Express middle │
-│  • Multi-LLM support │  • ReputationReg.    │  • Payment types  │
-│  • Rebalancer        │  • ValidationReg.    │                   │
-└──────────────────────┴──────────────────────┴───────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                       AgenticOcean Platform                       │
+├──────────────────────┬───────────────────────┬───────────────────┤
+│  @agenticocean/      │  @agenticocean/       │  @agenticocean/   │
+│  defi-agent          │  vault                │  x402-stellar     │
+│                      │                       │                   │
+│  • AI yield engine   │  • VaultFactory       │  • Header builder │
+│  • Blend SDK client  │  • UserVault client   │  • Facilitator    │
+│  • Soroswap client   │  • AgentRegistry      │  • Express middle │
+│  • Multi-LLM support │  • ReputationReg.     │  • Payment types  │
+│  • Rebalancer        │  • ValidationReg.     │                   │
+└──────────────────────┴───────────────────────┴───────────────────┘
                               ↕ Soroban RPC / Horizon
-┌─────────────────────────────────────────────────────────────────┐
-│                    Soroban Smart Contracts (Rust)                │
-│  VaultFactory · UserVault · AgentRegistry                        │
-│  ReputationRegistry · ValidationRegistry                         │
-└─────────────────────────────────────────────────────────────────┘
-                              Stellar Mainnet
+┌──────────────────────────────────────────────────────────────────┐
+│                   Soroban Smart Contracts (Rust)                  │
+│   VaultFactory · UserVault · AgentRegistry                        │
+│   ReputationRegistry · ValidationRegistry                         │
+└──────────────────────────────────────────────────────────────────┘
+                           Stellar Mainnet
 ```
 
 ---
 
-## Monorepo Structure
+## Smart Contracts — Mainnet
 
-```
-StellarRiseInHackathon/
-├── contracts/                  ← 5 Soroban smart contracts (Rust)
-│   ├── vault-factory/          ← Deploys per-user UserVault instances
-│   ├── user-vault/             ← Smart account: agent_pay(), deposit(), withdraw()
-│   ├── agent-registry/         ← SRC-8004 identity + unique @handle system
-│   ├── reputation-registry/    ← On-chain feedback and running averages
-│   └── validation-registry/    ← Third-party validation requests
-│
-├── packages/                   ← Published TypeScript SDKs
-│   ├── agent-ai/               ← @agenticocean/defi-agent v0.3.0
-│   ├── vault/                  ← @agenticocean/vault v0.1.0
-│   ├── x402-stellar/           ← @agenticocean/x402-stellar v1.0.0
-│   └── shared/                 ← @agentnet/shared (internal types)
-│
-├── apps/
-│   ├── backend/                ← Express 5 + TypeScript API (port 3001)
-│   └── web/                    ← Next.js 15 frontend (port 3000)
-│
-├── gitbook/                    ← Documentation site (docsify → Vercel)
-├── docs/                       ← x402 spec, testing guide
-└── tests/                      ← Unit, integration, e2e test suites
-```
+All contracts are deployed and verified on **Stellar Mainnet**:
+
+| Contract | Address |
+|---|---|
+| VaultFactory | `CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM` |
+| AgentRegistry | `CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU` |
+| ReputationRegistry | `CB6B4EBQ3JXLGUWF5WGMQV63PL3K2WQP5LMEL2BZDIDTEPCIC5BDH6ZB` |
+| ValidationRegistry | `CDX65CKW2NZQZK5U7DQRK6KVOBI4PTLQVGHYAEQ7OPPY2KRCDUAS2AL5` |
+| USDC SAC | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
 
 ---
 
-## Smart Contracts
+## Published SDKs
 
-Five Soroban contracts deployed to **Stellar Mainnet** (soroban-sdk `=25.0.2`):
+| Package | Version | Description |
+|---|---|---|
+| [`@agenticocean/vault`](https://www.npmjs.com/package/@agenticocean/vault) | `0.1.1` | TypeScript client for all five Soroban contracts |
+| [`@agenticocean/x402-stellar`](https://www.npmjs.com/package/@agenticocean/x402-stellar) | `1.0.1` | x402 payment protocol — header builder, facilitator, Express middleware |
+| [`@agenticocean/defi-agent`](https://www.npmjs.com/package/@agenticocean/defi-agent) | `0.3.1` | AI yield optimizer, Blend client, Soroswap client, autonomous rebalancer |
 
-| Contract | Address | Purpose |
-|----------|---------|---------|
-| VaultFactory | `CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM` | Deploys per-user vaults |
-| UserVault WASM | hash `27b91b68f5c58464a69efd4ffb4e0a0761ba22da65a774e41fba3fdc7bdaf361` | Smart USDC account with `agent_pay()` |
-| AgentRegistry | `CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU` | SRC-8004 agent identity + handles |
-| ReputationRegistry | `CB6B4EBQ3JXLGUWF5WGMQV63PL3K2WQP5LMEL2BZDIDTEPCIC5BDH6ZB` | On-chain feedback system |
-| ValidationRegistry | `CDX65CKW2NZQZK5U7DQRK6KVOBI4PTLQVGHYAEQ7OPPY2KRCDUAS2AL5` | Third-party validation |
+### Quick install
 
-### Key contract feature — Agent handles
-
-The `AgentRegistry` now implements an ENS-like unique handle system. Each agent claims a globally unique `@handle` at registration time (first-come, first-served):
-
+```bash
+npm install @agenticocean/vault @agenticocean/x402-stellar @agenticocean/defi-agent
 ```
-register(owner, name, "stellar-yield-bot", agentUri, vault, signer)
-           ↑              ↑ handle — 3-32 chars, a-z/0-9/hyphen, unique
-```
-
-Handles are resolvable on-chain: `get_agent_by_handle("stellar-yield-bot")` → `AgentInfo`.
-
----
-
-## SDK Packages
-
-### `@agenticocean/defi-agent` v0.3.0
-
-AI-powered yield optimizer supporting **multiple LLM providers** — provider is auto-detected from the API key prefix:
-
-| Key prefix | Provider |
-|-----------|---------|
-| `sk-ant-` | Anthropic Claude |
-| `AIza` | Google Gemini |
-| `gsk_` | Groq |
-| `xai-` | xAI Grok |
-
-```typescript
-import { YieldOptimizer } from "@agenticocean/defi-agent";
-
-const optimizer = new YieldOptimizer({
-  stellarRpcUrl: "https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY",
-  networkPassphrase: "Public Global Stellar Network ; September 2015",
-  aiApiKey: process.env.AI_API_KEY,   // Claude, Gemini, Groq, or xAI key
-  blendPoolId: "CCB...",
-});
-
-const strategy = await optimizer.optimize("Best USDC yield with moderate risk", "moderate", 1000);
-console.log(`${strategy.total_estimated_apy}% APY`);
-```
-
-### `@agenticocean/vault` v0.1.0
-
-TypeScript client for all five Soroban contracts:
-
-```typescript
-import { AgentRegistry, VaultFactory, UserVault } from "@agenticocean/vault";
-
-// Resolve an agent by handle
-const registry = new AgentRegistry(REGISTRY_ADDRESS, stellarConfig);
-const agent = await registry.getAgentByHandle("stellar-yield-bot");
-
-// Check handle availability
-const available = await registry.isHandleAvailable("my-agent");
-```
-
-### `@agenticocean/x402-stellar` v1.0.0
-
-x402 payment protocol for Stellar — build payment headers agent-side, settle on-chain server-side:
-
-```typescript
-// Agent side — build the X-PAYMENT header
-import { buildX402Header } from "@agenticocean/x402-stellar";
-const header = await buildX402Header({ vaultContract, agentSignerSecret, payTo, amount });
-
-// Server side — gate a route with the middleware
-import { createX402Middleware } from "@agenticocean/x402-stellar";
-app.use("/api/yield/query", createX402Middleware({ price: "100000", asset: "USDC" }));
-```
-
----
-
-## Backend API
-
-Express 5 server with 17 route modules:
-
-| Route | Description |
-|-------|-------------|
-| `GET /health` | Server status + contract addresses |
-| `GET /api/agents` | List registered agents from on-chain |
-| `GET /api/agents/:id` | Single agent detail |
-| `GET /api/vaults/:owner` | Vault balance + agent policies |
-| `GET /api/yield/query` ⚡ | **x402-gated** AI yield strategy (0.01 USDC/query) |
-| `POST /api/yield/query` ⚡ | Same via POST body |
-| `GET /api/explorer/agents` | Explorer agent list with parsed metadata |
-| `GET /api/explorer/agents/:id` | Full agent profile |
-| `GET /api/explorer/agents/:id/stats` | Daily query/USDC stats (last 30 days) |
-| `GET /api/explorer/activity` | Decoded global on-chain activity feed |
-| `GET /api/portfolio` | Portfolio positions and APY data |
-| `GET /api/reputation/:id/summary` | Agent reputation summary |
-| `GET /api/reputation/:id/feedback` | Paginated feedback entries |
-| `GET /api/validation/:id` | Validation records for an agent |
-| `GET /api/stats` | Platform-wide statistics |
-| `GET /api/events` | Soroban event stream |
-| `POST /api/x402/settle` | Manually settle an x402 payment |
-| `POST /api/tx/build` | Build + simulate a Soroban transaction |
-| `GET /api/credits` | Credit balance for a wallet |
-| `POST /api/rebalance/trigger` | Manual rebalance trigger |
-
----
-
-## Frontend
-
-Next.js 15 (App Router) with 10 dashboard pages:
-
-| Page | Route | What it does |
-|------|-------|-------------|
-| Landing | `/` | Marketing page — architecture, pricing, CTA |
-| Dashboard | `/app` | Overview — vault stats, agent status, APY |
-| Vault | `/vault` | Create vault, deposit/withdraw USDC, manage agents |
-| Agents | `/agents` | Agent marketplace — browse by capability |
-| Chat | `/chat` | AI yield query — pays via x402, shows strategy cards |
-| Portfolio | `/portfolio` | Deployed positions, earnings, rebalance history |
-| Register | `/register` | Register agent with unique `@handle` |
-| History | `/history` | Transaction history with Stellar Expert links |
-| Explorer | `/explorer` | ERC-8004 explorer — all agents + global activity |
-| Explorer detail | `/explorer/:id` | Agent profile: stats charts, action breakdown, tx history |
-| Credits | `/credits` | Credit balance and top-up |
-
-### Explorer feature highlights
-
-The `/explorer/:id` agent profile page includes:
-- **4 stats cards** — Total Queries, USDC Paid, Days Active, Avg/Day
-- **Bar chart** — Daily query volume over last 30 days (recharts)
-- **Area chart** — USDC spent via x402 over last 30 days (recharts)
-- **Action breakdown** — Animated progress bars by payment memo type
-- **Rich transaction history** — Decoded human-readable descriptions, colored by type
-- **Reputation panel** — Star rating, score bar, individual review cards
 
 ---
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Contracts | Soroban (Rust), soroban-sdk `=25.0.2` |
-| Contract tests | `cargo test --workspace` (21+ tests) |
+|---|---|
+| Smart Contracts | Soroban (Rust), `soroban-sdk = 25.0.2` |
 | Backend | Express 5, TypeScript ESM, Winston, Zod |
 | Database | MongoDB / Mongoose |
-| DeFi | `@blend-capital/blend-sdk`, `@soroswap/sdk` |
+| DeFi | `@blend-capital/blend-sdk`, Soroswap API |
+| AI | Claude / Gemini / Groq / xAI (auto-detected from key prefix) |
 | Billing | Stripe |
-| Frontend | Next.js 15, Tailwind CSS v4, Freighter API |
+| Frontend | Next.js 15 (App Router), Tailwind CSS v4, Freighter API |
 | Charts | Recharts |
-| AI | Claude / Gemini / Groq / xAI (auto-detected) |
 | Network | Stellar Mainnet |
-| Docs | Docsify → Vercel ([agenticoceandocs.vercel.app](https://agenticoceandocs.vercel.app)) |
-| Package manager | pnpm 10 + Turborepo |
+| Package Manager | pnpm 10 |
 
 ---
 
@@ -241,8 +110,7 @@ The `/explorer/:id` agent profile page includes:
 
 - Node.js ≥ 20
 - pnpm 10
-- Rust + `wasm32-unknown-unknown` target (for contract builds)
-- Freighter browser extension (for frontend testing)
+- [Freighter](https://freighter.app) browser extension (for wallet connection)
 
 ### Install
 
@@ -250,66 +118,160 @@ The `/explorer/:id` agent profile page includes:
 pnpm install
 ```
 
-### Run
-
-```bash
-pnpm dev:backend   # Express API on :3001
-pnpm dev:web       # Next.js on :3000
-```
-
-### Build contracts
-
-```bash
-cd contracts && cargo build --release --target wasm32-unknown-unknown
-```
-
-### Test contracts
-
-```bash
-cd contracts && cargo test --workspace
-```
-
-### Build SDKs
-
-```bash
-pnpm build:sdk
-```
-
 ### Environment
 
-Copy `.env.example` in `apps/backend/` and fill in:
+Create a `.env` file in the backend root:
 
-```bash
+```env
+# Stellar Network
 STELLAR_RPC_URL=https://mainnet.stellar.validationcloud.io/v1/YOUR_API_KEY
 STELLAR_HORIZON_URL=https://horizon.stellar.org
 STELLAR_NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
+
+# Contract Addresses (mainnet)
 VAULT_FACTORY_ADDRESS=CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM
 AGENT_REGISTRY_ADDRESS=CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU
 REPUTATION_REGISTRY_ADDRESS=CB6B4EBQ3JXLGUWF5WGMQV63PL3K2WQP5LMEL2BZDIDTEPCIC5BDH6ZB
 VALIDATION_REGISTRY_ADDRESS=CDX65CKW2NZQZK5U7DQRK6KVOBI4PTLQVGHYAEQ7OPPY2KRCDUAS2AL5
 USDC_SAC_ADDRESS=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
+
+# Keys
+ADMIN_SECRET_KEY=S...
 FACILITATOR_SECRET_KEY=S...
-AI_API_KEY=...   # sk-ant-, AIza, gsk_, or xai- prefix — provider auto-detected
+AGENT_SIGNER_SECRET_KEY=S...
+
+# AI — provider auto-detected from key prefix
+# sk-ant-* → Anthropic Claude | AIza* → Google Gemini | gsk_* → Groq | xai-* → xAI
+AI_API_KEY=...
+
+# Database
+MONGODB_URI=mongodb://localhost:27017/agenticocean
+
+# Stripe (optional)
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Frontend URL (for Stripe redirects)
+FRONTEND_URL=http://localhost:3000
+```
+
+For the frontend, create a `.env.local` file:
+
+```env
+NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
+NEXT_PUBLIC_STELLAR_NETWORK=mainnet
+NEXT_PUBLIC_VAULT_FACTORY_ADDRESS=CAXYXFBO26RSBU2HRNPDWOQ7M2WITX67E7PI543WHDDMM5F7U4WQOUXM
+NEXT_PUBLIC_AGENT_REGISTRY_ADDRESS=CDKHR3UUKCKXJ6CRKWKUZI3SKWAAKJMU6TGHRBM2VJJBCKEO6ETH55AU
+NEXT_PUBLIC_REPUTATION_REGISTRY_ADDRESS=CB6B4EBQ3JXLGUWF5WGMQV63PL3K2WQP5LMEL2BZDIDTEPCIC5BDH6ZB
+NEXT_PUBLIC_VALIDATION_REGISTRY_ADDRESS=CDX65CKW2NZQZK5U7DQRK6KVOBI4PTLQVGHYAEQ7OPPY2KRCDUAS2AL5
+NEXT_PUBLIC_USDC_SAC_ADDRESS=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
+```
+
+### Run
+
+```bash
+# Backend (port 3001)
+pnpm dev
+
+# Frontend (port 3000) — from frontend directory
+pnpm dev
+```
+
+### Build
+
+```bash
+pnpm build
+```
+
+---
+
+## Frontend Pages
+
+| Page | Route | Description |
+|---|---|---|
+| Landing | `/` | Marketing — architecture, features, pricing, CTA |
+| Dashboard | `/app` | Overview — vault stats, agent status, live APY |
+| Vault | `/vault` | Create vault, deposit/withdraw USDC, manage agent access |
+| Agents | `/agents` | Agent marketplace — browse by capability and reputation |
+| Chat | `/chat` | AI yield query — pays via x402, shows live strategy cards |
+| Portfolio | `/portfolio` | Deployed positions, earnings, rebalance history |
+| Register | `/register` | Register an agent with a unique `@handle` |
+| History | `/history` | Transaction history with Stellar Expert links |
+| Explorer | `/explorer` | On-chain explorer — all agents and global activity |
+| Explorer Detail | `/explorer/:id` | Agent profile: stats charts, tx history, reputation |
+| Credits | `/credits` | Credit balance — top up via USDC or Stripe |
+
+---
+
+## API Reference
+
+The backend exposes 20+ REST endpoints on port `3001`:
+
+| Endpoint | Description |
+|---|---|
+| `GET /health` | Server status and contract addresses |
+| `GET /api/agents` | List all registered agents |
+| `GET /api/agents/:id` | Single agent by token ID |
+| `GET /api/vaults/:owner` | Vault balance and agent policies |
+| `GET /api/yield/query` ⚡ | **x402-gated** AI yield strategy (0.01 USDC/query) |
+| `GET /api/explorer/agents` | Explorer listing with parsed metadata |
+| `GET /api/explorer/agents/:id/stats` | Daily query/USDC stats (last 30 days) |
+| `GET /api/explorer/activity` | Decoded global on-chain activity feed |
+| `GET /api/portfolio` | Portfolio positions and APY data |
+| `GET /api/reputation/:id/summary` | Agent reputation summary |
+| `GET /api/stats` | Platform-wide statistics |
+| `POST /api/rebalance/trigger` | Trigger manual portfolio rebalance |
+| `GET /api/credits` | Credit balance for a wallet |
+| `POST /api/credits/stripe/checkout` | Create Stripe checkout session |
+| `POST /api/credits/stripe/verify-session` | Award credits after Stripe payment |
+| `POST /api/x402/settle` | Settle an x402 micropayment |
+| `POST /api/tx/build` | Build and simulate a Soroban transaction |
+
+---
+
+## How x402 Works
+
+```
+AI Agent                    AgenticOcean API              Stellar Network
+   │                               │                             │
+   │  GET /api/yield/query         │                             │
+   │──────────────────────────────▶│                             │
+   │                               │                             │
+   │       402 Payment Required    │                             │
+   │       X-Payment-Required: ... │                             │
+   │◀──────────────────────────────│                             │
+   │                               │                             │
+   │  Build X-PAYMENT header       │                             │
+   │  (sign with agent key)        │                             │
+   │                               │                             │
+   │  GET /api/yield/query         │                             │
+   │  X-PAYMENT: <signed header>   │                             │
+   │──────────────────────────────▶│                             │
+   │                               │  Submit agent_pay() tx      │
+   │                               │────────────────────────────▶│
+   │                               │                             │
+   │                               │  Confirmed ✓                │
+   │                               │◀────────────────────────────│
+   │                               │                             │
+   │       200 OK + strategy       │                             │
+   │◀──────────────────────────────│                             │
 ```
 
 ---
 
 ## Documentation
 
-Full SDK and dashboard documentation: **[agenticoceandocs.vercel.app](https://agenticoceandocs.vercel.app)**
+Full SDK and dashboard docs: **[agenticoceandocs.vercel.app](https://agenticoceandocs.vercel.app)**
 
-Local: `gitbook/` folder (docsify — open `index.html` or run any static server).
-
-| Doc | Location |
-|-----|----------|
-| SDK reference | [agenticoceandocs.vercel.app/sdk/defi-agent/overview](https://agenticoceandocs.vercel.app/#/sdk/defi-agent/overview) |
-| Dashboard guide | [agenticoceandocs.vercel.app/dashboard/overview](https://agenticoceandocs.vercel.app/#/dashboard/overview) |
-| x402 spec | `docs/x402-stellar-spec.md` |
-| Deployment record | `DEPLOYMENT.md` |
-| Test flow | `TEST_FLOW.md` |
+| Section | Link |
+|---|---|
+| SDK — defi-agent | [/sdk/defi-agent/overview](https://agenticoceandocs.vercel.app/#/sdk/defi-agent/overview) |
+| SDK — vault | [/sdk/vault/overview](https://agenticoceandocs.vercel.app/#/sdk/vault/overview) |
+| SDK — x402-stellar | [/sdk/x402-stellar/overview](https://agenticoceandocs.vercel.app/#/sdk/x402-stellar/overview) |
+| Dashboard guide | [/dashboard/overview](https://agenticoceandocs.vercel.app/#/dashboard/overview) |
 
 ---
 
-## Built for
+## Built For
 
-SDF Issue #633 — Stellar Hackathon, February 2026
+**SDF Issue #633 — Stellar Rise Hackathon, February 2026**
