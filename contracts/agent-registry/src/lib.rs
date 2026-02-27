@@ -7,9 +7,14 @@ pub mod types;
 use types::{AgentIdentity, DataKey, RegistryError};
 
 const NAME_MAX_LEN: u32 = 64;
+const SYMBOL_MAX_LEN: u32 = 16;
 const URI_MAX_LEN: u32 = 2048;
+const CONTRACT_URI_MAX_LEN: u32 = 2048;
 const METADATA_KEY_MAX_LEN: u32 = 64;
 const METADATA_VALUE_MAX_LEN: u32 = 2048;
+const DEFAULT_COLLECTION_NAME: &str = "Agent Identity";
+const DEFAULT_COLLECTION_SYMBOL: &str = "AGENT";
+const DEFAULT_CONTRACT_URI: &str = "ipfs://agent-registry";
 
 #[contract]
 pub struct AgentRegistry;
@@ -54,6 +59,19 @@ impl AgentRegistry {
         }
     }
 
+    fn require_admin(env: &Env, caller: &Address) -> Result<(), RegistryError> {
+        Self::require_initialized(env)?;
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(RegistryError::NotInitialized)?;
+        if *caller != admin {
+            return Err(RegistryError::NotAdmin);
+        }
+        Ok(())
+    }
+
     fn validate_max_len(
         value: &String,
         max_len: u32,
@@ -69,8 +87,23 @@ impl AgentRegistry {
         Self::validate_max_len(name, NAME_MAX_LEN, RegistryError::NameTooLong)
     }
 
+    fn validate_symbol(symbol: &String) -> Result<(), RegistryError> {
+        if symbol.to_bytes().is_empty() {
+            return Err(RegistryError::SymbolTooLong);
+        }
+        Self::validate_max_len(symbol, SYMBOL_MAX_LEN, RegistryError::SymbolTooLong)
+    }
+
     fn validate_agent_uri(agent_uri: &String) -> Result<(), RegistryError> {
         Self::validate_max_len(agent_uri, URI_MAX_LEN, RegistryError::AgentUriTooLong)
+    }
+
+    fn validate_contract_uri(contract_uri: &String) -> Result<(), RegistryError> {
+        Self::validate_max_len(
+            contract_uri,
+            CONTRACT_URI_MAX_LEN,
+            RegistryError::ContractUriTooLong,
+        )
     }
 
     fn validate_metadata(key: &String, value: &String) -> Result<(), RegistryError> {
@@ -159,6 +192,98 @@ impl AgentRegistry {
         env.storage()
             .persistent()
             .remove(&DataKey::TokenApproval(token_id));
+    }
+
+    fn transfer_core(
+        env: &Env,
+        from: &Address,
+        to: &Address,
+        token_id: u64,
+    ) -> Result<(), RegistryError> {
+        if *to == env.current_contract_address() {
+            return Err(RegistryError::InvalidRecipient);
+        }
+
+        let mut token = Self::get_token(env, token_id)?;
+        let token_owner = token.owner.clone();
+        if token_owner != *from {
+            return Err(RegistryError::NotTokenOwner);
+        }
+
+        if *from != *to {
+            Self::remove_owner_token(env, from, token_id);
+            Self::add_owner_token(env, to, token_id);
+
+            let from_balance_key = DataKey::Balance(from.clone());
+            let from_balance: u32 = env
+                .storage()
+                .persistent()
+                .get(&from_balance_key)
+                .unwrap_or(0);
+            env.storage().persistent().set(
+                &from_balance_key,
+                &from_balance.saturating_sub(1),
+            );
+            Self::bump_persistent_ttl(env, &from_balance_key);
+
+            let to_balance_key = DataKey::Balance(to.clone());
+            let to_balance: u32 = env.storage().persistent().get(&to_balance_key).unwrap_or(0);
+            env.storage()
+                .persistent()
+                .set(&to_balance_key, &to_balance.saturating_add(1));
+            Self::bump_persistent_ttl(env, &to_balance_key);
+        }
+
+        token.owner = to.clone();
+        token.updated_at = env.ledger().timestamp();
+
+        let token_key = DataKey::Token(token_id);
+        let owner_key = DataKey::TokenOwner(token_id);
+        env.storage().persistent().set(&token_key, &token);
+        env.storage().persistent().set(&owner_key, to);
+        Self::bump_persistent_ttl(env, &token_key);
+        Self::bump_persistent_ttl(env, &owner_key);
+        Self::clear_token_approval(env, token_id);
+
+        env.events()
+            .publish((Symbol::new(env, "transfer"), from, to, token_id), ());
+        Ok(())
+    }
+
+    fn burn_core(env: &Env, token_id: u64) -> Result<(), RegistryError> {
+        let token = Self::get_token(env, token_id)?;
+        let owner = token.owner.clone();
+
+        Self::remove_owner_token(env, &owner, token_id);
+        if token.is_active {
+            Self::remove_active_token(env, token_id);
+        }
+
+        let balance_key = DataKey::Balance(owner.clone());
+        let balance: u32 = env.storage().persistent().get(&balance_key).unwrap_or(0);
+        env.storage()
+            .persistent()
+            .set(&balance_key, &balance.saturating_sub(1));
+        Self::bump_persistent_ttl(env, &balance_key);
+
+        let total: u64 = env.storage().instance().get(&DataKey::TotalSupply).unwrap_or(0);
+        env.storage()
+            .instance()
+            .set(&DataKey::TotalSupply, &total.saturating_sub(1));
+        Self::bump_instance_ttl(env);
+
+        env.storage().persistent().remove(&DataKey::Token(token_id));
+        env.storage().persistent().remove(&DataKey::TokenOwner(token_id));
+        env.storage()
+            .persistent()
+            .remove(&DataKey::HandleToken(token.handle));
+        env.storage()
+            .persistent()
+            .remove(&DataKey::TokenApproval(token_id));
+
+        env.events()
+            .publish((Symbol::new(env, "burn"), owner, token_id), ());
+        Ok(())
     }
 
     fn add_owner_token(env: &Env, owner: &Address, token_id: u64) {
@@ -314,12 +439,43 @@ impl AgentRegistry {
     }
 
     pub fn initialize(env: Env, admin: Address) -> Result<(), RegistryError> {
+        let collection_name = String::from_str(&env, DEFAULT_COLLECTION_NAME);
+        let collection_symbol = String::from_str(&env, DEFAULT_COLLECTION_SYMBOL);
+        let contract_uri = String::from_str(&env, DEFAULT_CONTRACT_URI);
+        Self::initialize_with_metadata(
+            env,
+            admin,
+            collection_name,
+            collection_symbol,
+            contract_uri,
+        )
+    }
+
+    fn initialize_with_metadata(
+        env: Env,
+        admin: Address,
+        collection_name: String,
+        collection_symbol: String,
+        contract_uri: String,
+    ) -> Result<(), RegistryError> {
         admin.require_auth();
         if env.storage().instance().has(&DataKey::Admin) {
             return Err(RegistryError::AlreadyInitialized);
         }
+        Self::validate_name(&collection_name)?;
+        Self::validate_symbol(&collection_symbol)?;
+        Self::validate_contract_uri(&contract_uri)?;
 
         env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage()
+            .instance()
+            .set(&DataKey::CollectionName, &collection_name);
+        env.storage()
+            .instance()
+            .set(&DataKey::CollectionSymbol, &collection_symbol);
+        env.storage()
+            .instance()
+            .set(&DataKey::ContractUri, &contract_uri);
         env.storage().instance().set(&DataKey::NextTokenId, &1u64);
         env.storage().instance().set(&DataKey::TotalSupply, &0u64);
         env.storage().instance().set(&DataKey::ActiveCount, &0u64);
@@ -455,6 +611,65 @@ impl AgentRegistry {
         Ok(token.agent_uri)
     }
 
+    pub fn name(env: Env) -> String {
+        Self::require_initialized_or_panic(&env);
+        let value = env
+            .storage()
+            .instance()
+            .get(&DataKey::CollectionName)
+            .unwrap_or(String::from_str(&env, DEFAULT_COLLECTION_NAME));
+        Self::bump_instance_ttl(&env);
+        value
+    }
+
+    pub fn symbol(env: Env) -> String {
+        Self::require_initialized_or_panic(&env);
+        let value = env
+            .storage()
+            .instance()
+            .get(&DataKey::CollectionSymbol)
+            .unwrap_or(String::from_str(&env, DEFAULT_COLLECTION_SYMBOL));
+        Self::bump_instance_ttl(&env);
+        value
+    }
+
+    pub fn contract_uri(env: Env) -> String {
+        Self::require_initialized_or_panic(&env);
+        let value = env
+            .storage()
+            .instance()
+            .get(&DataKey::ContractUri)
+            .unwrap_or(String::from_str(&env, DEFAULT_CONTRACT_URI));
+        Self::bump_instance_ttl(&env);
+        value
+    }
+
+    pub fn set_collection_metadata(
+        env: Env,
+        admin: Address,
+        collection_name: String,
+        collection_symbol: String,
+        contract_uri: String,
+    ) -> Result<(), RegistryError> {
+        admin.require_auth();
+        Self::require_admin(&env, &admin)?;
+        Self::validate_name(&collection_name)?;
+        Self::validate_symbol(&collection_symbol)?;
+        Self::validate_contract_uri(&contract_uri)?;
+
+        env.storage()
+            .instance()
+            .set(&DataKey::CollectionName, &collection_name);
+        env.storage()
+            .instance()
+            .set(&DataKey::CollectionSymbol, &collection_symbol);
+        env.storage()
+            .instance()
+            .set(&DataKey::ContractUri, &contract_uri);
+        Self::bump_instance_ttl(&env);
+        Ok(())
+    }
+
     pub fn approve(
         env: Env,
         owner: Address,
@@ -528,6 +743,17 @@ impl AgentRegistry {
         Self::is_operator_approved(&env, &owner, &operator)
     }
 
+    pub fn transfer(
+        env: Env,
+        from: Address,
+        to: Address,
+        token_id: u64,
+    ) -> Result<(), RegistryError> {
+        Self::require_initialized(&env)?;
+        from.require_auth();
+        Self::transfer_core(&env, &from, &to, token_id)
+    }
+
     pub fn transfer_from(
         env: Env,
         caller: Address,
@@ -538,11 +764,7 @@ impl AgentRegistry {
         Self::require_initialized(&env)?;
         caller.require_auth();
 
-        if to == env.current_contract_address() {
-            return Err(RegistryError::InvalidRecipient);
-        }
-
-        let mut token = Self::get_token(&env, token_id)?;
+        let token = Self::get_token(&env, token_id)?;
         let token_owner = token.owner.clone();
 
         if token_owner != from {
@@ -552,45 +774,18 @@ impl AgentRegistry {
             return Err(RegistryError::NotApprovedOrOwner);
         }
 
-        if from != to {
-            Self::remove_owner_token(&env, &from, token_id);
-            Self::add_owner_token(&env, &to, token_id);
+        Self::transfer_core(&env, &from, &to, token_id)
+    }
 
-            let from_balance_key = DataKey::Balance(from.clone());
-            let from_balance: u32 = env
-                .storage()
-                .persistent()
-                .get(&from_balance_key)
-                .unwrap_or(0);
-            env.storage().persistent().set(
-                &from_balance_key,
-                &from_balance.saturating_sub(1),
-            );
-            Self::bump_persistent_ttl(&env, &from_balance_key);
+    pub fn burn(env: Env, caller: Address, token_id: u64) -> Result<(), RegistryError> {
+        Self::require_initialized(&env)?;
+        caller.require_auth();
 
-            let to_balance_key = DataKey::Balance(to.clone());
-            let to_balance: u32 = env.storage().persistent().get(&to_balance_key).unwrap_or(0);
-            env.storage()
-                .persistent()
-                .set(&to_balance_key, &to_balance.saturating_add(1));
-            Self::bump_persistent_ttl(&env, &to_balance_key);
+        let token = Self::get_token(&env, token_id)?;
+        if !Self::is_approved_or_owner(&env, &caller, token_id, &token.owner) {
+            return Err(RegistryError::NotApprovedOrOwner);
         }
-
-        token.owner = to.clone();
-        token.updated_at = env.ledger().timestamp();
-
-        let token_key = DataKey::Token(token_id);
-        let owner_key = DataKey::TokenOwner(token_id);
-        env.storage().persistent().set(&token_key, &token);
-        env.storage().persistent().set(&owner_key, &to.clone());
-        Self::bump_persistent_ttl(&env, &token_key);
-        Self::bump_persistent_ttl(&env, &owner_key);
-
-        Self::clear_token_approval(&env, token_id);
-
-        env.events()
-            .publish((Symbol::new(&env, "transfer"), from, to, token_id), ());
-        Ok(())
+        Self::burn_core(&env, token_id)
     }
 
     pub fn set_agent_uri(
@@ -691,6 +886,12 @@ impl AgentRegistry {
 
     pub fn get_metadata(env: Env, token_id: u64, key: String) -> Option<String> {
         Self::require_initialized_or_panic(&env);
+        let token_key = DataKey::Token(token_id);
+        if !env.storage().persistent().has(&token_key) {
+            return None;
+        }
+        Self::bump_persistent_ttl(&env, &token_key);
+
         let metadata_key = DataKey::Metadata(token_id, key);
         let value = env.storage().persistent().get(&metadata_key);
         if value.is_some() {
@@ -753,7 +954,7 @@ impl AgentRegistry {
 
     /// Lists active agents using a bounded active index.
     /// `start_token_id` behaves as a 1-based cursor into active agents.
-    pub fn list_agents(env: Env, start_token_id: u64, limit: u64) -> Vec<AgentIdentity> {
+    pub fn list_agents(env: Env, start_token_id: u64, limit: u32) -> Vec<AgentIdentity> {
         Self::require_initialized_or_panic(&env);
         if limit == 0 {
             return Vec::new(&env);
@@ -777,7 +978,8 @@ impl AgentRegistry {
             return Vec::new(&env);
         }
 
-        let end = core::cmp::min(start_index.saturating_add(limit), active_count);
+        let limit_u64 = limit as u64;
+        let end = core::cmp::min(start_index.saturating_add(limit_u64), active_count);
         let mut out = Vec::new(&env);
         let mut i = start_index;
         while i < end {
@@ -797,7 +999,7 @@ impl AgentRegistry {
         out
     }
 
-    pub fn list_tokens_by_owner(env: Env, owner: Address, offset: u64, limit: u64) -> Vec<u64> {
+    pub fn list_tokens_by_owner(env: Env, owner: Address, offset: u32, limit: u32) -> Vec<u64> {
         Self::require_initialized_or_panic(&env);
         if limit == 0 {
             return Vec::new(&env);
@@ -805,17 +1007,16 @@ impl AgentRegistry {
 
         let count_key = DataKey::OwnerTokenCount(owner.clone());
         let count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
-        let count_u64 = count as u64;
-        if count == 0 || offset >= count_u64 {
+        if count == 0 || offset >= count {
             return Vec::new(&env);
         }
         Self::bump_persistent_ttl(&env, &count_key);
 
-        let end = core::cmp::min(offset.saturating_add(limit), count_u64);
+        let end = core::cmp::min(offset.saturating_add(limit), count);
         let mut out = Vec::new(&env);
         let mut i = offset;
         while i < end {
-            let key = DataKey::OwnerToken(owner.clone(), i as u32);
+            let key = DataKey::OwnerToken(owner.clone(), i);
             if let Some(token_id) = env.storage().persistent().get::<DataKey, u64>(&key) {
                 Self::bump_persistent_ttl(&env, &key);
                 out.push_back(token_id);
@@ -833,6 +1034,16 @@ impl AgentRegistry {
             Self::bump_persistent_ttl(&env, &key);
         }
         available
+    }
+
+    pub fn exists(env: Env, token_id: u64) -> bool {
+        Self::require_initialized_or_panic(&env);
+        let key = DataKey::Token(token_id);
+        let exists = env.storage().persistent().has(&key);
+        if exists {
+            Self::bump_persistent_ttl(&env, &key);
+        }
+        exists
     }
 
     pub fn total_supply(env: Env) -> u64 {

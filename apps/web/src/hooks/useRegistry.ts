@@ -72,7 +72,7 @@ export function useRegistry() {
   async function loadAgents() {
     setLoading(true);
     try {
-      // Try list_agents — panics on this deployed contract, so catch separately
+      // Prefer on-chain pagination; fallback to per-token reads if unavailable.
       let raw: any[] | null = null;
       try {
         raw = await readContract<any[]>(
@@ -84,7 +84,7 @@ export function useRegistry() {
           ],
         );
       } catch {
-        // list_agents panics on chain — fall through to per-ID fallback
+        // fall through to per-ID fallback
       }
 
       if (raw !== null) {

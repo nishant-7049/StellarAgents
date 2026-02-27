@@ -103,7 +103,7 @@ fn test_multiple_identities_per_owner() {
     assert_eq!(id2, 2);
     assert_eq!(reg.balance_of(&owner), 2);
 
-    let ids = reg.list_tokens_by_owner(&owner, &0u64, &10u64);
+    let ids = reg.list_tokens_by_owner(&owner, &0u32, &10u32);
     assert_eq!(ids.len(), 2);
     assert_eq!(ids.get(0), Some(1));
     assert_eq!(ids.get(1), Some(2));
@@ -125,9 +125,9 @@ fn test_owner_transfer() {
     assert_eq!(reg.balance_of(&owner), 0);
     assert_eq!(reg.balance_of(&recipient), 1);
 
-    let owner_tokens = reg.list_tokens_by_owner(&owner, &0u64, &10u64);
+    let owner_tokens = reg.list_tokens_by_owner(&owner, &0u32, &10u32);
     assert_eq!(owner_tokens.len(), 0);
-    let recipient_tokens = reg.list_tokens_by_owner(&recipient, &0u64, &10u64);
+    let recipient_tokens = reg.list_tokens_by_owner(&recipient, &0u32, &10u32);
     assert_eq!(recipient_tokens.len(), 1);
     assert_eq!(recipient_tokens.get(0), Some(token_id));
 }
@@ -204,7 +204,7 @@ fn test_deactivate_and_reactivate() {
 
     reg.reactivate(&owner, &token_id);
     assert_eq!(reg.active_count(), 1);
-    let listed = reg.list_agents(&1u64, &10u64);
+    let listed = reg.list_agents(&1u64, &10u32);
     assert_eq!(listed.len(), 1);
 }
 
@@ -220,7 +220,7 @@ fn test_owner_token_pagination() {
     mint_default(&env, &reg, &owner, "pag-2");
     mint_default(&env, &reg, &owner, "pag-3");
 
-    let page = reg.list_tokens_by_owner(&owner, &1u64, &1u64);
+    let page = reg.list_tokens_by_owner(&owner, &1u32, &1u32);
     assert_eq!(page.len(), 1);
     assert_eq!(page.get(0), Some(2));
 }
@@ -236,15 +236,15 @@ fn test_owner_index_swap_remove_after_transfer() {
 
     let id1 = mint_default(&env, &reg, &owner, "swap-a");
     let id2 = mint_default(&env, &reg, &owner, "swap-b");
-    assert_eq!(reg.list_tokens_by_owner(&owner, &0u64, &10u64).len(), 2);
+    assert_eq!(reg.list_tokens_by_owner(&owner, &0u32, &10u32).len(), 2);
 
     reg.transfer_from(&owner, &owner, &recipient, &id1);
 
-    let owner_tokens = reg.list_tokens_by_owner(&owner, &0u64, &10u64);
+    let owner_tokens = reg.list_tokens_by_owner(&owner, &0u32, &10u32);
     assert_eq!(owner_tokens.len(), 1);
     assert_eq!(owner_tokens.get(0), Some(id2));
 
-    let recipient_tokens = reg.list_tokens_by_owner(&recipient, &0u64, &10u64);
+    let recipient_tokens = reg.list_tokens_by_owner(&recipient, &0u32, &10u32);
     assert_eq!(recipient_tokens.len(), 1);
     assert_eq!(recipient_tokens.get(0), Some(id1));
 }
@@ -314,4 +314,79 @@ fn test_length_limits_enforced() {
         &String::from_str(&env, "value"),
     );
     assert_eq!(bad_meta, Err(Ok(RegistryError::MetadataKeyTooLong)));
+}
+
+#[test]
+fn test_collection_metadata_defaults_and_admin_update() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (admin, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let stranger = Address::generate(&env);
+
+    assert_eq!(reg.name(), String::from_str(&env, "Agent Identity"));
+    assert_eq!(reg.symbol(), String::from_str(&env, "AGENT"));
+    assert_eq!(reg.contract_uri(), String::from_str(&env, "ipfs://agent-registry"));
+
+    let unauthorized = reg.try_set_collection_metadata(
+        &stranger,
+        &String::from_str(&env, "New Name"),
+        &String::from_str(&env, "NAGENT"),
+        &String::from_str(&env, "ipfs://new-contract-uri"),
+    );
+    assert_eq!(unauthorized, Err(Ok(RegistryError::NotAdmin)));
+
+    reg.set_collection_metadata(
+        &admin,
+        &String::from_str(&env, "Agent Registry"),
+        &String::from_str(&env, "AID"),
+        &String::from_str(&env, "ipfs://agent-registry-v2"),
+    );
+    assert_eq!(reg.name(), String::from_str(&env, "Agent Registry"));
+    assert_eq!(reg.symbol(), String::from_str(&env, "AID"));
+    assert_eq!(
+        reg.contract_uri(),
+        String::from_str(&env, "ipfs://agent-registry-v2")
+    );
+}
+
+#[test]
+fn test_transfer_method_owner_only() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+    let recipient = Address::generate(&env);
+    let stranger = Address::generate(&env);
+
+    let token_id = mint_default(&env, &reg, &owner, "transfer-owner-only");
+    let bad = reg.try_transfer(&stranger, &recipient, &token_id);
+    assert_eq!(bad, Err(Ok(RegistryError::NotTokenOwner)));
+
+    reg.transfer(&owner, &recipient, &token_id);
+    assert_eq!(reg.owner_of(&token_id), recipient);
+}
+
+#[test]
+fn test_burn_reduces_supply_and_clears_ownership() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+
+    let token_id = mint_default(&env, &reg, &owner, "burnable-agent");
+    assert!(reg.exists(&token_id));
+    assert_eq!(reg.total_supply(), 1);
+    assert_eq!(reg.active_count(), 1);
+
+    reg.burn(&owner, &token_id);
+    assert!(!reg.exists(&token_id));
+    assert_eq!(reg.total_supply(), 0);
+    assert_eq!(reg.active_count(), 0);
+    assert_eq!(reg.balance_of(&owner), 0);
+
+    let owner_of = reg.try_owner_of(&token_id);
+    assert_eq!(owner_of, Err(Ok(RegistryError::TokenNotFound)));
 }

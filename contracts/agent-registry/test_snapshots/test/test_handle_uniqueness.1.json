@@ -461,6 +461,42 @@
                       "key": {
                         "vec": [
                           {
+                            "symbol": "CollectionName"
+                          }
+                        ]
+                      },
+                      "val": {
+                        "string": "Agent Identity"
+                      }
+                    },
+                    {
+                      "key": {
+                        "vec": [
+                          {
+                            "symbol": "CollectionSymbol"
+                          }
+                        ]
+                      },
+                      "val": {
+                        "string": "AGENT"
+                      }
+                    },
+                    {
+                      "key": {
+                        "vec": [
+                          {
+                            "symbol": "ContractUri"
+                          }
+                        ]
+                      },
+                      "val": {
+                        "string": "ipfs://agent-registry"
+                      }
+                    },
+                    {
+                      "key": {
+                        "vec": [
+                          {
                             "symbol": "NextTokenId"
                           }
                         ]

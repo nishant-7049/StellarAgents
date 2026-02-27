@@ -22,11 +22,17 @@ pub enum RegistryError {
     AgentUriTooLong = 16,
     MetadataKeyTooLong = 17,
     MetadataValueTooLong = 18,
+    NotAdmin = 19,
+    SymbolTooLong = 20,
+    ContractUriTooLong = 21,
 }
 
 #[contracttype]
 pub enum DataKey {
     Admin,
+    CollectionName,
+    CollectionSymbol,
+    ContractUri,
     NextTokenId,
     TotalSupply,
     ActiveCount,

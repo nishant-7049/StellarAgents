@@ -15,7 +15,7 @@ export class AgentRegistry {
   }
 
   /** List active agents starting from token ID, up to limit.
-   *  Falls back to per-ID fetching if the contract's list_agents panics. */
+   *  Falls back to per-ID fetching when on-chain pagination is unavailable. */
   async listAgents(startTokenId: number = 1, limit: number = 10): Promise<AgentInfo[]> {
     if (limit <= 0) return [];
     const result = await this.reader.readContractValue(
@@ -124,6 +124,30 @@ export class AgentRegistry {
       [nativeToScVal(owner, { type: "address" })],
     );
     return Number(balance || 0);
+  }
+
+  async exists(tokenId: number): Promise<boolean> {
+    const exists = await this.reader.readContractValue(
+      this.registryAddress,
+      "exists",
+      [nativeToScVal(BigInt(tokenId), { type: "u64" })],
+    );
+    return Boolean(exists);
+  }
+
+  async getName(): Promise<string> {
+    const value = await this.reader.readContractValue(this.registryAddress, "name");
+    return String(value || "");
+  }
+
+  async getSymbol(): Promise<string> {
+    const value = await this.reader.readContractValue(this.registryAddress, "symbol");
+    return String(value || "");
+  }
+
+  async getContractUri(): Promise<string> {
+    const value = await this.reader.readContractValue(this.registryAddress, "contract_uri");
+    return String(value || "");
   }
 
   /** Get the total number of active agents. */
