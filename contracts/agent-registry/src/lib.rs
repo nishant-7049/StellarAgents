@@ -255,6 +255,7 @@ impl AgentRegistry {
         let owner = token.owner.clone();
 
         Self::remove_owner_token(env, &owner, token_id);
+        Self::remove_global_token(env, token_id);
         if token.is_active {
             Self::remove_active_token(env, token_id);
         }
@@ -306,6 +307,75 @@ impl AgentRegistry {
         Self::bump_persistent_ttl(env, &owner_slot_key);
         Self::bump_persistent_ttl(env, &owner_index_key);
         Self::bump_persistent_ttl(env, &count_key);
+    }
+
+    fn add_global_token(env: &Env, token_id: u64) {
+        let total_supply: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TotalSupply)
+            .unwrap_or(0);
+
+        let global_slot_key = DataKey::GlobalToken(total_supply);
+        let global_index_key = DataKey::TokenGlobalIndex(token_id);
+
+        env.storage()
+            .persistent()
+            .set(&global_slot_key, &token_id);
+        env.storage()
+            .persistent()
+            .set(&global_index_key, &total_supply);
+
+        Self::bump_persistent_ttl(env, &global_slot_key);
+        Self::bump_persistent_ttl(env, &global_index_key);
+    }
+
+    fn remove_global_token(env: &Env, token_id: u64) {
+        let total_supply: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TotalSupply)
+            .unwrap_or(0);
+        if total_supply == 0 {
+            return;
+        }
+
+        let global_index_key = DataKey::TokenGlobalIndex(token_id);
+        let Some(index) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, u64>(&global_index_key)
+        else {
+            return;
+        };
+        Self::bump_persistent_ttl(env, &global_index_key);
+
+        if index >= total_supply {
+            return;
+        }
+
+        let last_index = total_supply.saturating_sub(1);
+        let last_slot_key = DataKey::GlobalToken(last_index);
+        let last_token: u64 = env
+            .storage()
+            .persistent()
+            .get(&last_slot_key)
+            .unwrap_or(token_id);
+
+        if index != last_index {
+            let move_slot_key = DataKey::GlobalToken(index);
+            env.storage().persistent().set(&move_slot_key, &last_token);
+            Self::bump_persistent_ttl(env, &move_slot_key);
+
+            let moved_token_index_key = DataKey::TokenGlobalIndex(last_token);
+            env.storage()
+                .persistent()
+                .set(&moved_token_index_key, &index);
+            Self::bump_persistent_ttl(env, &moved_token_index_key);
+        }
+
+        env.storage().persistent().remove(&last_slot_key);
+        env.storage().persistent().remove(&global_index_key);
     }
 
     fn remove_owner_token(env: &Env, owner: &Address, token_id: u64) {
@@ -536,6 +606,7 @@ impl AgentRegistry {
         Self::bump_persistent_ttl(&env, &handle_key);
 
         Self::add_owner_token(&env, &owner, token_id);
+        Self::add_global_token(&env, token_id);
         Self::add_active_token(&env, token_id);
 
         let balance_key = DataKey::Balance(owner.clone());
@@ -559,11 +630,34 @@ impl AgentRegistry {
         Self::bump_instance_ttl(&env);
 
         env.events().publish(
-            (Symbol::new(&env, "identity_minted"), token_id, owner),
+            (Symbol::new(&env, "identity_minted"), token_id, owner.clone()),
             handle,
         );
+        env.events()
+            .publish((Symbol::new(&env, "mint"), owner, token_id), ());
 
         Ok(token_id)
+    }
+
+    // Standard-compatible alias: keeps custom identity payload while exposing `mint`.
+    pub fn mint(
+        env: Env,
+        owner: Address,
+        name: String,
+        handle: String,
+        token_uri: String,
+        vault_address: Address,
+        agent_signer: Address,
+    ) -> Result<u64, RegistryError> {
+        Self::mint_identity(
+            env,
+            owner,
+            name,
+            handle,
+            token_uri,
+            vault_address,
+            agent_signer,
+        )
     }
 
     pub fn owner_of(env: Env, token_id: u64) -> Result<Address, RegistryError> {
@@ -591,6 +685,11 @@ impl AgentRegistry {
     pub fn get_agent(env: Env, token_id: u64) -> Result<AgentIdentity, RegistryError> {
         Self::require_initialized(&env)?;
         Self::get_token(&env, token_id)
+    }
+
+    // Standard-compatible alias.
+    pub fn token(env: Env, token_id: u64) -> Result<AgentIdentity, RegistryError> {
+        Self::get_agent(env, token_id)
     }
 
     pub fn get_agent_by_handle(env: Env, handle: String) -> Result<AgentIdentity, RegistryError> {
@@ -695,9 +794,16 @@ impl AgentRegistry {
         Self::bump_persistent_ttl(&env, &approval_key);
 
         env.events().publish(
-            (Symbol::new(&env, "approval"), token_owner, to, token_id),
+            (
+                Symbol::new(&env, "approval"),
+                token_owner.clone(),
+                to.clone(),
+                token_id,
+            ),
             (),
         );
+        env.events()
+            .publish((Symbol::new(&env, "approve"), token_owner, to, token_id), ());
         Ok(())
     }
 
@@ -718,6 +824,11 @@ impl AgentRegistry {
         approved
     }
 
+    // Standard-compatible alias.
+    pub fn get_approval(env: Env, token_id: u64) -> Option<Address> {
+        Self::get_approved(env, token_id)
+    }
+
     pub fn set_approval_for_all(
         env: Env,
         owner: Address,
@@ -732,7 +843,15 @@ impl AgentRegistry {
         Self::bump_persistent_ttl(&env, &key);
 
         env.events().publish(
-            (Symbol::new(&env, "approval_for_all"), owner, operator),
+            (
+                Symbol::new(&env, "approval_for_all"),
+                owner.clone(),
+                operator.clone(),
+            ),
+            approved,
+        );
+        env.events().publish(
+            (Symbol::new(&env, "approve_for_all"), owner, operator),
             approved,
         );
         Ok(())
@@ -741,6 +860,11 @@ impl AgentRegistry {
     pub fn is_approved_for_all(env: Env, owner: Address, operator: Address) -> bool {
         Self::require_initialized_or_panic(&env);
         Self::is_operator_approved(&env, &owner, &operator)
+    }
+
+    // Standard-compatible alias.
+    pub fn is_approval_for_all(env: Env, owner: Address, operator: Address) -> bool {
+        Self::is_approved_for_all(env, owner, operator)
     }
 
     pub fn transfer(
@@ -775,6 +899,17 @@ impl AgentRegistry {
         }
 
         Self::transfer_core(&env, &from, &to, token_id)
+    }
+
+    // Standard-compatible alias.
+    pub fn safe_transfer_from(
+        env: Env,
+        caller: Address,
+        from: Address,
+        to: Address,
+        token_id: u64,
+    ) -> Result<(), RegistryError> {
+        Self::transfer_from(env, caller, from, to, token_id)
     }
 
     pub fn burn(env: Env, caller: Address, token_id: u64) -> Result<(), RegistryError> {
@@ -1024,6 +1159,28 @@ impl AgentRegistry {
             i = i.saturating_add(1);
         }
         out
+    }
+
+    // Enumerable standard helper.
+    pub fn token_of_owner_by_index(env: Env, owner: Address, index: u32) -> Option<u64> {
+        Self::require_initialized_or_panic(&env);
+        let key = DataKey::OwnerToken(owner, index);
+        let token_id = env.storage().persistent().get::<DataKey, u64>(&key);
+        if token_id.is_some() {
+            Self::bump_persistent_ttl(&env, &key);
+        }
+        token_id
+    }
+
+    // Enumerable standard helper.
+    pub fn token_by_index(env: Env, index: u64) -> Option<u64> {
+        Self::require_initialized_or_panic(&env);
+        let key = DataKey::GlobalToken(index);
+        let token_id = env.storage().persistent().get::<DataKey, u64>(&key);
+        if token_id.is_some() {
+            Self::bump_persistent_ttl(&env, &key);
+        }
+        token_id
     }
 
     pub fn is_handle_available(env: Env, handle: String) -> bool {

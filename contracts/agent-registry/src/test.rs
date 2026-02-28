@@ -390,3 +390,68 @@ fn test_burn_reduces_supply_and_clears_ownership() {
     let owner_of = reg.try_owner_of(&token_id);
     assert_eq!(owner_of, Err(Ok(RegistryError::TokenNotFound)));
 }
+
+#[test]
+fn test_standard_alias_mint_and_token() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+
+    let token_id = reg.mint(
+        &owner,
+        &String::from_str(&env, "Alias Bot"),
+        &String::from_str(&env, "alias-bot"),
+        &String::from_str(&env, r#"{"capabilities":["yield"]}"#),
+        &Address::generate(&env),
+        &Address::generate(&env),
+    );
+
+    let token = reg.token(&token_id);
+    assert_eq!(token.token_id, token_id);
+    assert_eq!(token.owner, owner);
+}
+
+#[test]
+fn test_standard_enumerable_views() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+
+    let id1 = mint_default(&env, &reg, &owner, "enum-1");
+    let id2 = mint_default(&env, &reg, &owner, "enum-2");
+    let id3 = mint_default(&env, &reg, &owner, "enum-3");
+
+    assert_eq!(reg.token_by_index(&0u64), Some(id1));
+    assert_eq!(reg.token_by_index(&1u64), Some(id2));
+    assert_eq!(reg.token_by_index(&2u64), Some(id3));
+    assert_eq!(reg.token_of_owner_by_index(&owner, &0u32), Some(id1));
+    assert_eq!(reg.token_of_owner_by_index(&owner, &1u32), Some(id2));
+    assert_eq!(reg.token_of_owner_by_index(&owner, &2u32), Some(id3));
+}
+
+#[test]
+fn test_global_enumeration_swap_remove_on_burn() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+
+    let id1 = mint_default(&env, &reg, &owner, "glob-1");
+    let id2 = mint_default(&env, &reg, &owner, "glob-2");
+    let id3 = mint_default(&env, &reg, &owner, "glob-3");
+    assert_eq!(reg.total_supply(), 3);
+
+    reg.burn(&owner, &id2);
+
+    assert_eq!(reg.total_supply(), 2);
+    let first = reg.token_by_index(&0u64).unwrap();
+    let second = reg.token_by_index(&1u64).unwrap();
+    assert!(first == id1 || first == id3);
+    assert!(second == id1 || second == id3);
+    assert_ne!(first, second);
+}

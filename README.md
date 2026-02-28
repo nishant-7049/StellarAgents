@@ -22,7 +22,7 @@ Built on Soroban smart contracts, it enables AI agents to manage DeFi positions,
 ## Key Features
 
 - **Smart Vaults** — Per-user Soroban contracts holding USDC with fine-grained, per-agent daily spending limits
-- **Agent Registry** — On-chain identity (SRC-8004): each agent gets a sequential NFT-like ID and a unique `@handle`
+- **Agent Registry** — On-chain identity (SRC-8004) with SEP-0050-compatible NFT entrypoints and enumerable views
 - **x402 Protocol** — HTTP 402-based micropayments: agent sends a signed payment header, service settles on-chain atomically
 - **AI Yield Optimizer** — LLM-powered strategy engine reading live rates from Blend Protocol and Soroswap DEX
 - **Autonomous Rebalancer** — Cron-based portfolio rebalancer with Blend-target execution via vault agent payments
@@ -234,6 +234,11 @@ The backend exposes 20+ REST endpoints on port `3001` under the `/api` prefix:
 Current execution scope:
 - Blend-target actions are executed through vault-authorized agent payments.
 - Soroswap and other strategy legs are currently tracked in portfolio state but are not fully executed on-chain by the autonomous rebalancer.
+
+Agent Registry NFT compatibility:
+- `mint_identity` remains the primary registration path for AgentNet metadata.
+- Standard-compatible aliases are available (`mint`, `token`, `get_approval`, `is_approval_for_all`, `safe_transfer_from`).
+- Enumerable views are available (`token_by_index`, `token_of_owner_by_index`).
 
 ---
 

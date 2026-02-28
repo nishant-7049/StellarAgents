@@ -1,6 +1,6 @@
 {
   "generators": {
-    "address": 7,
+    "address": 9,
     "nonce": 0,
     "mux_id": 0
   },
@@ -41,7 +41,7 @@
                   "string": "Yield Bot"
                 },
                 {
-                  "string": "bot-one"
+                  "string": "enum-1"
                 },
                 {
                   "string": "{\"capabilities\":[\"yield\"]}"
@@ -75,7 +75,7 @@
                   "string": "Yield Bot"
                 },
                 {
-                  "string": "bot-two"
+                  "string": "enum-2"
                 },
                 {
                   "string": "{\"capabilities\":[\"yield\"]}"
@@ -93,6 +93,44 @@
         }
       ]
     ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "function_name": "mint_identity",
+              "args": [
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                },
+                {
+                  "string": "Yield Bot"
+                },
+                {
+                  "string": "enum-3"
+                },
+                {
+                  "string": "{\"capabilities\":[\"yield\"]}"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARQG5"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATYON"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [],
+    [],
+    [],
+    [],
     [],
     []
   ],
@@ -190,6 +228,33 @@
               "key": {
                 "vec": [
                   {
+                    "symbol": "ActiveToken"
+                  },
+                  {
+                    "u64": "2"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "u64": "3"
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 5996400
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "vec": [
+                  {
                     "symbol": "Balance"
                   },
                   {
@@ -199,7 +264,7 @@
               },
               "durability": "persistent",
               "val": {
-                "u32": 2
+                "u32": 3
               }
             }
           },
@@ -271,10 +336,37 @@
               "key": {
                 "vec": [
                   {
+                    "symbol": "GlobalToken"
+                  },
+                  {
+                    "u64": "2"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "u64": "3"
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 5996400
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "vec": [
+                  {
                     "symbol": "HandleToken"
                   },
                   {
-                    "string": "bot-one"
+                    "string": "enum-1"
                   }
                 ]
               },
@@ -301,13 +393,40 @@
                     "symbol": "HandleToken"
                   },
                   {
-                    "string": "bot-two"
+                    "string": "enum-2"
                   }
                 ]
               },
               "durability": "persistent",
               "val": {
                 "u64": "2"
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 5996400
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "vec": [
+                  {
+                    "symbol": "HandleToken"
+                  },
+                  {
+                    "string": "enum-3"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "u64": "3"
               }
             }
           },
@@ -385,6 +504,36 @@
               "key": {
                 "vec": [
                   {
+                    "symbol": "OwnerToken"
+                  },
+                  {
+                    "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                  },
+                  {
+                    "u32": 2
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "u64": "3"
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 5996400
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "vec": [
+                  {
                     "symbol": "OwnerTokenCount"
                   },
                   {
@@ -394,7 +543,7 @@
               },
               "durability": "persistent",
               "val": {
-                "u32": 2
+                "u32": 3
               }
             }
           },
@@ -443,7 +592,7 @@
                       "symbol": "handle"
                     },
                     "val": {
-                      "string": "bot-one"
+                      "string": "enum-1"
                     }
                   },
                   {
@@ -551,7 +700,7 @@
                       "symbol": "handle"
                     },
                     "val": {
-                      "string": "bot-two"
+                      "string": "enum-2"
                     }
                   },
                   {
@@ -628,6 +777,114 @@
               "key": {
                 "vec": [
                   {
+                    "symbol": "Token"
+                  },
+                  {
+                    "u64": "3"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "map": [
+                  {
+                    "key": {
+                      "symbol": "agent_signer"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATYON"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "agent_uri"
+                    },
+                    "val": {
+                      "string": "{\"capabilities\":[\"yield\"]}"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "handle"
+                    },
+                    "val": {
+                      "string": "enum-3"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "is_active"
+                    },
+                    "val": {
+                      "bool": true
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "name"
+                    },
+                    "val": {
+                      "string": "Yield Bot"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "owner"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "registered_at"
+                    },
+                    "val": {
+                      "u64": "0"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "token_id"
+                    },
+                    "val": {
+                      "u64": "3"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "updated_at"
+                    },
+                    "val": {
+                      "u64": "0"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "vault_address"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARQG5"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 5996400
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "vec": [
+                  {
                     "symbol": "TokenActiveIndex"
                   },
                   {
@@ -682,6 +939,33 @@
               "key": {
                 "vec": [
                   {
+                    "symbol": "TokenActiveIndex"
+                  },
+                  {
+                    "u64": "3"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "u64": "2"
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 5996400
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "vec": [
+                  {
                     "symbol": "TokenGlobalIndex"
                   },
                   {
@@ -719,6 +1003,33 @@
               "durability": "persistent",
               "val": {
                 "u64": "1"
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 5996400
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "vec": [
+                  {
+                    "symbol": "TokenGlobalIndex"
+                  },
+                  {
+                    "u64": "3"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "u64": "2"
               }
             }
           },
@@ -767,6 +1078,33 @@
                   },
                   {
                     "u64": "2"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 5996400
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "vec": [
+                  {
+                    "symbol": "TokenOwner"
+                  },
+                  {
+                    "u64": "3"
                   }
                 ]
               },
@@ -841,6 +1179,33 @@
             "contract_data": {
               "ext": "v0",
               "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "vec": [
+                  {
+                    "symbol": "TokenOwnerIndex"
+                  },
+                  {
+                    "u64": "3"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "u32": 2
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 5996400
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
               "key": "ledger_key_contract_instance",
               "durability": "persistent",
               "val": {
@@ -858,7 +1223,7 @@
                         ]
                       },
                       "val": {
-                        "u64": "2"
+                        "u64": "3"
                       }
                     },
                     {
@@ -918,7 +1283,7 @@
                         ]
                       },
                       "val": {
-                        "u64": "3"
+                        "u64": "4"
                       }
                     },
                     {
@@ -930,7 +1295,7 @@
                         ]
                       },
                       "val": {
-                        "u64": "2"
+                        "u64": "3"
                       }
                     }
                   ]
@@ -952,6 +1317,26 @@
               "key": {
                 "ledger_key_nonce": {
                   "nonce": "1033654523790656264"
+                }
+              },
+              "durability": "temporary",
+              "val": "void"
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 6311999
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
+              "key": {
+                "ledger_key_nonce": {
+                  "nonce": "4837995959683129791"
                 }
               },
               "durability": "temporary",

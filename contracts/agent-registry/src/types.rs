@@ -42,6 +42,8 @@ pub enum DataKey {
     OwnerTokenCount(Address),
     OwnerToken(Address, u32),
     TokenOwnerIndex(u64),
+    GlobalToken(u64),
+    TokenGlobalIndex(u64),
     ActiveToken(u64),
     TokenActiveIndex(u64),
     HandleToken(String),

@@ -101,6 +101,28 @@ export class AgentRegistry {
     return (result || []).map((id: any) => Number(id));
   }
 
+  /** SEP-0050 enumerable helper: owner token at a specific index. */
+  async tokenOfOwnerByIndex(owner: string, index: number): Promise<number | null> {
+    const result = await this.reader.readContractValue(
+      this.registryAddress,
+      "token_of_owner_by_index",
+      [nativeToScVal(owner, { type: "address" }), nativeToScVal(index, { type: "u32" })],
+    );
+    if (result === null || result === undefined) return null;
+    return Number(result);
+  }
+
+  /** SEP-0050 enumerable helper: global token at index. */
+  async tokenByIndex(index: number): Promise<number | null> {
+    const result = await this.reader.readContractValue(
+      this.registryAddress,
+      "token_by_index",
+      [nativeToScVal(BigInt(index), { type: "u64" })],
+    );
+    if (result === null || result === undefined) return null;
+    return Number(result);
+  }
+
   async getAgentByHandle(handle: string): Promise<AgentInfo | null> {
     return await this.reader.readContractValue(
       this.registryAddress,
