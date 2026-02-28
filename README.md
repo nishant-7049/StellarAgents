@@ -25,7 +25,7 @@ Built on Soroban smart contracts, it enables AI agents to manage DeFi positions,
 - **Agent Registry** — On-chain identity (SRC-8004): each agent gets a sequential NFT-like ID and a unique `@handle`
 - **x402 Protocol** — HTTP 402-based micropayments: agent sends a signed payment header, service settles on-chain atomically
 - **AI Yield Optimizer** — LLM-powered strategy engine reading live rates from Blend Protocol and Soroswap DEX
-- **Autonomous Rebalancer** — Cron-based portfolio rebalancer that executes Blend supply/withdraw operations
+- **Autonomous Rebalancer** — Cron-based portfolio rebalancer with Blend-target execution via vault agent payments
 - **Reputation & Validation** — On-chain feedback and third-party validation registries for agent accountability
 - **Agent Explorer** — Real-time explorer with stats charts, decoded transaction history, and reputation scores
 
@@ -205,7 +205,7 @@ pnpm build
 
 ## API Reference
 
-The backend exposes 20+ REST endpoints on port `3001`:
+The backend exposes 20+ REST endpoints on port `3001` under the `/api` prefix:
 
 | Endpoint | Description |
 |---|---|
@@ -213,19 +213,27 @@ The backend exposes 20+ REST endpoints on port `3001`:
 | `GET /api/agents` | List all registered agents |
 | `GET /api/agents/:id` | Single agent by token ID |
 | `GET /api/vaults/:owner` | Vault balance and agent policies |
-| `GET /api/yield/query` ⚡ | **x402-gated** AI yield strategy (0.01 USDC/query) |
+| `GET /api/yield/query` / `POST /api/yield/query` ⚡ | **x402-gated** AI yield strategy (0.01 USDC/query for strategy intents) |
 | `GET /api/explorer/agents` | Explorer listing with parsed metadata |
 | `GET /api/explorer/agents/:id/stats` | Daily query/USDC stats (last 30 days) |
 | `GET /api/explorer/activity` | Decoded global on-chain activity feed |
-| `GET /api/portfolio` | Portfolio positions and APY data |
+| `GET /api/portfolio/:wallet` | Portfolio positions and APY data for one wallet |
+| `POST /api/portfolio/record` | Record executed strategy positions in portfolio history |
+| `POST /api/portfolio/agent-rebalance` | Trigger agent-led portfolio rebalance evaluation |
 | `GET /api/reputation/:id/summary` | Agent reputation summary |
 | `GET /api/stats` | Platform-wide statistics |
 | `POST /api/rebalance/trigger` | Trigger manual portfolio rebalance |
-| `GET /api/credits` | Credit balance for a wallet |
+| `GET /api/credits/:wallet` | Credit balance for a wallet |
+| `POST /api/execute/preview` | Build execution transaction bundle (XDRs) |
+| `POST /api/execute/simulate` | Simulate strategy outcome (returns/risk mix) |
 | `POST /api/credits/stripe/checkout` | Create Stripe checkout session |
-| `POST /api/credits/stripe/verify-session` | Award credits after Stripe payment |
+| `POST /api/credits/stripe/webhook` | Stripe webhook ingestion endpoint |
 | `POST /api/x402/settle` | Settle an x402 micropayment |
 | `POST /api/tx/build` | Build and simulate a Soroban transaction |
+
+Current execution scope:
+- Blend-target actions are executed through vault-authorized agent payments.
+- Soroswap and other strategy legs are currently tracked in portfolio state but are not fully executed on-chain by the autonomous rebalancer.
 
 ---
 
