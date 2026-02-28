@@ -237,8 +237,11 @@ Current execution scope:
 
 Agent Registry NFT compatibility:
 - `mint_identity` remains the primary registration path for AgentNet metadata.
-- Standard-compatible aliases are available (`mint`, `token`, `get_approval`, `is_approval_for_all`, `safe_transfer_from`).
-- Enumerable views are available (`token_by_index`, `token_of_owner_by_index`).
+- Standard-compatible aliases are available (`mint`, `token`, `get_approval`, `is_approval_for_all`, `safe_transfer_from`, `balance`).
+- Approval APIs use ledger-expiring approvals (`approve(..., live_until_ledger)`, `approve_for_all(..., live_until_ledger)`).
+- Enumerable views are available (`token_by_index`, `token_of_owner_by_index`, `get_token_id`, `get_owner_token_id`).
+- The contract now imports OpenZeppelin Stellar crates (`stellar-tokens`) for official NFT constants and dependency alignment.
+- Upgrade and migration helpers are available (`__constructor`, `set_admin`, `set_migration_open`, `migrate_identity`).
 
 ---
 

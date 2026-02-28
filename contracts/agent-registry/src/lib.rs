@@ -2,12 +2,13 @@
 use soroban_sdk::{
     contract, contractimpl, panic_with_error, Address, Env, String, Symbol, Vec,
 };
+use stellar_tokens::non_fungible::{MAX_NAME_LEN as OZ_NAME_MAX_LEN, MAX_SYMBOL_LEN as OZ_SYMBOL_MAX_LEN};
 
 pub mod types;
-use types::{AgentIdentity, DataKey, RegistryError};
+use types::{AgentIdentity, ApprovalData, DataKey, RegistryError};
 
-const NAME_MAX_LEN: u32 = 64;
-const SYMBOL_MAX_LEN: u32 = 16;
+const NAME_MAX_LEN: u32 = OZ_NAME_MAX_LEN as u32;
+const SYMBOL_MAX_LEN: u32 = OZ_SYMBOL_MAX_LEN as u32;
 const URI_MAX_LEN: u32 = 2048;
 const CONTRACT_URI_MAX_LEN: u32 = 2048;
 const METADATA_KEY_MAX_LEN: u32 = 64;
@@ -116,6 +117,23 @@ impl AgentRegistry {
         Ok(())
     }
 
+    fn token_id_u32(env: &Env, token_id: u64) -> u32 {
+        if token_id > u32::MAX as u64 {
+            panic_with_error!(env, RegistryError::InvalidTokenId);
+        }
+        token_id as u32
+    }
+
+    fn validate_live_until_ledger(
+        env: &Env,
+        live_until_ledger: u32,
+    ) -> Result<(), RegistryError> {
+        if live_until_ledger != 0 && live_until_ledger < env.ledger().sequence() {
+            return Err(RegistryError::InvalidLiveUntilLedger);
+        }
+        Ok(())
+    }
+
     /// Validate a handle: 3–32 chars, only lowercase a-z, 0-9, and hyphens.
     /// No leading/trailing hyphens.
     fn validate_handle(handle: &String) -> Result<(), RegistryError> {
@@ -156,11 +174,10 @@ impl AgentRegistry {
 
     fn is_operator_approved(env: &Env, owner: &Address, operator: &Address) -> bool {
         let key = DataKey::OperatorApproval(owner.clone(), operator.clone());
-        let approved: bool = env.storage().persistent().get(&key).unwrap_or(false);
-        if env.storage().persistent().has(&key) {
-            Self::bump_persistent_ttl(env, &key);
-        }
-        approved
+        let Some(live_until_ledger) = env.storage().temporary().get::<DataKey, u32>(&key) else {
+            return false;
+        };
+        live_until_ledger >= env.ledger().sequence()
     }
 
     fn is_approved_or_owner(
@@ -174,13 +191,14 @@ impl AgentRegistry {
         }
 
         let approval_key = DataKey::TokenApproval(token_id);
-        if let Some(approved) = env
+        if let Some(approval) = env
             .storage()
-            .persistent()
-            .get::<DataKey, Address>(&approval_key)
+            .temporary()
+            .get::<DataKey, ApprovalData>(&approval_key)
         {
-            Self::bump_persistent_ttl(env, &approval_key);
-            if approved == caller.clone() {
+            if approval.live_until_ledger >= env.ledger().sequence()
+                && approval.approved == caller.clone()
+            {
                 return true;
             }
         }
@@ -190,7 +208,7 @@ impl AgentRegistry {
 
     fn clear_token_approval(env: &Env, token_id: u64) {
         env.storage()
-            .persistent()
+            .temporary()
             .remove(&DataKey::TokenApproval(token_id));
     }
 
@@ -279,7 +297,7 @@ impl AgentRegistry {
             .persistent()
             .remove(&DataKey::HandleToken(token.handle));
         env.storage()
-            .persistent()
+            .temporary()
             .remove(&DataKey::TokenApproval(token_id));
 
         env.events()
@@ -508,6 +526,98 @@ impl AgentRegistry {
         Self::bump_instance_ttl(env);
     }
 
+    fn is_migration_open(env: &Env) -> bool {
+        env.storage()
+            .instance()
+            .get(&DataKey::MigrationOpen)
+            .unwrap_or(false)
+    }
+
+    fn mint_identity_with_token_id(
+        env: &Env,
+        token_id: u64,
+        owner: Address,
+        name: String,
+        handle: String,
+        agent_uri: String,
+        vault_address: Address,
+        agent_signer: Address,
+        registered_at: u64,
+        updated_at: u64,
+        is_active: bool,
+    ) -> Result<u64, RegistryError> {
+        if token_id == 0 {
+            return Err(RegistryError::InvalidTokenId);
+        }
+
+        let handle_key = DataKey::HandleToken(handle.clone());
+        if env.storage().persistent().has(&handle_key) {
+            Self::bump_persistent_ttl(env, &handle_key);
+            return Err(RegistryError::HandleAlreadyTaken);
+        }
+
+        let token_key = DataKey::Token(token_id);
+        if env.storage().persistent().has(&token_key) {
+            Self::bump_persistent_ttl(env, &token_key);
+            return Err(RegistryError::TokenAlreadyExists);
+        }
+
+        let token = AgentIdentity {
+            token_id,
+            owner: owner.clone(),
+            name,
+            handle: handle.clone(),
+            agent_uri,
+            vault_address,
+            agent_signer,
+            registered_at,
+            updated_at,
+            is_active,
+        };
+
+        let owner_key = DataKey::TokenOwner(token_id);
+        env.storage().persistent().set(&token_key, &token);
+        env.storage().persistent().set(&owner_key, &owner);
+        env.storage().persistent().set(&handle_key, &token_id);
+        Self::bump_persistent_ttl(env, &token_key);
+        Self::bump_persistent_ttl(env, &owner_key);
+        Self::bump_persistent_ttl(env, &handle_key);
+
+        Self::add_owner_token(env, &owner, token_id);
+        Self::add_global_token(env, token_id);
+        if is_active {
+            Self::add_active_token(env, token_id);
+        }
+
+        let balance_key = DataKey::Balance(owner.clone());
+        let balance: u32 = env.storage().persistent().get(&balance_key).unwrap_or(0);
+        env.storage()
+            .persistent()
+            .set(&balance_key, &balance.saturating_add(1));
+        Self::bump_persistent_ttl(env, &balance_key);
+
+        let total: u64 = env.storage().instance().get(&DataKey::TotalSupply).unwrap_or(0);
+        env.storage()
+            .instance()
+            .set(&DataKey::TotalSupply, &total.saturating_add(1));
+
+        let next: u64 = env.storage().instance().get(&DataKey::NextTokenId).unwrap_or(1);
+        if token_id.saturating_add(1) > next {
+            env.storage()
+                .instance()
+                .set(&DataKey::NextTokenId, &token_id.saturating_add(1));
+        }
+
+        Self::bump_instance_ttl(env);
+        env.events().publish(
+            (Symbol::new(env, "identity_minted"), token_id, owner.clone()),
+            handle,
+        );
+        env.events()
+            .publish((Symbol::new(env, "mint"), owner, token_id), ());
+        Ok(token_id)
+    }
+
     pub fn initialize(env: Env, admin: Address) -> Result<(), RegistryError> {
         let collection_name = String::from_str(&env, DEFAULT_COLLECTION_NAME);
         let collection_symbol = String::from_str(&env, DEFAULT_COLLECTION_SYMBOL);
@@ -519,6 +629,24 @@ impl AgentRegistry {
             collection_symbol,
             contract_uri,
         )
+    }
+
+    pub fn __constructor(
+        env: Env,
+        admin: Address,
+        collection_name: String,
+        collection_symbol: String,
+        contract_uri: String,
+    ) {
+        if let Err(err) = Self::initialize_with_metadata(
+            env.clone(),
+            admin,
+            collection_name,
+            collection_symbol,
+            contract_uri,
+        ) {
+            panic_with_error!(&env, err);
+        }
     }
 
     fn initialize_with_metadata(
@@ -546,11 +674,71 @@ impl AgentRegistry {
         env.storage()
             .instance()
             .set(&DataKey::ContractUri, &contract_uri);
+        env.storage().instance().set(&DataKey::MigrationOpen, &false);
         env.storage().instance().set(&DataKey::NextTokenId, &1u64);
         env.storage().instance().set(&DataKey::TotalSupply, &0u64);
         env.storage().instance().set(&DataKey::ActiveCount, &0u64);
         Self::bump_instance_ttl(&env);
         Ok(())
+    }
+
+    pub fn set_admin(env: Env, admin: Address, new_admin: Address) -> Result<(), RegistryError> {
+        admin.require_auth();
+        Self::require_admin(&env, &admin)?;
+        env.storage().instance().set(&DataKey::Admin, &new_admin);
+        Self::bump_instance_ttl(&env);
+        Ok(())
+    }
+
+    pub fn set_migration_open(env: Env, admin: Address, open: bool) -> Result<(), RegistryError> {
+        admin.require_auth();
+        Self::require_admin(&env, &admin)?;
+        env.storage().instance().set(&DataKey::MigrationOpen, &open);
+        Self::bump_instance_ttl(&env);
+        Ok(())
+    }
+
+    pub fn migration_open(env: Env) -> bool {
+        Self::require_initialized_or_panic(&env);
+        Self::is_migration_open(&env)
+    }
+
+    pub fn migrate_identity(
+        env: Env,
+        admin: Address,
+        token_id: u64,
+        owner: Address,
+        name: String,
+        handle: String,
+        agent_uri: String,
+        vault_address: Address,
+        agent_signer: Address,
+        registered_at: u64,
+        updated_at: u64,
+        is_active: bool,
+    ) -> Result<u64, RegistryError> {
+        admin.require_auth();
+        Self::require_admin(&env, &admin)?;
+        if !Self::is_migration_open(&env) {
+            return Err(RegistryError::MigrationClosed);
+        }
+        Self::validate_name(&name)?;
+        Self::validate_handle(&handle)?;
+        Self::validate_agent_uri(&agent_uri)?;
+
+        Self::mint_identity_with_token_id(
+            &env,
+            token_id,
+            owner,
+            name,
+            handle,
+            agent_uri,
+            vault_address,
+            agent_signer,
+            registered_at,
+            updated_at,
+            is_active,
+        )
     }
 
     pub fn mint_identity(
@@ -569,74 +757,25 @@ impl AgentRegistry {
         Self::validate_handle(&handle)?;
         Self::validate_agent_uri(&agent_uri)?;
 
-        let handle_key = DataKey::HandleToken(handle.clone());
-        if env.storage().persistent().has(&handle_key) {
-            Self::bump_persistent_ttl(&env, &handle_key);
-            return Err(RegistryError::HandleAlreadyTaken);
-        }
-
         let token_id: u64 = env
             .storage()
             .instance()
             .get(&DataKey::NextTokenId)
             .unwrap_or(1);
         let now = env.ledger().timestamp();
-
-        let token = AgentIdentity {
+        Self::mint_identity_with_token_id(
+            &env,
             token_id,
-            owner: owner.clone(),
+            owner,
             name,
-            handle: handle.clone(),
+            handle,
             agent_uri,
             vault_address,
             agent_signer,
-            registered_at: now,
-            updated_at: now,
-            is_active: true,
-        };
-
-        let token_key = DataKey::Token(token_id);
-        let owner_key = DataKey::TokenOwner(token_id);
-
-        env.storage().persistent().set(&token_key, &token);
-        env.storage().persistent().set(&owner_key, &owner);
-        env.storage().persistent().set(&handle_key, &token_id);
-        Self::bump_persistent_ttl(&env, &token_key);
-        Self::bump_persistent_ttl(&env, &owner_key);
-        Self::bump_persistent_ttl(&env, &handle_key);
-
-        Self::add_owner_token(&env, &owner, token_id);
-        Self::add_global_token(&env, token_id);
-        Self::add_active_token(&env, token_id);
-
-        let balance_key = DataKey::Balance(owner.clone());
-        let balance: u32 = env.storage().persistent().get(&balance_key).unwrap_or(0);
-        env.storage()
-            .persistent()
-            .set(&balance_key, &balance.saturating_add(1));
-        Self::bump_persistent_ttl(&env, &balance_key);
-
-        let total: u64 = env
-            .storage()
-            .instance()
-            .get(&DataKey::TotalSupply)
-            .unwrap_or(0);
-        env.storage()
-            .instance()
-            .set(&DataKey::TotalSupply, &total.saturating_add(1));
-        env.storage()
-            .instance()
-            .set(&DataKey::NextTokenId, &token_id.saturating_add(1));
-        Self::bump_instance_ttl(&env);
-
-        env.events().publish(
-            (Symbol::new(&env, "identity_minted"), token_id, owner.clone()),
-            handle,
-        );
-        env.events()
-            .publish((Symbol::new(&env, "mint"), owner, token_id), ());
-
-        Ok(token_id)
+            now,
+            now,
+            true,
+        )
     }
 
     // Standard-compatible alias: keeps custom identity payload while exposing `mint`.
@@ -680,6 +819,15 @@ impl AgentRegistry {
         }
         let balance: u32 = env.storage().persistent().get(&key).unwrap_or(0);
         balance as u64
+    }
+
+    pub fn balance(env: Env, owner: Address) -> u32 {
+        Self::require_initialized_or_panic(&env);
+        let key = DataKey::Balance(owner);
+        if env.storage().persistent().has(&key) {
+            Self::bump_persistent_ttl(&env, &key);
+        }
+        env.storage().persistent().get(&key).unwrap_or(0)
     }
 
     pub fn get_agent(env: Env, token_id: u64) -> Result<AgentIdentity, RegistryError> {
@@ -771,39 +919,48 @@ impl AgentRegistry {
 
     pub fn approve(
         env: Env,
-        owner: Address,
-        to: Address,
+        approver: Address,
+        approved: Address,
         token_id: u64,
+        live_until_ledger: u32,
     ) -> Result<(), RegistryError> {
         Self::require_initialized(&env)?;
-        owner.require_auth();
+        approver.require_auth();
+        Self::validate_live_until_ledger(&env, live_until_ledger)?;
 
         let token_owner = Self::owner_of(env.clone(), token_id)?;
-        if token_owner == to {
+        if token_owner == approved {
             return Err(RegistryError::ApprovalToCurrentOwner);
         }
 
-        let can_approve =
-            owner == token_owner || Self::is_operator_approved(&env, &token_owner, &owner);
+        let can_approve = approver == token_owner
+            || Self::is_operator_approved(&env, &token_owner, &approver);
         if !can_approve {
             return Err(RegistryError::ApproveCallerNotOwnerNorOperator);
         }
 
         let approval_key = DataKey::TokenApproval(token_id);
-        env.storage().persistent().set(&approval_key, &to.clone());
-        Self::bump_persistent_ttl(&env, &approval_key);
+        if live_until_ledger == 0 {
+            env.storage().temporary().remove(&approval_key);
+        } else {
+            let data = ApprovalData {
+                approved: approved.clone(),
+                live_until_ledger,
+            };
+            env.storage().temporary().set(&approval_key, &data);
+        }
 
         env.events().publish(
             (
                 Symbol::new(&env, "approval"),
                 token_owner.clone(),
-                to.clone(),
+                approved.clone(),
                 token_id,
             ),
-            (),
+            live_until_ledger,
         );
         env.events()
-            .publish((Symbol::new(&env, "approve"), token_owner, to, token_id), ());
+            .publish((Symbol::new(&env, "approve"), token_owner, approved, token_id), ());
         Ok(())
     }
 
@@ -817,9 +974,19 @@ impl AgentRegistry {
         Self::bump_persistent_ttl(&env, &token_key);
 
         let approval_key = DataKey::TokenApproval(token_id);
-        let approved = env.storage().persistent().get(&approval_key);
-        if env.storage().persistent().has(&approval_key) {
-            Self::bump_persistent_ttl(&env, &approval_key);
+        let approved = env
+            .storage()
+            .temporary()
+            .get::<DataKey, ApprovalData>(&approval_key)
+            .and_then(|data| {
+                if data.live_until_ledger >= env.ledger().sequence() {
+                    Some(data.approved)
+                } else {
+                    None
+                }
+            });
+        if approved.is_none() {
+            env.storage().temporary().remove(&approval_key);
         }
         approved
     }
@@ -829,18 +996,22 @@ impl AgentRegistry {
         Self::get_approved(env, token_id)
     }
 
-    pub fn set_approval_for_all(
+    pub fn approve_for_all(
         env: Env,
         owner: Address,
         operator: Address,
-        approved: bool,
+        live_until_ledger: u32,
     ) -> Result<(), RegistryError> {
         Self::require_initialized(&env)?;
         owner.require_auth();
+        Self::validate_live_until_ledger(&env, live_until_ledger)?;
 
         let key = DataKey::OperatorApproval(owner.clone(), operator.clone());
-        env.storage().persistent().set(&key, &approved);
-        Self::bump_persistent_ttl(&env, &key);
+        if live_until_ledger == 0 {
+            env.storage().temporary().remove(&key);
+        } else {
+            env.storage().temporary().set(&key, &live_until_ledger);
+        }
 
         env.events().publish(
             (
@@ -848,13 +1019,23 @@ impl AgentRegistry {
                 owner.clone(),
                 operator.clone(),
             ),
-            approved,
+            live_until_ledger,
         );
         env.events().publish(
             (Symbol::new(&env, "approve_for_all"), owner, operator),
-            approved,
+            live_until_ledger,
         );
         Ok(())
+    }
+
+    pub fn set_approval_for_all(
+        env: Env,
+        owner: Address,
+        operator: Address,
+        approved: bool,
+    ) -> Result<(), RegistryError> {
+        let live_until_ledger = if approved { u32::MAX } else { 0 };
+        Self::approve_for_all(env, owner, operator, live_until_ledger)
     }
 
     pub fn is_approved_for_all(env: Env, owner: Address, operator: Address) -> bool {
@@ -1172,6 +1353,13 @@ impl AgentRegistry {
         token_id
     }
 
+    pub fn get_owner_token_id(env: Env, owner: Address, index: u32) -> u32 {
+        let Some(token_id) = Self::token_of_owner_by_index(env.clone(), owner, index) else {
+            panic_with_error!(&env, RegistryError::TokenNotFound);
+        };
+        Self::token_id_u32(&env, token_id)
+    }
+
     // Enumerable standard helper.
     pub fn token_by_index(env: Env, index: u64) -> Option<u64> {
         Self::require_initialized_or_panic(&env);
@@ -1181,6 +1369,13 @@ impl AgentRegistry {
             Self::bump_persistent_ttl(&env, &key);
         }
         token_id
+    }
+
+    pub fn get_token_id(env: Env, index: u32) -> u32 {
+        let Some(token_id) = Self::token_by_index(env.clone(), index as u64) else {
+            panic_with_error!(&env, RegistryError::TokenNotFound);
+        };
+        Self::token_id_u32(&env, token_id)
     }
 
     pub fn is_handle_available(env: Env, handle: String) -> bool {

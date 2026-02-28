@@ -2,10 +2,9 @@ node_modules/
 .next/
 dist/
 target/
-.env
-.env.local
 .env.contracts
 *.wasm
 .turbo/
 CLAUDE.md
 .stellar/
+config.bat

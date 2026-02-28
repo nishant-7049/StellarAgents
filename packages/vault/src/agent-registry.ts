@@ -112,6 +112,16 @@ export class AgentRegistry {
     return Number(result);
   }
 
+  /** OZ-style enumerable helper: owner token at index (panics on invalid index on-chain). */
+  async getOwnerTokenId(owner: string, index: number): Promise<number> {
+    const result = await this.reader.readContractValue(
+      this.registryAddress,
+      "get_owner_token_id",
+      [nativeToScVal(owner, { type: "address" }), nativeToScVal(index, { type: "u32" })],
+    );
+    return Number(result);
+  }
+
   /** SEP-0050 enumerable helper: global token at index. */
   async tokenByIndex(index: number): Promise<number | null> {
     const result = await this.reader.readContractValue(
@@ -120,6 +130,16 @@ export class AgentRegistry {
       [nativeToScVal(BigInt(index), { type: "u64" })],
     );
     if (result === null || result === undefined) return null;
+    return Number(result);
+  }
+
+  /** OZ-style enumerable helper: global token at index (panics on invalid index on-chain). */
+  async getTokenId(index: number): Promise<number> {
+    const result = await this.reader.readContractValue(
+      this.registryAddress,
+      "get_token_id",
+      [nativeToScVal(index, { type: "u32" })],
+    );
     return Number(result);
   }
 

@@ -1,12 +1,23 @@
 #![cfg(test)]
 use super::*;
-use soroban_sdk::{testutils::Address as _, Address, Env, String};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger, LedgerInfo},
+    Address, Env, String,
+};
 
 fn setup(env: &Env) -> (Address, Address) {
     let admin = Address::generate(env);
-    let reg_id = env.register(AgentRegistry, ());
+    let reg_id = env.register(
+        AgentRegistry,
+        (
+            admin.clone(),
+            String::from_str(env, "Agent Identity"),
+            String::from_str(env, "AGENT"),
+            String::from_str(env, "ipfs://agent-registry"),
+        ),
+    );
     let reg = AgentRegistryClient::new(env, &reg_id);
-    reg.initialize(&admin);
+    assert_eq!(reg.name(), String::from_str(env, "Agent Identity"));
     (admin, reg_id)
 }
 
@@ -30,19 +41,22 @@ fn mint_default(
 fn test_not_initialized_rejected() {
     let env = Env::default();
     env.mock_all_auths();
-    let reg_id = env.register(AgentRegistry, ());
-    let reg = AgentRegistryClient::new(&env, &reg_id);
-    let owner = Address::generate(&env);
-
-    let result = reg.try_mint_identity(
-        &owner,
-        &String::from_str(&env, "Agent"),
-        &String::from_str(&env, "init-check"),
-        &String::from_str(&env, "{}"),
-        &Address::generate(&env),
-        &Address::generate(&env),
+    let admin = Address::generate(&env);
+    let reg_id = env.register(
+        AgentRegistry,
+        (
+            admin.clone(),
+            String::from_str(&env, "Agent Identity"),
+            String::from_str(&env, "AGENT"),
+            String::from_str(&env, "ipfs://agent-registry"),
+        ),
     );
-    assert_eq!(result, Err(Ok(RegistryError::NotInitialized)));
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+
+    let result = reg.try_initialize(
+        &admin,
+    );
+    assert_eq!(result, Err(Ok(RegistryError::AlreadyInitialized)));
 }
 
 #[test]
@@ -143,7 +157,7 @@ fn test_approve_then_transfer() {
     let recipient = Address::generate(&env);
 
     let token_id = mint_default(&env, &reg, &owner, "xfer-approved");
-    reg.approve(&owner, &operator, &token_id);
+    reg.approve(&owner, &operator, &token_id, &u32::MAX);
     assert_eq!(reg.get_approved(&token_id), Some(operator.clone()));
 
     reg.transfer_from(&operator, &owner, &recipient, &token_id);
@@ -434,6 +448,59 @@ fn test_standard_enumerable_views() {
 }
 
 #[test]
+fn test_standard_enumerable_indexed_getters() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+
+    let id1 = mint_default(&env, &reg, &owner, "enum-idx-1");
+    let id2 = mint_default(&env, &reg, &owner, "enum-idx-2");
+
+    assert_eq!(reg.get_token_id(&0u32), id1 as u32);
+    assert_eq!(reg.get_token_id(&1u32), id2 as u32);
+    assert_eq!(reg.get_owner_token_id(&owner, &0u32), id1 as u32);
+    assert_eq!(reg.get_owner_token_id(&owner, &1u32), id2 as u32);
+}
+
+#[test]
+fn test_approval_expiry_and_invalid_ledger() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (_, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+    let owner = Address::generate(&env);
+    let operator = Address::generate(&env);
+    let token_id = mint_default(&env, &reg, &owner, "expiry-agent");
+
+    let current = env.ledger().get();
+    env.ledger().set(LedgerInfo {
+        sequence_number: current.sequence_number + 10,
+        ..current
+    });
+
+    let seq = env.ledger().get().sequence_number;
+    let invalid = reg.try_approve(&owner, &operator, &token_id, &(seq - 1));
+    assert_eq!(invalid, Err(Ok(RegistryError::InvalidLiveUntilLedger)));
+
+    reg.approve(&owner, &operator, &token_id, &(seq + 1));
+    assert_eq!(reg.get_approved(&token_id), Some(operator.clone()));
+
+    reg.approve_for_all(&owner, &operator, &(seq + 1));
+    assert!(reg.is_approved_for_all(&owner, &operator));
+
+    let next = env.ledger().get();
+    env.ledger().set(LedgerInfo {
+        sequence_number: next.sequence_number + 2,
+        ..next
+    });
+
+    assert_eq!(reg.get_approved(&token_id), None);
+    assert!(!reg.is_approved_for_all(&owner, &operator));
+}
+
+#[test]
 fn test_global_enumeration_swap_remove_on_burn() {
     let env = Env::default();
     env.mock_all_auths();
@@ -454,4 +521,77 @@ fn test_global_enumeration_swap_remove_on_burn() {
     assert!(first == id1 || first == id3);
     assert!(second == id1 || second == id3);
     assert_ne!(first, second);
+}
+
+#[test]
+fn test_admin_rotation_and_migration_flow() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (admin, reg_id) = setup(&env);
+    let reg = AgentRegistryClient::new(&env, &reg_id);
+
+    let new_admin = Address::generate(&env);
+    let owner = Address::generate(&env);
+    let vault = Address::generate(&env);
+    let signer = Address::generate(&env);
+
+    assert!(!reg.migration_open());
+    reg.set_migration_open(&admin, &true);
+    assert!(reg.migration_open());
+
+    let imported = reg.migrate_identity(
+        &admin,
+        &42u64,
+        &owner,
+        &String::from_str(&env, "Imported Agent"),
+        &String::from_str(&env, "imported-agent"),
+        &String::from_str(&env, r#"{"capabilities":["yield"]}"#),
+        &vault,
+        &signer,
+        &1234u64,
+        &5678u64,
+        &false,
+    );
+    assert_eq!(imported, 42);
+    assert_eq!(reg.total_supply(), 1);
+    assert_eq!(reg.active_count(), 0);
+    assert_eq!(reg.next_token_id(), 43);
+    assert_eq!(reg.owner_of(&42u64), owner);
+
+    let duplicate = reg.try_migrate_identity(
+        &admin,
+        &42u64,
+        &owner,
+        &String::from_str(&env, "Duplicate"),
+        &String::from_str(&env, "dup-agent"),
+        &String::from_str(&env, "{}"),
+        &vault,
+        &signer,
+        &1u64,
+        &1u64,
+        &true,
+    );
+    assert_eq!(duplicate, Err(Ok(RegistryError::TokenAlreadyExists)));
+
+    reg.set_migration_open(&admin, &false);
+    let closed = reg.try_migrate_identity(
+        &admin,
+        &43u64,
+        &owner,
+        &String::from_str(&env, "Blocked"),
+        &String::from_str(&env, "blocked-agent"),
+        &String::from_str(&env, "{}"),
+        &vault,
+        &signer,
+        &1u64,
+        &1u64,
+        &true,
+    );
+    assert_eq!(closed, Err(Ok(RegistryError::MigrationClosed)));
+
+    reg.set_admin(&admin, &new_admin);
+    let old_admin_fail = reg.try_set_migration_open(&admin, &true);
+    assert_eq!(old_admin_fail, Err(Ok(RegistryError::NotAdmin)));
+    reg.set_migration_open(&new_admin, &true);
+    assert!(reg.migration_open());
 }

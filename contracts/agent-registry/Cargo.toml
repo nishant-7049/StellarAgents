@@ -9,6 +9,7 @@ doctest = false
 
 [dependencies]
 soroban-sdk = { workspace = true }
+stellar-tokens = { git = "https://github.com/OpenZeppelin/stellar-contracts", package = "stellar-tokens", rev = "d0656aec31bc7b2479c243d600bc6a6dee302eef" }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }

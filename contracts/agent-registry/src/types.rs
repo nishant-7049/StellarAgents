@@ -25,6 +25,10 @@ pub enum RegistryError {
     NotAdmin = 19,
     SymbolTooLong = 20,
     ContractUriTooLong = 21,
+    InvalidTokenId = 22,
+    MigrationClosed = 23,
+    TokenAlreadyExists = 24,
+    InvalidLiveUntilLedger = 25,
 }
 
 #[contracttype]
@@ -33,6 +37,7 @@ pub enum DataKey {
     CollectionName,
     CollectionSymbol,
     ContractUri,
+    MigrationOpen,
     NextTokenId,
     TotalSupply,
     ActiveCount,
@@ -68,4 +73,11 @@ pub struct AgentIdentity {
     pub registered_at: u64,
     pub updated_at: u64,
     pub is_active: bool,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ApprovalData {
+    pub approved: Address,
+    pub live_until_ledger: u32,
 }
