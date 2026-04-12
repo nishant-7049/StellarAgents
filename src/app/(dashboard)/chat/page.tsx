@@ -69,6 +69,18 @@ export default function AgentDemoPage() {
 
   return (
     <div className="space-y-6">
+      {/* Upgrade notice */}
+      <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-sm">
+        <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+        <span>
+          <span className="font-semibold">Yield Optimizer upgrade in progress — </span>
+          smarter pool-level rebalancing across Blend, Soroswap &amp; DeFindex coming soon.
+        </span>
+        <span className="ml-auto shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800">
+          Upcoming
+        </span>
+      </div>
+
       {/* Page header */}
       <div className="flex items-start justify-between">
         <div>
